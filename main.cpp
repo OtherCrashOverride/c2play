@@ -265,7 +265,7 @@ void SetupPins()
 				codecContext.has_video = 1;
 				//codecContext.am_sysinfo.param = (void*)(SYNC_OUTSIDE);
 				codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
-				codecContext.am_sysinfo.rate = (int)(96000.0 / fps);
+				codecContext.am_sysinfo.rate = (int)(96000.5 / fps);	// 0.5 is used by kodi
 
 				video_codec_id = codec_id;
 			}
@@ -274,8 +274,17 @@ void SetupPins()
 
 			switch (codec_id)
 			{
+			case CODEC_ID_MPEG2VIDEO:
+				codecContext.video_type = VFORMAT_MPEG12;
+				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
+				break;
+
 			case CODEC_ID_MPEG4:
 				printf("stream #%d - VIDEO/MPEG4\n", i);
+
+				codecContext.video_type = VFORMAT_MPEG4;
+				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_5;
+				//VIDEO_DEC_FORMAT_MP4; //VIDEO_DEC_FORMAT_MPEG4_3; //VIDEO_DEC_FORMAT_MPEG4_4; //VIDEO_DEC_FORMAT_MPEG4_5;
 				break;
 
 			case CODEC_ID_H264:
@@ -872,7 +881,7 @@ int main(int argc, char** argv)
 	bool isFirstVideoPacket = true;
 	bool isAnnexB = false;
 	bool isExtraDataSent = false;
-
+	long estimatedNextPts = 0;
 
 	while (isRunning && av_read_frame(ctx, &pkt) >= 0)
 	{
@@ -901,6 +910,27 @@ int main(int argc, char** argv)
 					printf("%02x ", nalHeader[j]);
 				}
 				printf("\n");
+				
+
+				//// DEBUG
+				//printf("Codec ExtraData=%p ExtraDataSize=%x\n", video_extra_data, video_extra_data_size);
+				//
+				//unsigned char* ptr = (unsigned char*)video_extra_data;
+				//printf("ExtraData :\n");
+				//for (int j = 0; j < video_extra_data_size; ++j)
+				//{					
+				//	printf("%02x ", ptr[j]);
+				//}
+				//printf("\n");
+				//
+
+				//int extraDataCall = codec_write(&codecContext, video_extra_data, video_extra_data_size);
+				//if (extraDataCall == -EAGAIN)
+				//{
+				//	printf("ExtraData codec_write failed.\n");
+				//}
+				////
+
 
 				if (nalHeader[0] == 0 && nalHeader[1] == 0 &&
 					nalHeader[2] == 0 && nalHeader[3] == 1)
@@ -914,7 +944,9 @@ int main(int argc, char** argv)
 			}
 
 
-			if (!isAnnexB)
+			if (!isAnnexB && 
+				(video_codec_id == CODEC_ID_H264 ||
+				video_codec_id == AV_CODEC_ID_HEVC))
 			{
 				//unsigned char* nalHeader = (unsigned char*)pkt.data;
 
@@ -925,7 +957,7 @@ int main(int argc, char** argv)
 				while (nalHeader < (pkt.data + pkt.size))
 				{
 					switch (video_codec_id)
-					{
+					{					
 					case CODEC_ID_H264:
 						if (!isExtraDataSent)
 						{
@@ -1001,6 +1033,29 @@ int main(int argc, char** argv)
 				{
 					printf("codec_checkin_pts failed\n");
 				}
+
+				estimatedNextPts = pkt.pts + pkt.duration;
+			}
+			else
+			{
+				//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt.duration);
+
+				if (pkt.duration > 0)
+				{
+					// Estimate PTS
+					AVStream* streamPtr = ctx->streams[video_stream_idx];
+					double timeStamp = av_q2d(streamPtr->time_base) * estimatedNextPts;
+					unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
+					
+					if (codec_checkin_pts(&codecContext, pts))
+					{
+						printf("codec_checkin_pts failed\n");
+					}
+
+					estimatedNextPts += pkt.duration;
+
+					//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
+				}
 			}
 
 
@@ -1027,6 +1082,7 @@ int main(int argc, char** argv)
 				else if (api > 0)
 				{
 					offset += api;
+					//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
 				}
 
 			} while (api == -EAGAIN || offset < pkt.size);
