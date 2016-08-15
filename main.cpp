@@ -725,7 +725,21 @@ void* AudioDecoderThread(void* argument)
 						for (int j = 0; j < alsa_channels; ++j)
 						{
 							float* samples = channels[j];
-							data[index++] = short(samples[i] * 0x7fff);
+							
+							float sample = samples[i];
+							short value;
+							if (sample >= 0)
+							{
+								value = (sample >= 1) ? 0x7fff : (short)(sample * 0x7fff);
+							}
+							else
+							{
+								value = (sample <= -1) ? 0x8000 : (short)(sample * 0x8000);
+							}
+
+							//printf("sample = %d\n", value);
+
+							data[index++] = value;
 						}
 					}
 				}
@@ -804,10 +818,26 @@ int main(int argc, char** argv)
 	avformat_network_init();
 
 
-	//const char* url = "file:test.mkv";
 	const char* url = argv[1];
 
-	int ret = avformat_open_input(&ctx, url, NULL, NULL);
+	AVDictionary* options_dict = NULL;
+	
+	/*
+	Set probing size in bytes, i.e. the size of the data to analyze to get
+	stream information. A higher value will enable detecting more information
+	in case it is dispersed into the stream, but will increase latency. Must
+	be an integer not lesser than 32. It is 5000000 by default.
+	*/
+	av_dict_set(&options_dict, "probesize", "10000000", 0);
+
+	/*
+	Specify how many microseconds are analyzed to probe the input. A higher
+	value will enable detecting more accurate information, but will increase
+	latency. It defaults to 5,000,000 microseconds = 5 seconds.
+	*/
+	av_dict_set(&options_dict, "analyzeduration", "10000000", 0);
+
+	int ret = avformat_open_input(&ctx, url, NULL, &options_dict);
 	if (ret < 0)
 	{
 		printf("avformat_open_input failed.\n");
@@ -1126,7 +1156,11 @@ int main(int argc, char** argv)
 
 				//printf("SetTimeStamp = %f\n", buffer->GetTimeStamp());
 			}
-
+			else
+			{
+				// Reset the timeStamp since the buffer is re-used.
+				buffer->SetTimeStamp(-1);
+			}
 
 			pthread_mutex_lock(&audioMutex);
 			audioQueue.push(buffer);
