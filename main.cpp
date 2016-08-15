@@ -26,6 +26,8 @@
 #include <queue>
 #include <pthread.h>
 #include <signal.h>
+#include <unistd.h>
+#include <getopt.h>
 
 extern "C"
 {
@@ -238,7 +240,7 @@ void SetupPins()
 		throw Exception("No streams found");
 	}
 
-	printf("streamCount = %d\n", streamCount);
+	printf("Streams (count=%d):\n", streamCount);
 
 	for (int i = 0; i < streamCount; ++i)
 	{
@@ -252,7 +254,6 @@ void SetupPins()
 		case AVMEDIA_TYPE_VIDEO:
 		{
 			double fps = av_q2d(streamPtr->avg_frame_rate);
-			printf("\tfps=%f\n", fps);
 
 
 			if (video_stream_idx < 0)
@@ -267,10 +268,10 @@ void SetupPins()
 				codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
 				//codecContext.am_sysinfo.rate = (int)(96000.5 / fps);	// 0.5 is used by kodi
 				codecContext.am_sysinfo.rate = 96000.5 * ((double)streamPtr->avg_frame_rate.den / (double)streamPtr->avg_frame_rate.num);
-				printf("codecContext.am_sysinfo.rate = %d (%d num : %d dem)\n",
-					codecContext.am_sysinfo.rate,
-					streamPtr->avg_frame_rate.num,
-					streamPtr->avg_frame_rate.den);
+				//printf("codecContext.am_sysinfo.rate = %d (%d num : %d dem)\n",
+					//codecContext.am_sysinfo.rate,
+					//streamPtr->avg_frame_rate.num,
+					//streamPtr->avg_frame_rate.den);
 
 				video_codec_id = codec_id;
 			}
@@ -280,14 +281,14 @@ void SetupPins()
 			switch (codec_id)
 			{
 			case CODEC_ID_MPEG2VIDEO:
-				printf("stream #%d - VIDEO/MPEG2\n", i);
+				printf("stream #%d - VIDEO/MPEG2", i);
 
 				codecContext.video_type = VFORMAT_MPEG12;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
 				break;
 
 			case CODEC_ID_MPEG4:
-				printf("stream #%d - VIDEO/MPEG4\n", i);
+				printf("stream #%d - VIDEO/MPEG4", i);
 
 				codecContext.video_type = VFORMAT_MPEG4;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_5;
@@ -296,7 +297,7 @@ void SetupPins()
 
 			case CODEC_ID_H264:
 			{
-				printf("stream #%d - VIDEO/H264\n", i);
+				printf("stream #%d - VIDEO/H264", i);
 
 				codecContext.video_type = VFORMAT_H264_4K2K;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
@@ -304,7 +305,7 @@ void SetupPins()
 			break;
 
 			case AV_CODEC_ID_HEVC:
-				printf("stream #%d - VIDEO/HEVC\n", i);
+				printf("stream #%d - VIDEO/HEVC", i);
 
 				codecContext.video_type = VFORMAT_HEVC;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
@@ -312,13 +313,23 @@ void SetupPins()
 
 
 			case CODEC_ID_VC1:
-				printf("stream #%d - VIDEO/VC1\n", i);
+				printf("stream #%d - VIDEO/VC1", i);
 				break;
 
 			default:
-				printf("stream #%d - VIDEO/UNKNOWN(%x)\n", i, codec_id);
+				printf("stream #%d - VIDEO/UNKNOWN(%x)", i, codec_id);
 				//throw NotSupportedException();
 			}
+
+			printf("\tfps=%f(%d/%d) ", fps,
+				streamPtr->avg_frame_rate.num,
+				streamPtr->avg_frame_rate.den);
+
+			printf("am_sysinfo.rate=%d ",
+				codecContext.am_sysinfo.rate);
+
+			printf("\n");
+
 		}
 		break;
 
@@ -804,6 +815,45 @@ void* AudioDecoderThread(void* argument)
 	return nullptr;
 }
 
+void FlushAudioQueue()
+{
+	pthread_mutex_lock(&audioMutex);
+
+	while (audioQueue.size() > 0)
+	{
+		Buffer* buffer = audioQueue.front();
+		audioQueue.pop();
+
+		audioFreeQueue.push(buffer);
+	}
+
+	pthread_mutex_unlock(&audioMutex);
+}
+
+
+void PrintDictionary(AVDictionary* dictionary)
+{
+	int count = av_dict_count(dictionary);
+
+	AVDictionaryEntry* prevEntry = nullptr;
+
+	for (int i = 0; i < count; ++i)
+	{
+		AVDictionaryEntry* entry = av_dict_get(dictionary, "", prevEntry, AV_DICT_IGNORE_SUFFIX);
+
+		if (entry != nullptr)
+		{
+			printf("\tkey=%s, value=%s\n", entry->key, entry->value);
+		}
+
+		prevEntry = entry;
+	}
+}
+
+struct option longopts[] = {
+	{ "pos",          required_argument,  NULL,          'l' },
+	{ 0, 0, 0, 0 }
+};
 
 int main(int argc, char** argv)
 {
@@ -814,16 +864,76 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	
+
+	// options
+	int c;
+	double optionStartPosition = 0;
+
+	while ((c = getopt_long(argc, argv, "l:", longopts, NULL)) != -1)
+	{
+		switch (c)
+		{
+		case 'l':
+		{
+			if (strchr(optarg, ':'))
+			{
+				unsigned int h;
+				unsigned int m;
+				double s;
+				if (sscanf(optarg, "%u:%u:%lf", &h, &m, &s) == 3)
+					optionStartPosition = h * 3600 + m * 60 + s;
+			}
+			else
+			{
+				optionStartPosition = atof(optarg);
+			}
+
+			printf("startPosition = %f\n", optionStartPosition);
+		}
+		break;
+
+		default:
+			throw NotSupportedException();
+
+			//printf("?? getopt returned character code 0%o ??\n", c);
+			//break;
+		}
+	}
+
+
+	const char* url = nullptr;
+	if (optind < argc) 
+	{
+		//printf("non-option ARGV-elements: ");
+		while (optind < argc)
+		{
+			url = argv[optind++];
+			//printf("%s\n", url);
+			break;
+		}		
+	}
+
+
+	if (url == nullptr)
+	{
+		// TODO: Usage
+		printf("TODO: Usage\n");
+		return 0;
+	}
+
+	//return 0;
+
+
 	// Trap signal to clean up
 	signal(SIGINT, SignalHandler);
 
 
+	// Initialize libav
 	av_register_all();
 	avformat_network_init();
 
 
-	const char* url = argv[1];
+	//const char* url = argv[1];
 
 	AVDictionary* options_dict = NULL;
 	
@@ -848,7 +958,41 @@ int main(int argc, char** argv)
 		printf("avformat_open_input failed.\n");
 	}
 
+	
+	printf("Source Metadata:\n");
+	PrintDictionary(ctx->metadata);
+	
+
 	SetupPins();
+	
+	
+	// Chapters
+	int chapterCount = ctx->nb_chapters;
+	printf("Chapters (count=%d):\n", chapterCount);
+
+	AVChapter** chapters = ctx->chapters;
+	for (int i = 0; i < chapterCount; ++i)
+	{
+		AVChapter* avChapter = chapters[i];
+
+		double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
+		double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
+		AVDictionary* metadata = avChapter->metadata;
+
+		printf("Chapter #%02d: %f -> %f\n", i, start, end);
+		PrintDictionary(metadata);
+	}
+
+
+	if (optionStartPosition > 0)
+	{
+		if (av_seek_frame(ctx, -1, (long)(optionStartPosition * AV_TIME_BASE), 0) < 0)
+		{
+			printf("av_seek_frame (%f) failed\n", optionStartPosition);
+		}
+	}
+
+	// ---
 
 	WriteToFile("/sys/class/graphics/fb0/blank", "1");
 
