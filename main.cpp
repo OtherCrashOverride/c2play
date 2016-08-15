@@ -275,6 +275,8 @@ void SetupPins()
 			switch (codec_id)
 			{
 			case CODEC_ID_MPEG2VIDEO:
+				printf("stream #%d - VIDEO/MPEG2\n", i);
+
 				codecContext.video_type = VFORMAT_MPEG12;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
 				break;
