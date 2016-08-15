@@ -265,7 +265,12 @@ void SetupPins()
 				codecContext.has_video = 1;
 				//codecContext.am_sysinfo.param = (void*)(SYNC_OUTSIDE);
 				codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
-				codecContext.am_sysinfo.rate = (int)(96000.5 / fps);	// 0.5 is used by kodi
+				//codecContext.am_sysinfo.rate = (int)(96000.5 / fps);	// 0.5 is used by kodi
+				codecContext.am_sysinfo.rate = 96000.5 * ((double)streamPtr->avg_frame_rate.den / (double)streamPtr->avg_frame_rate.num);
+				printf("codecContext.am_sysinfo.rate = %d (%d num : %d dem)\n",
+					codecContext.am_sysinfo.rate,
+					streamPtr->avg_frame_rate.num,
+					streamPtr->avg_frame_rate.den);
 
 				video_codec_id = codec_id;
 			}
@@ -749,6 +754,24 @@ void* AudioDecoderThread(void* argument)
 				}
 
 
+
+
+				snd_pcm_sframes_t frames = snd_pcm_writei(handle,
+					(void*)data,
+					decoded_frame->nb_samples);
+
+				if (frames < 0) 
+				{
+					printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+
+					if (frames == -EPIPE)
+					{
+						snd_pcm_recover(handle, frames, 1);
+						printf("snd_pcm_recover\n");
+					}
+				}
+
+
 				{
 					if (frameTimeStamp < 0)
 					{
@@ -765,24 +788,6 @@ void* AudioDecoderThread(void* argument)
 						printf("codec_set_pcrscr failed.\n");
 					}
 				}
-
-
-				snd_pcm_sframes_t frames = snd_pcm_writei(handle,
-					(void*)data,
-					decoded_frame->nb_samples);
-
-
-				if (frames < 0) 
-				{
-					printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
-
-					if (frames == -EPIPE)
-					{
-						snd_pcm_recover(handle, frames, 1);
-						printf("snd_pcm_recover\n");
-					}
-				}
-
 
 
 
