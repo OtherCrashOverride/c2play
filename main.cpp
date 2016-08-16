@@ -558,7 +558,7 @@ void* VideoDecoderThread(void* argument)
 
 void* AudioDecoderThread(void* argument)
 {
-	const double AUDIO_ADJUST_SECONDS = (-0.325);
+	const double AUDIO_ADJUST_SECONDS = (-0.30);
 
 
 
@@ -851,12 +851,129 @@ void PrintDictionary(AVDictionary* dictionary)
 }
 
 struct option longopts[] = {
-	{ "pos",          required_argument,  NULL,          'l' },
+	{ "time",         required_argument,  NULL,          't' },
+	{ "chapter",      required_argument,  NULL,          'c' },
 	{ 0, 0, 0, 0 }
 };
 
+#if 0
+void TestAudio()
+{
+
+
+	/*
+	typedef struct {
+    int valid;               ///< audio extradata valid(1) or invalid(0), set by dsp
+    int sample_rate;         ///< audio stream sample rate
+    int channels;            ///< audio stream channels
+    int bitrate;             ///< audio stream bit rate
+    int codec_id;            ///< codec format id
+    int block_align;         ///< audio block align from ffmpeg
+    int extradata_size;      ///< extra data size
+    char extradata[AUDIO_EXTRA_DATA_SIZE];;   ///< extra data information for decoder
+} audio_info_t;
+*/
+
+	/*
+	typedef struct {
+	CODEC_HANDLE handle;        ///< codec device handler
+	CODEC_HANDLE cntl_handle;   ///< video control device handler
+	CODEC_HANDLE sub_handle;    ///< subtile device handler
+	CODEC_HANDLE audio_utils_handle;  ///< audio utils handler
+	stream_type_t stream_type;  ///< stream type(es, ps, rm, ts)
+	unsigned int has_video:
+	1;                          ///< stream has video(1) or not(0)
+	unsigned int  has_audio:
+	1;                          ///< stream has audio(1) or not(0)
+	unsigned int has_sub:
+	1;                          ///< stream has subtitle(1) or not(0)
+	unsigned int noblock:
+	1;                          ///< codec device is NONBLOCK(1) or not(0)
+	int video_type;             ///< stream video type(H264, VC1...)
+	int audio_type;             ///< stream audio type(PCM, WMA...)
+	int sub_type;               ///< stream subtitle type(TXT, SSA...)
+	int video_pid;              ///< stream video pid
+	int audio_pid;              ///< stream audio pid
+	int sub_pid;                ///< stream subtitle pid
+	int audio_channels;         ///< stream audio channel number
+	int audio_samplerate;       ///< steram audio sample rate
+	int vbuf_size;              ///< video buffer size of codec device
+	int abuf_size;              ///< audio buffer size of codec device
+	dec_sysinfo_t am_sysinfo;   ///< system information for video
+	audio_info_t audio_info;    ///< audio information pass to audiodsp
+	int packet_size;            ///< data size per packet
+	int avsync_threshold;    ///<for adec in ms>
+	void * adec_priv;          ///<for adec>
+	int SessionID;
+	int dspdec_not_supported;//check some profile that audiodsp decoder can not support,we switch to arm decoder
+	int switch_audio_flag;		//<switch audio flag switching(1) else(0)
+	} codec_para_t;
+	*/
+
+	codec_para_t audioCodec = { 0 };
+
+	audioCodec.stream_type = STREAM_TYPE_ES_AUDIO;
+	audioCodec.has_audio = 1;
+	audioCodec.audio_type = AFORMAT_PCM_S16LE;
+	audioCodec.audio_channels = 2;
+	audioCodec.audio_samplerate = 48000;
+
+	audioCodec.audio_info.sample_rate = 48000;
+	audioCodec.audio_info.channels = 2;
+		//audioCodec.audio_info.bitrate
+	audioCodec.audio_info.codec_id = AFORMAT_PCM_S16LE;
+		//audioCodec.audio_info.extradata_size
+		//audioCodec.audio_info.extradata
+
+
+	int api = codec_init(&audioCodec);
+	if (api != 0)
+	{
+		printf("audioCodec codec_init failed (%x=%d).\n", api, api);
+		exit(1);
+	}
+
+	int length = audioCodec.audio_channels * audioCodec.audio_samplerate * sizeof(short);
+	short buffer[length];
+	
+	for (int i = 0; i < length; ++i)
+	{
+		buffer[i] = (short)(rand() % 0xffff);
+		//printf("%04x", buffer[i]);
+	}
+
+	unsigned char* data = (unsigned char*)buffer;
+	data[0] = 0x00;
+	data[1] = 0x00;
+	data[2] = 0x01;
+
+	data[3] = 0xc0;
+
+	int remainingLength = length - 6;
+	data[4] = (remainingLength & 0xff00) >> 8;
+	data[5] = remainingLength & 0xff;
+
+
+	while (true)
+	{
+		api = codec_write(&audioCodec, buffer, length);
+		if (api <= 0)
+		{
+			printf("audioCodec codec_write error: %x\n", api);
+		}
+		usleep(1);
+	}
+}
+#endif
+
 int main(int argc, char** argv)
 {
+#if 0
+	TestAudio();
+	return 0;
+#endif
+
+
 	if (argc < 2)
 	{
 		// TODO: Usage
@@ -868,12 +985,13 @@ int main(int argc, char** argv)
 	// options
 	int c;
 	double optionStartPosition = 0;
+	int optionChapter = -1;
 
-	while ((c = getopt_long(argc, argv, "l:", longopts, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
 		switch (c)
 		{
-		case 'l':
+		case 't':
 		{
 			if (strchr(optarg, ':'))
 			{
@@ -881,16 +999,28 @@ int main(int argc, char** argv)
 				unsigned int m;
 				double s;
 				if (sscanf(optarg, "%u:%u:%lf", &h, &m, &s) == 3)
+				{
 					optionStartPosition = h * 3600 + m * 60 + s;
+				}
+				else
+				{
+					printf("invalid time specification.\n");
+					throw Exception();
+				}
 			}
 			else
 			{
 				optionStartPosition = atof(optarg);
 			}
 
-			printf("startPosition = %f\n", optionStartPosition);
+			printf("startPosition=%f\n", optionStartPosition);
 		}
 		break;
+
+		case 'c':
+			optionChapter = atoi(optarg);
+			printf("optionChapter=%d\n", optionChapter);
+			break;
 
 		default:
 			throw NotSupportedException();
@@ -975,12 +1105,18 @@ int main(int argc, char** argv)
 	{
 		AVChapter* avChapter = chapters[i];
 
+		int index = i + 1;
 		double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
 		double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
 		AVDictionary* metadata = avChapter->metadata;
 
-		printf("Chapter #%02d: %f -> %f\n", i, start, end);
+		printf("Chapter #%02d: %f -> %f\n", index, start, end);
 		PrintDictionary(metadata);
+
+		if (optionChapter > -1 && optionChapter == index)
+		{
+			optionStartPosition = start;
+		}
 	}
 
 
@@ -1350,6 +1486,8 @@ int main(int argc, char** argv)
 	}
 
 	codec_close(&codecContext);
+
+	WriteToFile("/sys/class/graphics/fb0/blank", "0");
 
 	return 0;
 }
