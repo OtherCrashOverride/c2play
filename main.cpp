@@ -365,7 +365,9 @@ void SetupPins()
 				//    break;
 
 			default:
-				throw NotSupportedException();
+				printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);
+				//throw NotSupportedException();
+				break;
 			}
 
 			audio_channels = codecCtxPtr->channels;
