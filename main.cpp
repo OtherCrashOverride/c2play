@@ -15,7 +15,7 @@
 */
 
 #include <stdio.h>
-#include <exception>
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -37,145 +37,148 @@ extern "C"
 #include <codec.h>
 }
 
+#include "Exception.h"
+#include "PacketBuffer.h"
+#include <memory>
 
 
-class Exception : std::exception
-{
-public:
-	Exception()
-	{}
-
-	Exception(const char* message)
-	{
-		printf("%s\n", message);
-	}
-};
-
-class NotSupportedException : Exception
-{
-
-};
-
-
-class Buffer
-{
-private:
-	const int DEFAULT_ALIGNMENT = 16;
+//class Exception : std::exception
+//{
+//public:
+//	Exception()
+//	{}
+//
+//	Exception(const char* message)
+//	{
+//		printf("%s\n", message);
+//	}
+//};
+//
+//class NotSupportedException : Exception
+//{
+//
+//};
 
 
-	void* actualPtr = nullptr;
-	void* dataPtr = nullptr;
-	int dataLength = 0;
-	int usedLength = 0;
-	double timeStamp = -1.0;
-
-
-	void SetData(void* value)
-	{
-		dataPtr = value;
-	}
-
-	void SetDataLength(int value)
-	{
-		dataLength = value;
-	}
-
-
-
-	static bool IsPowerOfTwo(int value)
-	{
-		return (value > 0) && (((value - 1) & value) == 0);
-	}
-
-	static void* AllocAligned(int length, int alignment, void** out_actualPtr)
-	{
-		if (length < 1)
-			throw Exception();
-
-		if (!IsPowerOfTwo(alignment))
-			throw Exception();
-
-
-		int actualAlignment = alignment - 1;
-		*out_actualPtr = malloc(length + actualAlignment);
-
-
-		long address = (long)*out_actualPtr;
-		void* result = (void*)((address + actualAlignment) & (~actualAlignment));
-		
-		return result;
-	}
-
-
-public:
-	double GetTimeStamp()
-	{
-		return timeStamp;
-	}
-	void SetTimeStamp(double value)
-	{
-		timeStamp = value;
-	}
-
-	void* GetData()
-	{
-		return dataPtr;
-	}
-	
-	int GetDataLength()
-	{
-		return dataLength;
-	}
-	
-	int GetUsedLength()
-	{
-		return usedLength;
-	}
-	void SetUsedLength(int value)
-	{
-		if (value < 0)
-			throw Exception();
-
-		usedLength = value;
-	}
-
-
-
-	Buffer()
-	{
-
-	}
-	Buffer(int dataLength)
-	{
-		if (dataLength < 1)
-			throw Exception();
-
-
-		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
-		SetDataLength(dataLength);
-	}
-
-	~Buffer()
-	{
-		free(actualPtr);
-	}
-
-
-	void Resize(int dataLength)
-	{
-		if (dataLength < 1)
-			throw Exception();
-
-
-		free(actualPtr);
-
-
-		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
-		SetDataLength(dataLength);
-		SetUsedLength(0);
-	}
-
-};
+//class Buffer
+//{
+//private:
+//	const int DEFAULT_ALIGNMENT = 16;
+//
+//
+//	void* actualPtr = nullptr;
+//	void* dataPtr = nullptr;
+//	int dataLength = 0;
+//	int usedLength = 0;
+//	double timeStamp = -1.0;
+//
+//
+//	void SetData(void* value)
+//	{
+//		dataPtr = value;
+//	}
+//
+//	void SetDataLength(int value)
+//	{
+//		dataLength = value;
+//	}
+//
+//
+//
+//	static bool IsPowerOfTwo(int value)
+//	{
+//		return (value > 0) && (((value - 1) & value) == 0);
+//	}
+//
+//	static void* AllocAligned(int length, int alignment, void** out_actualPtr)
+//	{
+//		if (length < 1)
+//			throw Exception();
+//
+//		if (!IsPowerOfTwo(alignment))
+//			throw Exception();
+//
+//
+//		int actualAlignment = alignment - 1;
+//		*out_actualPtr = malloc(length + actualAlignment);
+//
+//
+//		long address = (long)*out_actualPtr;
+//		void* result = (void*)((address + actualAlignment) & (~actualAlignment));
+//		
+//		return result;
+//	}
+//
+//
+//public:
+//	double GetTimeStamp()
+//	{
+//		return timeStamp;
+//	}
+//	void SetTimeStamp(double value)
+//	{
+//		timeStamp = value;
+//	}
+//
+//	void* GetData()
+//	{
+//		return dataPtr;
+//	}
+//	
+//	int GetDataLength()
+//	{
+//		return dataLength;
+//	}
+//	
+//	int GetUsedLength()
+//	{
+//		return usedLength;
+//	}
+//	void SetUsedLength(int value)
+//	{
+//		if (value < 0)
+//			throw Exception();
+//
+//		usedLength = value;
+//	}
+//
+//
+//
+//	Buffer()
+//	{
+//
+//	}
+//	Buffer(int dataLength)
+//	{
+//		if (dataLength < 1)
+//			throw Exception();
+//
+//
+//		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
+//		SetDataLength(dataLength);
+//	}
+//
+//	~Buffer()
+//	{
+//		free(actualPtr);
+//	}
+//
+//
+//	void Resize(int dataLength)
+//	{
+//		if (dataLength < 1)
+//			throw Exception();
+//
+//
+//		free(actualPtr);
+//
+//
+//		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
+//		SetDataLength(dataLength);
+//		SetUsedLength(0);
+//	}
+//
+//};
 
 
 
@@ -202,9 +205,16 @@ int audio_stream_idx = -1;
 AVCodecID audio_codec_id;
 int audio_sample_rate = 0;
 int audio_channels = 0;
-std::queue<Buffer*> audioQueue;
-std::queue<Buffer*> audioFreeQueue;
+//std::queue<Buffer*> audioQueue;
+//std::queue<Buffer*> audioFreeQueue;
+
+typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
+
 pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
+std::queue<PacketBufferPtr> audioBuffers;
+
+pthread_mutex_t videoMutex = PTHREAD_MUTEX_INITIALIZER;
+std::queue<PacketBufferPtr> videoBuffers;
 
 
 
@@ -281,14 +291,14 @@ void SetupPins()
 			switch (codec_id)
 			{
 			case CODEC_ID_MPEG2VIDEO:
-				printf("stream #%d - VIDEO/MPEG2", i);
+				printf("stream #%d - VIDEO/MPEG2\n", i);
 
 				codecContext.video_type = VFORMAT_MPEG12;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
 				break;
 
 			case CODEC_ID_MPEG4:
-				printf("stream #%d - VIDEO/MPEG4", i);
+				printf("stream #%d - VIDEO/MPEG4\n", i);
 
 				codecContext.video_type = VFORMAT_MPEG4;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_5;
@@ -297,7 +307,7 @@ void SetupPins()
 
 			case CODEC_ID_H264:
 			{
-				printf("stream #%d - VIDEO/H264", i);
+				printf("stream #%d - VIDEO/H264\n", i);
 
 				codecContext.video_type = VFORMAT_H264_4K2K;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
@@ -305,7 +315,7 @@ void SetupPins()
 			break;
 
 			case AV_CODEC_ID_HEVC:
-				printf("stream #%d - VIDEO/HEVC", i);
+				printf("stream #%d - VIDEO/HEVC\n", i);
 
 				codecContext.video_type = VFORMAT_HEVC;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
@@ -313,11 +323,11 @@ void SetupPins()
 
 
 			case CODEC_ID_VC1:
-				printf("stream #%d - VIDEO/VC1", i);
+				printf("stream #%d - VIDEO/VC1\n", i);
 				break;
 
 			default:
-				printf("stream #%d - VIDEO/UNKNOWN(%x)", i, codec_id);
+				printf("stream #%d - VIDEO/UNKNOWN(%x)\n", i, codec_id);
 				//throw NotSupportedException();
 			}
 
@@ -327,6 +337,16 @@ void SetupPins()
 
 			printf("am_sysinfo.rate=%d ",
 				codecContext.am_sysinfo.rate);
+
+
+			int width = codecCtxPtr->width;
+			int height = codecCtxPtr->height;
+
+			printf("SAR=(%d/%d) ",
+				streamPtr->sample_aspect_ratio.num,
+				streamPtr->sample_aspect_ratio.den);
+
+			// TODO: DAR
 
 			printf("\n");
 
@@ -432,7 +452,6 @@ void SetupPins()
 		}
 
 	}
-
 }
 
 void ConvertH264ExtraDataToAnnexB()
@@ -555,7 +574,278 @@ void SignalHandler(int s)
 
 void* VideoDecoderThread(void* argument)
 {
+	WriteToFile("/sys/class/graphics/fb0/blank", "1");
 
+
+	int api = codec_init(&codecContext);
+	if (api != 0)
+	{
+		printf("codec_init failed (%x).\n", api);
+		exit(1);
+	}
+
+	api = codec_set_syncenable(&codecContext, 1);
+	if (api != 0)
+	{
+		printf("codec_set_syncenable failed (%x).\n", api);
+		exit(1);
+	}
+
+
+	switch (video_codec_id)
+	{
+	case CODEC_ID_H264:
+		ConvertH264ExtraDataToAnnexB();
+		break;
+
+	case AV_CODEC_ID_HEVC:
+		HevcExtraDataToAnnexB();
+		break;
+	}
+
+
+	bool isFirstVideoPacket = true;
+	bool isAnnexB = false;
+	bool isExtraDataSent = false;
+	long estimatedNextPts = 0;
+
+	while (isRunning)
+	{
+		pthread_mutex_lock(&videoMutex);
+		size_t count = videoBuffers.size();
+
+		if (count < 1)
+		{
+			pthread_mutex_unlock(&videoMutex);
+			usleep(1);
+		}
+		else
+		{
+			PacketBufferPtr buffer = videoBuffers.front();
+			videoBuffers.pop();
+
+			pthread_mutex_unlock(&videoMutex);
+
+			AVPacket* pkt = buffer->GetAVPacket();
+
+
+			unsigned char* nalHeader = (unsigned char*)pkt->data;
+
+#if 0
+			printf("Header (pkt.size=%x):\n", pkt.size);
+			for (int j = 0; j < 16; ++j)	//nalHeaderLength
+			{
+				printf("%02x ", nalHeader[j]);
+			}
+			printf("\n");
+#endif
+
+			if (isFirstVideoPacket)
+			{
+				printf("Header (pkt.size=%x):\n", pkt->size);
+				for (int j = 0; j < 16; ++j)	//nalHeaderLength
+				{
+					printf("%02x ", nalHeader[j]);
+				}
+				printf("\n");
+
+
+				//// DEBUG
+				//printf("Codec ExtraData=%p ExtraDataSize=%x\n", video_extra_data, video_extra_data_size);
+				//
+				//unsigned char* ptr = (unsigned char*)video_extra_data;
+				//printf("ExtraData :\n");
+				//for (int j = 0; j < video_extra_data_size; ++j)
+				//{					
+				//	printf("%02x ", ptr[j]);
+				//}
+				//printf("\n");
+				//
+
+				//int extraDataCall = codec_write(&codecContext, video_extra_data, video_extra_data_size);
+				//if (extraDataCall == -EAGAIN)
+				//{
+				//	printf("ExtraData codec_write failed.\n");
+				//}
+				////
+
+
+				if (nalHeader[0] == 0 && nalHeader[1] == 0 &&
+					nalHeader[2] == 0 && nalHeader[3] == 1)
+				{
+					isAnnexB = true;
+				}
+
+				isFirstVideoPacket = false;
+
+				printf("isAnnexB=%u\n", isAnnexB);
+			}
+		
+
+			if (!isAnnexB &&
+				(video_codec_id == CODEC_ID_H264 ||
+					video_codec_id == AV_CODEC_ID_HEVC))
+			{
+				//unsigned char* nalHeader = (unsigned char*)pkt.data;
+
+				// Five least significant bits of first NAL unit byte signify nal_unit_type.
+				int nal_unit_type;
+				const int nalHeaderLength = 4;
+
+				while (nalHeader < (pkt->data + pkt->size))
+				{
+					switch (video_codec_id)
+					{
+					case CODEC_ID_H264:
+						//if (!isExtraDataSent)
+						{
+							// Copy AnnexB data if NAL unit type is 5
+							nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
+
+							if (nal_unit_type == 5)
+							{
+								api = codec_write(&codecContext, &videoExtraData[0], videoExtraData.size());
+								if (api <= 0)
+								{
+									printf("extra data codec_write error: %x\n", api);
+								}
+								else
+								{
+									//printf("extra data codec_write OK\n");
+								}
+							}
+
+							isExtraDataSent = true;
+						}
+						break;
+
+					case AV_CODEC_ID_HEVC:
+						//if (!isExtraDataSent)
+						{
+							nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
+
+							/* prepend extradata to IRAP frames */
+							if (nal_unit_type >= 16 && nal_unit_type <= 23)
+							{
+								int attempts = 10;
+
+								while (attempts > 0)
+								{
+									api = codec_write(&codecContext, &videoExtraData[0], videoExtraData.size());
+									if (api <= 0)
+									{
+										usleep(1);
+										--attempts;
+									}
+									else
+									{
+										//printf("extra data codec_write OK\n");
+										break;
+									}
+
+								}
+
+								if (attempts == 0)
+								{
+									printf("extra data codec_write error: %x\n", api);
+								}
+							}
+
+							isExtraDataSent = true;
+						}
+						break;
+
+					}
+
+
+					// Overwrite header NAL length with startcode '0x00000001' in *BigEndian*
+					int nalLength = nalHeader[0] << 24;
+					nalLength |= nalHeader[1] << 16;
+					nalLength |= nalHeader[2] << 8;
+					nalLength |= nalHeader[3];
+
+					nalHeader[0] = 0;
+					nalHeader[1] = 0;
+					nalHeader[2] = 0;
+					nalHeader[3] = 1;
+
+					nalHeader += nalLength + 4;
+				}
+			}
+
+
+			if (pkt->pts != AV_NOPTS_VALUE)
+			{
+				AVStream* streamPtr = ctx->streams[video_stream_idx];
+				double timeStamp = av_q2d(streamPtr->time_base) * pkt->pts;
+				unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
+				//printf("pts = %lu, timeStamp = %f\n", pts, timeStamp);
+				if (codec_checkin_pts(&codecContext, pts))
+				{
+					printf("codec_checkin_pts failed\n");
+				}
+
+				estimatedNextPts = pkt->pts + pkt->duration;
+			}
+			else
+			{
+				//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt.duration);
+
+				if (pkt->duration > 0)
+				{
+					// Estimate PTS
+					AVStream* streamPtr = ctx->streams[video_stream_idx];
+					double timeStamp = av_q2d(streamPtr->time_base) * estimatedNextPts;
+					unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
+
+					if (codec_checkin_pts(&codecContext, pts))
+					{
+						printf("codec_checkin_pts failed\n");
+					}
+
+					estimatedNextPts += pkt->duration;
+
+					//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
+				}
+			}
+
+
+			// Send the data to the codec
+			int api = 0;
+			int offset = 0;
+			do
+			{
+				api = codec_write(&codecContext, pkt->data + offset, pkt->size - offset);
+				if (api == -EAGAIN)
+				{
+					usleep(1);
+				}
+				else if (api == -1)
+				{
+					// TODO: Sometimes this error is returned.  Ignoring it
+					// does not seem to have any impact on video display
+				}
+				else if (api < 0)
+				{
+					printf("codec_write error: %x\n", api);
+					//codec_reset(&codecContext);
+				}
+				else if (api > 0)
+				{
+					offset += api;
+					//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
+				}
+
+			} while (api == -EAGAIN || offset < pkt->size);
+		}
+
+	}
+
+	codec_close(&codecContext);
+
+	WriteToFile("/sys/class/graphics/fb0/blank", "0");
+
+	return nullptr;
 }
 
 void* AudioDecoderThread(void* argument)
@@ -654,7 +944,7 @@ void* AudioDecoderThread(void* argument)
 	while (isRunning)
 	{
 		pthread_mutex_lock(&audioMutex);
-		size_t count = audioQueue.size();
+		size_t count = audioBuffers.size();
 
 		if (count < 1)
 		{
@@ -663,8 +953,8 @@ void* AudioDecoderThread(void* argument)
 		}
 		else
 		{
-			Buffer* buffer = audioQueue.front();
-			audioQueue.pop();
+			PacketBufferPtr buffer = audioBuffers.front();
+			audioBuffers.pop();
 
 			pthread_mutex_unlock(&audioMutex);
 
@@ -678,16 +968,19 @@ void* AudioDecoderThread(void* argument)
 
 			// ---
 
-			AVPacket pkt;
-			av_init_packet(&pkt);
-			pkt.data = (uint8_t*)buffer->GetData();
-			pkt.size = buffer->GetUsedLength();
-			pkt.dts = pkt.pts = AV_NOPTS_VALUE;
-			//printf("pkt.data=%p, pkt.size=%x\n", pkt.data, pkt.size);
+			//AVPacket pkt;
+			//av_init_packet(&pkt);
+			//pkt.data = (uint8_t*)buffer->GetData();
+			//pkt.size = buffer->GetUsedLength();
+			//pkt.dts = pkt.pts = AV_NOPTS_VALUE;
+			////printf("pkt.data=%p, pkt.size=%x\n", pkt.data, pkt.size);
 
 
 			int got_frame = 0;
-			int len = avcodec_decode_audio4(soundCodecContext, decoded_frame, &got_frame, &pkt);
+			int len = avcodec_decode_audio4(soundCodecContext,
+				decoded_frame,
+				&got_frame,
+				buffer->GetAVPacket());
 			//printf("avcodec_decode_audio4 len=%d\n", len);
 
 			if (len < 0) 
@@ -806,9 +1099,9 @@ void* AudioDecoderThread(void* argument)
 
 			}
 
-			pthread_mutex_lock(&audioMutex);
-			audioFreeQueue.push(buffer);
-			pthread_mutex_unlock(&audioMutex);
+			//pthread_mutex_lock(&audioMutex);
+			//audioFreeQueue.push(buffer);
+			//pthread_mutex_unlock(&audioMutex);
 
 		}
 
@@ -817,20 +1110,20 @@ void* AudioDecoderThread(void* argument)
 	return nullptr;
 }
 
-void FlushAudioQueue()
-{
-	pthread_mutex_lock(&audioMutex);
-
-	while (audioQueue.size() > 0)
-	{
-		Buffer* buffer = audioQueue.front();
-		audioQueue.pop();
-
-		audioFreeQueue.push(buffer);
-	}
-
-	pthread_mutex_unlock(&audioMutex);
-}
+//void FlushAudioQueue()
+//{
+//	pthread_mutex_lock(&audioMutex);
+//
+//	while (audioQueue.size() > 0)
+//	{
+//		Buffer* buffer = audioQueue.front();
+//		audioQueue.pop();
+//
+//		audioFreeQueue.push(buffer);
+//	}
+//
+//	pthread_mutex_unlock(&audioMutex);
+//}
 
 
 void PrintDictionary(AVDictionary* dictionary)
@@ -1061,6 +1354,7 @@ int main(int argc, char** argv)
 
 
 	// Initialize libav
+	av_log_set_level(AV_LOG_VERBOSE);
 	av_register_all();
 	avformat_network_init();
 
@@ -1132,35 +1426,7 @@ int main(int argc, char** argv)
 
 	// ---
 
-	WriteToFile("/sys/class/graphics/fb0/blank", "1");
 
-
-	int api = codec_init(&codecContext);
-	if (api != 0)
-	{
-		printf("codec_init failed (%x).\n", api);
-		exit(1);
-	}
-
-	//api = codec_set_syncenable(&codecContext, 1);
-	//if (api != 0)
-	//{
-	//	printf("codec_set_syncenable failed (%x).\n", api);
-	//	exit(1);
-	//}
-
-
-
-	switch (video_codec_id)
-	{
-	case CODEC_ID_H264:
-		ConvertH264ExtraDataToAnnexB();
-		break;
-
-	case AV_CODEC_ID_HEVC:
-		HevcExtraDataToAnnexB();
-		break;
-	}
 
 
 	pthread_t audioThread;
@@ -1168,12 +1434,12 @@ int main(int argc, char** argv)
 
 	if (audio_stream_idx >= 0)
 	{
-		// Sound
-		for (int i = 0; i < 256; ++i)
-		{
-			Buffer* buffer = new Buffer();
-			audioFreeQueue.push(buffer);
-		}
+		//// Sound
+		//for (int i = 0; i < 256; ++i)
+		//{
+		//	Buffer* buffer = new Buffer();
+		//	audioFreeQueue.push(buffer);
+		//}
 
 		// ----- start decoder -----
 		int result_code = pthread_create(&audioThread, NULL, AudioDecoderThread, NULL);
@@ -1187,8 +1453,22 @@ int main(int argc, char** argv)
 	}
 
 
+	pthread_t videoThread;
+	bool isVideoThreadStarted = false;
 
-	av_log_set_level(AV_LOG_VERBOSE);
+	if (video_stream_idx >= 0)
+	{
+		// ----- start decoder -----
+		int result_code = pthread_create(&videoThread, NULL, VideoDecoderThread, NULL);
+		if (result_code != 0)
+		{
+			printf("VideoDecoderThread pthread_create failed.\n");
+			exit(1);
+		}
+
+		isVideoThreadStarted = true;
+	}
+
 
 
 	// Demux
@@ -1197,269 +1477,119 @@ int main(int argc, char** argv)
 	pkt.data = NULL;
 	pkt.size = 0;
 	
-	bool isFirstVideoPacket = true;
-	bool isAnnexB = false;
-	bool isExtraDataSent = false;
-	long estimatedNextPts = 0;
 
-	while (isRunning && av_read_frame(ctx, &pkt) >= 0)
+	while (isRunning )
 	{
 		//printf("Read packet.\n");
 
+		PacketBufferPtr buffer = std::make_shared<PacketBuffer>();
 
-		if (pkt.stream_index == video_stream_idx)
+		if (av_read_frame(ctx, buffer->GetAVPacket()) < 0)
+			break;
+
+		AVPacket* pkt = buffer->GetAVPacket();
+
+		if (pkt->pts != AV_NOPTS_VALUE)
 		{
-			unsigned char* nalHeader = (unsigned char*)pkt.data;
+			AVStream* streamPtr = ctx->streams[pkt->stream_index];
+			buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
+		}
 
-#if 0
-			printf("Header (pkt.size=%x):\n", pkt.size);
-			for (int j = 0; j < 16; ++j)	//nalHeaderLength
+
+		if (pkt->stream_index == video_stream_idx)
+		{
+			const int MAX_VIDEO_BUFFERS = 64;
+
+			size_t count;
+
+			while (isRunning)
 			{
-				printf("%02x ", nalHeader[j]);
-			}
-			printf("\n");
-#endif
+				pthread_mutex_lock(&videoMutex);
+				count = videoBuffers.size();
 
-
-			if (isFirstVideoPacket)
-			{
-				printf("Header (pkt.size=%x):\n", pkt.size);
-				for (int j = 0; j < 16; ++j)	//nalHeaderLength
+				if (count >= MAX_VIDEO_BUFFERS)
 				{
-					printf("%02x ", nalHeader[j]);
-				}
-				printf("\n");
-				
+					pthread_mutex_unlock(&videoMutex);
 
-				//// DEBUG
-				//printf("Codec ExtraData=%p ExtraDataSize=%x\n", video_extra_data, video_extra_data_size);
-				//
-				//unsigned char* ptr = (unsigned char*)video_extra_data;
-				//printf("ExtraData :\n");
-				//for (int j = 0; j < video_extra_data_size; ++j)
-				//{					
-				//	printf("%02x ", ptr[j]);
-				//}
-				//printf("\n");
-				//
-
-				//int extraDataCall = codec_write(&codecContext, video_extra_data, video_extra_data_size);
-				//if (extraDataCall == -EAGAIN)
-				//{
-				//	printf("ExtraData codec_write failed.\n");
-				//}
-				////
-
-
-				if (nalHeader[0] == 0 && nalHeader[1] == 0 &&
-					nalHeader[2] == 0 && nalHeader[3] == 1)
-				{					
-					isAnnexB = true;
-				}
-
-				isFirstVideoPacket = false;
-
-				printf("isAnnexB=%u\n", isAnnexB);
-			}
-
-
-			if (!isAnnexB && 
-				(video_codec_id == CODEC_ID_H264 ||
-				video_codec_id == AV_CODEC_ID_HEVC))
-			{
-				//unsigned char* nalHeader = (unsigned char*)pkt.data;
-
-				// Five least significant bits of first NAL unit byte signify nal_unit_type.
-				int nal_unit_type;
-				const int nalHeaderLength = 4;
-
-				while (nalHeader < (pkt.data + pkt.size))
-				{
-					switch (video_codec_id)
-					{					
-					case CODEC_ID_H264:
-						if (!isExtraDataSent)
-						{
-							// Copy AnnexB data if NAL unit type is 5
-							//nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
-
-							//if (nal_unit_type == 5)
-							{
-								api = codec_write(&codecContext, &videoExtraData[0], videoExtraData.size());
-								if (api <= 0)
-								{
-									printf("extra data codec_write error: %x\n", api);
-								}
-								else
-								{
-									//printf("extra data codec_write OK\n");
-								}
-							}
-
-							isExtraDataSent = true;
-						}
-						break;
-
-					case AV_CODEC_ID_HEVC:
-						if (!isExtraDataSent)
-						{
-							//nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
-
-							/* prepend extradata to IRAP frames */
-							//if (nal_unit_type >= 16 && nal_unit_type <= 23)
-							{
-								api = codec_write(&codecContext, &videoExtraData[0], videoExtraData.size());
-								if (api <= 0)
-								{
-									printf("extra data codec_write error: %x\n", api);
-								}
-								else
-								{
-									printf("extra data codec_write OK\n");
-								}
-							}
-
-							isExtraDataSent = true;
-						}
-						break;
-
-					}
-
-
-					// Overwrite header NAL length with startcode '0x00000001' in *BigEndian*
-					int nalLength = nalHeader[0] << 24;
-					nalLength |= nalHeader[1] << 16;
-					nalLength |= nalHeader[2] << 8;
-					nalLength |= nalHeader[3];
-
-					nalHeader[0] = 0;
-					nalHeader[1] = 0;
-					nalHeader[2] = 0;
-					nalHeader[3] = 1;
-
-					nalHeader += nalLength + 4;
-				}
-			}
-
-
-			if (pkt.pts != AV_NOPTS_VALUE)
-			{
-				AVStream* streamPtr = ctx->streams[video_stream_idx];
-				double timeStamp = av_q2d(streamPtr->time_base) * pkt.pts;
-				unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
-				//printf("pts = %lu, timeStamp = %f\n", pts, timeStamp);
-				if (codec_checkin_pts(&codecContext, pts))
-				{
-					printf("codec_checkin_pts failed\n");
-				}
-
-				estimatedNextPts = pkt.pts + pkt.duration;
-			}
-			else
-			{
-				//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt.duration);
-
-				if (pkt.duration > 0)
-				{
-					// Estimate PTS
-					AVStream* streamPtr = ctx->streams[video_stream_idx];
-					double timeStamp = av_q2d(streamPtr->time_base) * estimatedNextPts;
-					unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
-					
-					if (codec_checkin_pts(&codecContext, pts))
-					{
-						printf("codec_checkin_pts failed\n");
-					}
-
-					estimatedNextPts += pkt.duration;
-
-					//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
-				}
-			}
-
-
-			// Send the data to the codec
-			int api = 0;
-			int offset = 0;
-			do
-			{
-				api = codec_write(&codecContext, pkt.data + offset, pkt.size - offset);
-				if (api == -EAGAIN)
-				{
 					usleep(1);
 				}
-				else if (api == -1)
+				else
 				{
-					// TODO: Sometimes this error is returned.  Ignoring it
-					// does not seem to have any impact on video display
-				}
-				else if (api < 0)
-				{
-					printf("codec_write error: %x\n", api);
-					//codec_reset(&codecContext);
-				}
-				else if (api > 0)
-				{
-					offset += api;
-					//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
-				}
+					videoBuffers.push(buffer);
 
-			} while (api == -EAGAIN || offset < pkt.size);
+					pthread_mutex_unlock(&videoMutex);
+					break;
+				}
+			}
+
 		}
-		else if (pkt.stream_index == audio_stream_idx)
+		else if (pkt->stream_index == audio_stream_idx)
 		{
-			Buffer* buffer = nullptr;
+			const int MAX_AUDIO_BUFFERS = 128;
 
-			while (buffer == nullptr)
+			size_t count;
+			
+			while(isRunning)
 			{
 				pthread_mutex_lock(&audioMutex);
+				count = audioBuffers.size();
 
-				if (audioFreeQueue.size() > 0)
+				if (count >= MAX_AUDIO_BUFFERS)
 				{
-					buffer = audioFreeQueue.front();
-					audioFreeQueue.pop();
-				}
-
-				pthread_mutex_unlock(&audioMutex);
-
-				if (buffer == nullptr)
+					pthread_mutex_unlock(&audioMutex);
+					
 					usleep(1);
+				}
+				else
+				{
+					audioBuffers.push(buffer);
+					
+					pthread_mutex_unlock(&audioMutex);
+					break;
+				}
 			}
 
-			if (buffer->GetDataLength() < pkt.size)
-			{
-				buffer->Resize(pkt.size);
-			}
+			//Buffer* buffer = nullptr;
 
-			memcpy(buffer->GetData(), pkt.data, pkt.size);
+			//while (buffer == nullptr)
+			//{
+			//	pthread_mutex_lock(&audioMutex);
 
-			buffer->SetUsedLength(pkt.size);
+			//	if (audioFreeQueue.size() > 0)
+			//	{
+			//		buffer = audioFreeQueue.front();
+			//		audioFreeQueue.pop();
+			//	}
+
+			//	pthread_mutex_unlock(&audioMutex);
+
+			//	if (buffer == nullptr)
+			//		usleep(1);
+			//}
+
+			//if (buffer->GetDataLength() < pkt.size)
+			//{
+			//	buffer->Resize(pkt.size);
+			//}
+
+			//memcpy(buffer->GetData(), pkt.data, pkt.size);
+
+			//buffer->SetUsedLength(pkt.size);
 
 
-			if (pkt.pts != AV_NOPTS_VALUE)
-			{
-				AVStream* streamPtr = ctx->streams[audio_stream_idx];
-				buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt.pts);
 
-				//printf("SetTimeStamp = %f\n", buffer->GetTimeStamp());
-			}
-			else
-			{
-				// Reset the timeStamp since the buffer is re-used.
-				buffer->SetTimeStamp(-1);
-			}
 
-			pthread_mutex_lock(&audioMutex);
-			audioQueue.push(buffer);
-			pthread_mutex_unlock(&audioMutex);
+			//pthread_mutex_lock(&audioMutex);
+			//audioQueue.push(buffer);
+			//pthread_mutex_unlock(&audioMutex);
 		}
 
 
-		av_free_packet(&pkt);
+		//av_free_packet(&pkt);
 
-		av_init_packet(&pkt);
-		pkt.data = NULL;
-		pkt.size = 0;
+		//av_init_packet(&pkt);
+		//pkt.data = NULL;
+		//pkt.size = 0;
 
 	}
 
@@ -1469,13 +1599,22 @@ int main(int argc, char** argv)
 	while (isRunning)
 	{
 		pthread_mutex_lock(&audioMutex);
-		size_t count = audioQueue.size();
+		size_t count = audioBuffers.size();
 		pthread_mutex_unlock(&audioMutex);
 
 		if (count < 1)
 			isRunning = false;
 	}
+	
+	while (isRunning)
+	{
+		pthread_mutex_lock(&videoMutex);
+		size_t count = videoBuffers.size();
+		pthread_mutex_unlock(&videoMutex);
 
+		if (count < 1)
+			isRunning = false;
+	}
 
 
 
@@ -1486,10 +1625,12 @@ int main(int argc, char** argv)
 		void *retval;
 		pthread_join(audioThread, &retval);
 	}
+	if (isVideoThreadStarted)
+	{
+		void *retval;
+		pthread_join(videoThread, &retval);
+	}
 
-	codec_close(&codecContext);
-
-	WriteToFile("/sys/class/graphics/fb0/blank", "0");
 
 	return 0;
 }
