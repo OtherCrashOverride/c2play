@@ -42,145 +42,6 @@ extern "C"
 #include <memory>
 
 
-//class Exception : std::exception
-//{
-//public:
-//	Exception()
-//	{}
-//
-//	Exception(const char* message)
-//	{
-//		printf("%s\n", message);
-//	}
-//};
-//
-//class NotSupportedException : Exception
-//{
-//
-//};
-
-
-//class Buffer
-//{
-//private:
-//	const int DEFAULT_ALIGNMENT = 16;
-//
-//
-//	void* actualPtr = nullptr;
-//	void* dataPtr = nullptr;
-//	int dataLength = 0;
-//	int usedLength = 0;
-//	double timeStamp = -1.0;
-//
-//
-//	void SetData(void* value)
-//	{
-//		dataPtr = value;
-//	}
-//
-//	void SetDataLength(int value)
-//	{
-//		dataLength = value;
-//	}
-//
-//
-//
-//	static bool IsPowerOfTwo(int value)
-//	{
-//		return (value > 0) && (((value - 1) & value) == 0);
-//	}
-//
-//	static void* AllocAligned(int length, int alignment, void** out_actualPtr)
-//	{
-//		if (length < 1)
-//			throw Exception();
-//
-//		if (!IsPowerOfTwo(alignment))
-//			throw Exception();
-//
-//
-//		int actualAlignment = alignment - 1;
-//		*out_actualPtr = malloc(length + actualAlignment);
-//
-//
-//		long address = (long)*out_actualPtr;
-//		void* result = (void*)((address + actualAlignment) & (~actualAlignment));
-//		
-//		return result;
-//	}
-//
-//
-//public:
-//	double GetTimeStamp()
-//	{
-//		return timeStamp;
-//	}
-//	void SetTimeStamp(double value)
-//	{
-//		timeStamp = value;
-//	}
-//
-//	void* GetData()
-//	{
-//		return dataPtr;
-//	}
-//	
-//	int GetDataLength()
-//	{
-//		return dataLength;
-//	}
-//	
-//	int GetUsedLength()
-//	{
-//		return usedLength;
-//	}
-//	void SetUsedLength(int value)
-//	{
-//		if (value < 0)
-//			throw Exception();
-//
-//		usedLength = value;
-//	}
-//
-//
-//
-//	Buffer()
-//	{
-//
-//	}
-//	Buffer(int dataLength)
-//	{
-//		if (dataLength < 1)
-//			throw Exception();
-//
-//
-//		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
-//		SetDataLength(dataLength);
-//	}
-//
-//	~Buffer()
-//	{
-//		free(actualPtr);
-//	}
-//
-//
-//	void Resize(int dataLength)
-//	{
-//		if (dataLength < 1)
-//			throw Exception();
-//
-//
-//		free(actualPtr);
-//
-//
-//		SetData(AllocAligned(dataLength, DEFAULT_ALIGNMENT, &actualPtr));
-//		SetDataLength(dataLength);
-//		SetUsedLength(0);
-//	}
-//
-//};
-
-
 
 const unsigned long PTS_FREQ = 90000;
 const int EXTERNAL_PTS = (1);
@@ -205,8 +66,6 @@ int audio_stream_idx = -1;
 AVCodecID audio_codec_id;
 int audio_sample_rate = 0;
 int audio_channels = 0;
-//std::queue<Buffer*> audioQueue;
-//std::queue<Buffer*> audioFreeQueue;
 
 typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
 
@@ -968,14 +827,6 @@ void* AudioDecoderThread(void* argument)
 
 			// ---
 
-			//AVPacket pkt;
-			//av_init_packet(&pkt);
-			//pkt.data = (uint8_t*)buffer->GetData();
-			//pkt.size = buffer->GetUsedLength();
-			//pkt.dts = pkt.pts = AV_NOPTS_VALUE;
-			////printf("pkt.data=%p, pkt.size=%x\n", pkt.data, pkt.size);
-
-
 			int got_frame = 0;
 			int len = avcodec_decode_audio4(soundCodecContext,
 				decoded_frame,
@@ -1098,32 +949,11 @@ void* AudioDecoderThread(void* argument)
 
 
 			}
-
-			//pthread_mutex_lock(&audioMutex);
-			//audioFreeQueue.push(buffer);
-			//pthread_mutex_unlock(&audioMutex);
-
 		}
-
 	}
 
 	return nullptr;
 }
-
-//void FlushAudioQueue()
-//{
-//	pthread_mutex_lock(&audioMutex);
-//
-//	while (audioQueue.size() > 0)
-//	{
-//		Buffer* buffer = audioQueue.front();
-//		audioQueue.pop();
-//
-//		audioFreeQueue.push(buffer);
-//	}
-//
-//	pthread_mutex_unlock(&audioMutex);
-//}
 
 
 void PrintDictionary(AVDictionary* dictionary)
@@ -1151,124 +981,9 @@ struct option longopts[] = {
 	{ 0, 0, 0, 0 }
 };
 
-#if 0
-void TestAudio()
-{
-
-
-	/*
-	typedef struct {
-    int valid;               ///< audio extradata valid(1) or invalid(0), set by dsp
-    int sample_rate;         ///< audio stream sample rate
-    int channels;            ///< audio stream channels
-    int bitrate;             ///< audio stream bit rate
-    int codec_id;            ///< codec format id
-    int block_align;         ///< audio block align from ffmpeg
-    int extradata_size;      ///< extra data size
-    char extradata[AUDIO_EXTRA_DATA_SIZE];;   ///< extra data information for decoder
-} audio_info_t;
-*/
-
-	/*
-	typedef struct {
-	CODEC_HANDLE handle;        ///< codec device handler
-	CODEC_HANDLE cntl_handle;   ///< video control device handler
-	CODEC_HANDLE sub_handle;    ///< subtile device handler
-	CODEC_HANDLE audio_utils_handle;  ///< audio utils handler
-	stream_type_t stream_type;  ///< stream type(es, ps, rm, ts)
-	unsigned int has_video:
-	1;                          ///< stream has video(1) or not(0)
-	unsigned int  has_audio:
-	1;                          ///< stream has audio(1) or not(0)
-	unsigned int has_sub:
-	1;                          ///< stream has subtitle(1) or not(0)
-	unsigned int noblock:
-	1;                          ///< codec device is NONBLOCK(1) or not(0)
-	int video_type;             ///< stream video type(H264, VC1...)
-	int audio_type;             ///< stream audio type(PCM, WMA...)
-	int sub_type;               ///< stream subtitle type(TXT, SSA...)
-	int video_pid;              ///< stream video pid
-	int audio_pid;              ///< stream audio pid
-	int sub_pid;                ///< stream subtitle pid
-	int audio_channels;         ///< stream audio channel number
-	int audio_samplerate;       ///< steram audio sample rate
-	int vbuf_size;              ///< video buffer size of codec device
-	int abuf_size;              ///< audio buffer size of codec device
-	dec_sysinfo_t am_sysinfo;   ///< system information for video
-	audio_info_t audio_info;    ///< audio information pass to audiodsp
-	int packet_size;            ///< data size per packet
-	int avsync_threshold;    ///<for adec in ms>
-	void * adec_priv;          ///<for adec>
-	int SessionID;
-	int dspdec_not_supported;//check some profile that audiodsp decoder can not support,we switch to arm decoder
-	int switch_audio_flag;		//<switch audio flag switching(1) else(0)
-	} codec_para_t;
-	*/
-
-	codec_para_t audioCodec = { 0 };
-
-	audioCodec.stream_type = STREAM_TYPE_ES_AUDIO;
-	audioCodec.has_audio = 1;
-	audioCodec.audio_type = AFORMAT_PCM_S16LE;
-	audioCodec.audio_channels = 2;
-	audioCodec.audio_samplerate = 48000;
-
-	audioCodec.audio_info.sample_rate = 48000;
-	audioCodec.audio_info.channels = 2;
-		//audioCodec.audio_info.bitrate
-	audioCodec.audio_info.codec_id = AFORMAT_PCM_S16LE;
-		//audioCodec.audio_info.extradata_size
-		//audioCodec.audio_info.extradata
-
-
-	int api = codec_init(&audioCodec);
-	if (api != 0)
-	{
-		printf("audioCodec codec_init failed (%x=%d).\n", api, api);
-		exit(1);
-	}
-
-	int length = audioCodec.audio_channels * audioCodec.audio_samplerate * sizeof(short);
-	short buffer[length];
-	
-	for (int i = 0; i < length; ++i)
-	{
-		buffer[i] = (short)(rand() % 0xffff);
-		//printf("%04x", buffer[i]);
-	}
-
-	unsigned char* data = (unsigned char*)buffer;
-	data[0] = 0x00;
-	data[1] = 0x00;
-	data[2] = 0x01;
-
-	data[3] = 0xc0;
-
-	int remainingLength = length - 6;
-	data[4] = (remainingLength & 0xff00) >> 8;
-	data[5] = remainingLength & 0xff;
-
-
-	while (true)
-	{
-		api = codec_write(&audioCodec, buffer, length);
-		if (api <= 0)
-		{
-			printf("audioCodec codec_write error: %x\n", api);
-		}
-		usleep(1);
-	}
-}
-#endif
 
 int main(int argc, char** argv)
 {
-#if 0
-	TestAudio();
-	return 0;
-#endif
-
-
 	if (argc < 2)
 	{
 		// TODO: Usage
@@ -1434,13 +1149,6 @@ int main(int argc, char** argv)
 
 	if (audio_stream_idx >= 0)
 	{
-		//// Sound
-		//for (int i = 0; i < 256; ++i)
-		//{
-		//	Buffer* buffer = new Buffer();
-		//	audioFreeQueue.push(buffer);
-		//}
-
 		// ----- start decoder -----
 		int result_code = pthread_create(&audioThread, NULL, AudioDecoderThread, NULL);
 		if (result_code != 0)
@@ -1548,49 +1256,7 @@ int main(int argc, char** argv)
 					break;
 				}
 			}
-
-			//Buffer* buffer = nullptr;
-
-			//while (buffer == nullptr)
-			//{
-			//	pthread_mutex_lock(&audioMutex);
-
-			//	if (audioFreeQueue.size() > 0)
-			//	{
-			//		buffer = audioFreeQueue.front();
-			//		audioFreeQueue.pop();
-			//	}
-
-			//	pthread_mutex_unlock(&audioMutex);
-
-			//	if (buffer == nullptr)
-			//		usleep(1);
-			//}
-
-			//if (buffer->GetDataLength() < pkt.size)
-			//{
-			//	buffer->Resize(pkt.size);
-			//}
-
-			//memcpy(buffer->GetData(), pkt.data, pkt.size);
-
-			//buffer->SetUsedLength(pkt.size);
-
-
-
-
-			//pthread_mutex_lock(&audioMutex);
-			//audioQueue.push(buffer);
-			//pthread_mutex_unlock(&audioMutex);
 		}
-
-
-		//av_free_packet(&pkt);
-
-		//av_init_packet(&pkt);
-		//pkt.data = NULL;
-		//pkt.size = 0;
-
 	}
 
 
