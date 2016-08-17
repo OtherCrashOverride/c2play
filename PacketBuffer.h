@@ -5,6 +5,8 @@ extern "C"
 #include <libavformat/avformat.h>
 }
 
+#include <memory>
+
 
 
 class PacketBuffer
@@ -61,4 +63,6 @@ public:
 	}
 };
 
+
+typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
 

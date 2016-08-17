@@ -39,7 +39,8 @@ extern "C"
 
 #include "Exception.h"
 #include "PacketBuffer.h"
-#include <memory>
+#include "AlsaAudioSink.h"
+#include "AmlVideoSink.h"
 
 
 
@@ -67,7 +68,7 @@ AVCodecID audio_codec_id;
 int audio_sample_rate = 0;
 int audio_channels = 0;
 
-typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
+
 
 pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 std::queue<PacketBufferPtr> audioBuffers;
@@ -75,6 +76,8 @@ std::queue<PacketBufferPtr> audioBuffers;
 pthread_mutex_t videoMutex = PTHREAD_MUTEX_INITIALIZER;
 std::queue<PacketBufferPtr> videoBuffers;
 
+double frameRate;
+AVRational time_base;
 
 
 void WriteToFile(const char* path, const char* value)
@@ -143,6 +146,10 @@ void SetupPins()
 					//streamPtr->avg_frame_rate.den);
 
 				video_codec_id = codec_id;
+
+
+				frameRate = av_q2d(streamPtr->avg_frame_rate);
+				time_base = streamPtr->time_base;
 			}
 
 			
@@ -1185,39 +1192,58 @@ int main(int argc, char** argv)
 
 
 
-	pthread_t audioThread;
-	bool isAudioThreadStarted = false;
+	//pthread_t audioThread;
+	//bool isAudioThreadStarted = false;
 
-	if (audio_stream_idx >= 0)
-	{
-		// ----- start decoder -----
-		int result_code = pthread_create(&audioThread, NULL, AudioDecoderThread, NULL);
-		if (result_code != 0)
-		{
-			printf("AudioDecoderThread pthread_create failed.\n");
-			exit(1);
-		}
+	//if (audio_stream_idx >= 0)
+	//{
+	//	// ----- start decoder -----
+	//	int result_code = pthread_create(&audioThread, NULL, AudioDecoderThread, NULL);
+	//	if (result_code != 0)
+	//	{
+	//		printf("AudioDecoderThread pthread_create failed.\n");
+	//		exit(1);
+	//	}
 
-		isAudioThreadStarted = true;
-	}
+	//	isAudioThreadStarted = true;
+	//}
+	AlsaAudioSink* audioSink = new AlsaAudioSink(audio_codec_id, audio_sample_rate);
+	audioSink->Start();
+	audioSink->SetState(MediaState::Play);
+
+
+	//std::shared_ptr<IClockSink> clockSink = std::make_shared<TestClockSink>(&codecContext);
+	//audioSink->SetClockSink(clockSink);
 
 
 	pthread_t videoThread;
 	bool isVideoThreadStarted = false;
 
-	if (video_stream_idx >= 0)
-	{
-		// ----- start decoder -----
-		int result_code = pthread_create(&videoThread, NULL, VideoDecoderThread, NULL);
-		if (result_code != 0)
-		{
-			printf("VideoDecoderThread pthread_create failed.\n");
-			exit(1);
-		}
+	//if (video_stream_idx >= 0)
+	//{
+	//	// ----- start decoder -----
+	//	int result_code = pthread_create(&videoThread, NULL, VideoDecoderThread, NULL);
+	//	if (result_code != 0)
+	//	{
+	//		printf("VideoDecoderThread pthread_create failed.\n");
+	//		exit(1);
+	//	}
 
-		isVideoThreadStarted = true;
-	}
+	//	isVideoThreadStarted = true;
+	//}
 
+	std::shared_ptr<AmlVideoSink> videoSink = std::make_shared<AmlVideoSink>(video_codec_id, frameRate, time_base);
+	videoSink->Start();
+	videoSink->SetState(MediaState::Play);
+	
+	audioSink->SetClockSink(videoSink);
+
+
+	AVStream* streamPtr = ctx->streams[video_stream_idx];
+	AVCodecContext* codecCtxPtr = streamPtr->codec;
+
+	videoSink->SetExtraData(codecCtxPtr->extradata);
+	videoSink->SetExtraDataSize(codecCtxPtr->extradata_size);
 
 
 	// Demux
@@ -1247,72 +1273,75 @@ int main(int argc, char** argv)
 
 		if (pkt->stream_index == video_stream_idx)
 		{
-			const int MAX_VIDEO_BUFFERS = 64;
+			//const int MAX_VIDEO_BUFFERS = 64;
 
-			size_t count;
+			//size_t count;
 
-			while (isRunning)
-			{
-				pthread_mutex_lock(&videoMutex);
-				count = videoBuffers.size();
+			//while (isRunning)
+			//{
+			//	pthread_mutex_lock(&videoMutex);
+			//	count = videoBuffers.size();
 
-				if (count >= MAX_VIDEO_BUFFERS)
-				{
-					pthread_mutex_unlock(&videoMutex);
+			//	if (count >= MAX_VIDEO_BUFFERS)
+			//	{
+			//		pthread_mutex_unlock(&videoMutex);
 
-					usleep(1);
-				}
-				else
-				{
-					videoBuffers.push(buffer);
+			//		usleep(1);
+			//	}
+			//	else
+			//	{
+			//		videoBuffers.push(buffer);
 
-					pthread_mutex_unlock(&videoMutex);
-					break;
-				}
-			}
+			//		pthread_mutex_unlock(&videoMutex);
+			//		break;
+			//	}
+			//}
 
+			videoSink->AddBuffer(buffer);
 		}
 		else if (pkt->stream_index == audio_stream_idx)
 		{
-			const int MAX_AUDIO_BUFFERS = 128;
+			//const int MAX_AUDIO_BUFFERS = 128;
 
-			size_t count;
-			
-			while(isRunning)
-			{
-				pthread_mutex_lock(&audioMutex);
-				count = audioBuffers.size();
+			//size_t count;
+			//
+			//while(isRunning)
+			//{
+			//	pthread_mutex_lock(&audioMutex);
+			//	count = audioBuffers.size();
 
-				if (count >= MAX_AUDIO_BUFFERS)
-				{
-					pthread_mutex_unlock(&audioMutex);
-					
-					usleep(1);
-				}
-				else
-				{
-					audioBuffers.push(buffer);
-					
-					pthread_mutex_unlock(&audioMutex);
-					break;
-				}
-			}
+			//	if (count >= MAX_AUDIO_BUFFERS)
+			//	{
+			//		pthread_mutex_unlock(&audioMutex);
+			//		
+			//		usleep(1);
+			//	}
+			//	else
+			//	{
+			//		audioBuffers.push(buffer);
+			//		
+			//		pthread_mutex_unlock(&audioMutex);
+			//		break;
+			//	}
+			//}
+			audioSink->AddBuffer(buffer);
 		}
 	}
 
 
-	// If not terminating, wait until all buffers are
-	// finished playing
-	while (isRunning)
-	{
-		pthread_mutex_lock(&audioMutex);
-		size_t count = audioBuffers.size();
-		pthread_mutex_unlock(&audioMutex);
+	//// If not terminating, wait until all buffers are
+	//// finished playing
+	//while (isRunning)
+	//{
+	//	pthread_mutex_lock(&audioMutex);
+	//	size_t count = audioBuffers.size();
+	//	pthread_mutex_unlock(&audioMutex);
 
-		if (count < 1)
-			isRunning = false;
-	}
-	
+	//	if (count < 1)
+	//		isRunning = false;
+	//}
+	audioSink->Stop();
+
 	while (isRunning)
 	{
 		pthread_mutex_lock(&videoMutex);
@@ -1327,11 +1356,11 @@ int main(int argc, char** argv)
 
 	//isRunning = false;
 
-	if (isAudioThreadStarted)
-	{
-		void *retval;
-		pthread_join(audioThread, &retval);
-	}
+	//if (isAudioThreadStarted)
+	//{
+	//	void *retval;
+	//	pthread_join(audioThread, &retval);
+	//}
 	if (isVideoThreadStarted)
 	{
 		void *retval;
