@@ -271,7 +271,7 @@ private:
 			int length_size = (extraData[offset++] & 3) + 1;
 			int num_arrays = extraData[offset++];
 
-			printf("HevcExtraDataToAnnexB: length_size=%d, num_arrays=%d\n", length_size, num_arrays);
+			//printf("HevcExtraDataToAnnexB: length_size=%d, num_arrays=%d\n", length_size, num_arrays);
 
 
 			for (int i = 0; i < num_arrays; i++)

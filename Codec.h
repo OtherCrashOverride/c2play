@@ -209,31 +209,31 @@ typedef std::shared_ptr<IClockSink> IClockSinkPtr;
 
 
 
-class TestClockSink : public virtual IClockSink
-{
-	const unsigned long PTS_FREQ = 90000;
-
-	codec_para_t* codecContext;
-
-
-public:
-	TestClockSink(codec_para_t* codecContext)
-		: codecContext(codecContext)
-	{
-		if (codecContext == nullptr)
-			throw ArgumentNullException();
-	}
-
-
-	// Inherited via IClockSink
-	virtual void SetTimeStamp(double value) override
-	{
-		unsigned long pts = (unsigned long)(value * PTS_FREQ);
-
-		int codecCall = codec_set_pcrscr(codecContext, (int)pts);
-		if (codecCall != 0)
-		{
-			printf("codec_set_pcrscr failed.\n");
-		}
-	}
-};
+//class TestClockSink : public virtual IClockSink
+//{
+//	const unsigned long PTS_FREQ = 90000;
+//
+//	codec_para_t* codecContext;
+//
+//
+//public:
+//	TestClockSink(codec_para_t* codecContext)
+//		: codecContext(codecContext)
+//	{
+//		if (codecContext == nullptr)
+//			throw ArgumentNullException();
+//	}
+//
+//
+//	// Inherited via IClockSink
+//	virtual void SetTimeStamp(double value) override
+//	{
+//		unsigned long pts = (unsigned long)(value * PTS_FREQ);
+//
+//		int codecCall = codec_set_pcrscr(codecContext, (int)pts);
+//		if (codecCall != 0)
+//		{
+//			printf("codec_set_pcrscr failed.\n");
+//		}
+//	}
+//};
