@@ -849,7 +849,7 @@ void* AudioDecoderThread(void* argument)
 			{
 				int leftChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_LEFT);
 				int rightChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_RIGHT);
-				//int centerChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_CENTER);
+				int centerChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_CENTER);
 
 
 				//printf("leftChannelIndex=%d, rightChannelIndex=%d, centerChannelIndex=%d\n",
@@ -876,33 +876,74 @@ void* AudioDecoderThread(void* argument)
 				}
 				else if (soundCodecContext->sample_fmt == AV_SAMPLE_FMT_FLTP)
 				{
+					if (alsa_channels != 2)
+					{
+						throw InvalidOperationException();
+					}
+
+
 					float* channels[alsa_channels] = { 0 };
 					channels[0] = (float*)decoded_frame->data[leftChannelIndex];
 					channels[1] = (float*)decoded_frame->data[rightChannelIndex];
-					//channels[2] = (float*)decoded_frame->data[centerChannelIndex];
+					channels[2] = (float*)decoded_frame->data[centerChannelIndex];
 
 					int index = 0;
 					for (int i = 0; i < decoded_frame->nb_samples; ++i)
 					{
-						for (int j = 0; j < alsa_channels; ++j)
+						//for (int j = 0; j < alsa_channels; ++j)
+						//{
+						//	float* samples = channels[j];
+						//	
+						//	float sample = samples[i];
+						//	short value;
+						//	if (sample >= 0)
+						//	{
+						//		value = (sample >= 1) ? 0x7fff : (short)(sample * 0x7fff);
+						//	}
+						//	else
+						//	{
+						//		value = (sample <= -1) ? 0x8000 : (short)(sample * 0x8000);
+						//	}
+
+						//	//printf("sample = %d\n", value);
+
+						//	data[index++] = value;
+						//}
+
+						float* leftSamples = channels[0];
+						float* rightSamples = channels[1];
+						float* centerSamples = channels[2];
+
+						float left;
+						float right;
+						if (decoded_frame->channels > 2)
 						{
-							float* samples = channels[j];
-							
-							float sample = samples[i];
-							short value;
-							if (sample >= 0)
-							{
-								value = (sample >= 1) ? 0x7fff : (short)(sample * 0x7fff);
-							}
-							else
-							{
-								value = (sample <= -1) ? 0x8000 : (short)(sample * 0x8000);
-							}
+							// Downmix
+							const float CENTER_WEIGHT = 0.1666666666666667f;
 
-							//printf("sample = %d\n", value);
-
-							data[index++] = value;
+							left = (leftSamples[i] * (1.0f - CENTER_WEIGHT)) + (centerSamples[i] * CENTER_WEIGHT);
+							right = (rightSamples[i] * (1.0f - CENTER_WEIGHT)) + (centerSamples[i] * CENTER_WEIGHT);
 						}
+						else
+						{
+							left = leftSamples[i];
+							right = rightSamples[i];
+						}
+
+
+						if (left > 1.0f)
+							left = 1.0f;
+						else if (left < -1.0f)
+							left = -1.0f;
+
+						if (right > 1.0f)
+							right = 1.0f;
+						else if (right < -1.0f)
+							right = -1.0f;
+
+						
+						data[index++] = (short)(left * 0x7fff);
+						data[index++] = (short)(right * 0x7fff);						
 					}
 				}
 				else

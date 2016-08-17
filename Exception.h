@@ -77,3 +77,14 @@ public:
 		: Exception(message)
 	{}
 };
+
+class InvalidOperationException : Exception
+{
+public:
+	InvalidOperationException()
+	{}
+
+	InvalidOperationException(const char* message)
+		: Exception(message)
+	{}
+};
