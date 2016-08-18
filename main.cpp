@@ -732,6 +732,10 @@ int main(int argc, char** argv)
 			{
 				switch (keycode)
 				{
+				case KEY_ESC:
+					isRunning = false;
+					break;
+
 				case KEY_FASTFORWARD:
 					//TODO
 					break;
