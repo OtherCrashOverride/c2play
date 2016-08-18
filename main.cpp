@@ -732,6 +732,15 @@ int main(int argc, char** argv)
 			{
 				switch (keycode)
 				{
+				case KEY_HOME:	// odroid remote
+				case KEY_MUTE:
+				case KEY_MENU:
+				case KEY_BACK:
+				case KEY_VOLUMEDOWN:
+				case KEY_VOLUMEUP:
+					break;
+
+				case KEY_POWER:	// odroid remote
 				case KEY_ESC:
 					isRunning = false;
 					break;
@@ -744,10 +753,7 @@ int main(int argc, char** argv)
 					//TODO
 					break;
 
-				case KEY_ENTER:
-					//TODO
-					break;
-
+				case KEY_ENTER:	// odroid remote
 				case KEY_SPACE:
 				case KEY_PLAYPAUSE:
 				{
@@ -770,24 +776,36 @@ int main(int argc, char** argv)
 
 				case KEY_LEFT:
 					// Backward
-					newTime = currentTime - 10.0; // 10 seconds
-					Seek(newTime);
+					if (!isPaused)
+					{
+						newTime = currentTime - 60.0; // 1 minute
+						Seek(newTime);
+					}
 					break;
 
 				case KEY_RIGHT:
 					// Forward
-					newTime = currentTime + 10.0; // 10 seconds				
-					Seek(newTime);
+					if (!isPaused)
+					{
+						newTime = currentTime + 60.0; // 1 minute			
+						Seek(newTime);
+					}
 					break;
 
 				case KEY_UP:
-					newTime = currentTime - 10.0 * 60; // 10 minutes
-					Seek(newTime);
+					if (!isPaused)
+					{
+						newTime = currentTime - 10.0 * 60; // 10 minutes
+						Seek(newTime);
+					}
 					break;
 
 				case KEY_DOWN:
-					newTime = currentTime + 10.0 * 60; // 10 minutes
-					Seek(newTime);
+					if (!isPaused)
+					{
+						newTime = currentTime + 10.0 * 60; // 10 minutes
+						Seek(newTime);
+					}
 					break;
 
 				default:

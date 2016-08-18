@@ -203,14 +203,14 @@ public:
 						case 0:
 						{
 							//RaiseKeyReleased(keyType);
-							printf("KeyReleased (%x)\n", keycode);
+							printf("%s: KeyReleased %d (0x%x)\n", name.c_str(), keycode, keycode);
 						}
 						break;
 
 						case 1:
 						{
 							//RaiseKeyPressed(keyType);
-							printf("KeyPressed (%x)\n", keycode);
+							printf("%s: KeyPressed %d (0x%x)\n", name.c_str(), keycode, keycode);
 							EnqueKey(keycode);
 						}
 						break;
@@ -218,7 +218,7 @@ public:
 						case 2:
 						{
 							//RaiseKeyRepeated(keyType);
-							printf("KeyRepeated (%x)\n", keycode);
+							printf("%s: KeyRepeated %d (0x%x)\n", name.c_str(), keycode, keycode);
 							EnqueKey(keycode);
 						}
 						break;
