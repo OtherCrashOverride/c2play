@@ -82,6 +82,14 @@ public:
 
 		this->name = std::string(name);
 
+		long arg = 1;
+		io = ioctl(fd, EVIOCGRAB, arg);
+		if (io < 0)
+		{
+			throw Exception("EVIOCGRAB failed.\n");
+		}
+
+
 		// Threading
 		isRunning = true;
 
