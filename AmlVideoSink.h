@@ -24,7 +24,7 @@ class AmlVideoSink : public Sink, public virtual IClockSink
 	void* extraData = nullptr;
 	int extraDataSize = 0;
 	AVRational time_base;
-
+	double lastTimeStamp = -1;
 
 public:
 
@@ -44,6 +44,11 @@ public:
 	void SetExtraDataSize(int value)
 	{
 		extraDataSize = value;
+	}
+
+	double GetLastTimeStamp() const
+	{
+		return lastTimeStamp;
 	}
 
 
@@ -138,6 +143,8 @@ public:
 			exit(1);
 		}
 
+
+		WriteToFile("/sys/class/graphics/fb0/blank", "1");
 	}
 
 	~AmlVideoSink()
@@ -167,33 +174,12 @@ public:
 	}
 
 
+	virtual void Flush() override
+	{
+		Sink::Flush();
 
-	//// Inherited via Sink
-	//virtual void AddBuffer(PacketBufferPtr buffer) override
-	//{
-	//	throw NotImplementedException();
-	//}
-
-	//virtual void Start() override
-	//{
-	//	throw NotImplementedException();
-	//}
-
-	//virtual void Stop() override
-	//{
-	//	throw NotImplementedException();
-	//}
-
-	//virtual void SetState(MediaState state) override
-	//{
-	//	throw NotImplementedException();
-	//}
-
-	//virtual void Flush() override
-	//{
-	//	throw NotImplementedException();
-	//}
-
+		codec_reset(&codecContext);
+	}
 
 	// Member
 private:
@@ -251,7 +237,6 @@ private:
 		printf("\n");
 #endif
 	}
-
 
 	void HevcExtraDataToAnnexB()
 	{
@@ -329,20 +314,6 @@ private:
 protected:
 	virtual void WorkThread() override
 	{
-		WriteToFile("/sys/class/graphics/fb0/blank", "1");
-
-
-		//switch (video_codec_id)
-		//{
-		//case CODEC_ID_H264:
-		//	ConvertH264ExtraDataToAnnexB();
-		//	break;
-
-		//case AV_CODEC_ID_HEVC:
-		//	HevcExtraDataToAnnexB();
-		//	break;
-		//}
-
 		printf("AmlVideoSink entering running state.\n");
 
 
@@ -350,15 +321,31 @@ protected:
 		bool isAnnexB = false;
 		bool isExtraDataSent = false;
 		long estimatedNextPts = 0;
+		MediaState lastState = State();
+
+
+		codec_resume(&codecContext);
 
 		while (IsRunning())
 		{
-			if (State() != MediaState::Play)
+			MediaState state = State();
+
+			if (state != MediaState::Play)
 			{
+				if (lastState == MediaState::Play)
+				{
+					int ret = codec_pause(&codecContext);
+				}
+
 				usleep(1);
 			}
 			else
 			{
+				if (lastState == MediaState::Pause)
+				{
+					int ret = codec_resume(&codecContext);
+				}
+
 				PacketBufferPtr buffer;
 
 				if (!TryGetBuffer(&buffer))
@@ -530,6 +517,7 @@ protected:
 						}
 
 						estimatedNextPts = pkt->pts + pkt->duration;
+						lastTimeStamp = timeStamp;
 					}
 					else
 					{
@@ -547,6 +535,7 @@ protected:
 							}
 
 							estimatedNextPts += pkt->duration;
+							lastTimeStamp = timeStamp;
 
 							//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
 						}
@@ -584,9 +573,13 @@ protected:
 
 			}
 
+			lastState = state;
 		}
 
 		printf("AmlVideoSink exiting running state.\n");
 	}
 
 };
+
+
+typedef std::shared_ptr<AmlVideoSink> AmlVideoSinkPtr;

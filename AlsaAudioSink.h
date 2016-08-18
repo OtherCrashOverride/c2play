@@ -16,13 +16,9 @@ class AlsaAudioSink : public Sink, public virtual IClockSource
 	unsigned int sampleRate = 0;
 	snd_pcm_t* handle = nullptr;
 	snd_pcm_sframes_t frames;
-	//pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
-	//std::queue<PacketBufferPtr> audioBuffers;
-	//pthread_t audioThread;
-	//bool isAudioThreadStarted = false;
-	//bool isRunning = false;
-	//MediaState state = MediaState::Pause;
 	IClockSinkPtr clockSink;
+	double lastTimeStamp = -1;
+	bool canPause = false;
 
 public:
 
@@ -33,6 +29,11 @@ public:
 	void SetClockSink(IClockSinkPtr value)
 	{
 		clockSink = value;
+	}
+
+	double GetLastTimeStamp() const
+	{
+		return lastTimeStamp;
 	}
 
 
@@ -71,6 +72,19 @@ public:
 		(snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size));
 		(snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, NULL));
 		(snd_pcm_hw_params(handle, hw_params));
+		
+		
+		if (snd_pcm_hw_params_can_pause(hw_params))
+		{
+			printf("ALSA device can pause.\n");
+			canPause = true;
+		}
+		else
+		{
+			printf("ALSA device can NOT pause.\n");
+			canPause = false;
+		}
+
 		snd_pcm_hw_params_free(hw_params);
 
 		snd_pcm_prepare(handle);
@@ -97,98 +111,7 @@ public:
 	}
 
 
-//	// Members
-//	virtual void AddBuffer(PacketBufferPtr buffer) override
-//	{
-//		const int MAX_AUDIO_BUFFERS = 128;
-//
-//		if (!isAudioThreadStarted)
-//			throw InvalidOperationException();
-//
-//
-//		size_t count;
-//
-//		while (isRunning)
-//		{
-//			pthread_mutex_lock(&audioMutex);
-//			count = audioBuffers.size();
-//
-//			if (count >= MAX_AUDIO_BUFFERS)
-//			{
-//				pthread_mutex_unlock(&audioMutex);
-//
-//				usleep(1);
-//			}
-//			else
-//			{
-//				audioBuffers.push(buffer);
-//
-//				pthread_mutex_unlock(&audioMutex);
-//				break;
-//			}
-//		}
-//	}
-//
-//	virtual void Start() override
-//	{
-//		if (isAudioThreadStarted)
-//			throw InvalidOperationException();
-//
-//		// ----- start decoder -----
-//		isRunning = true;
-//
-//		int result_code = pthread_create(&audioThread, NULL, ThreadTrampoline, (void*)this);
-//		if (result_code != 0)
-//		{
-//			throw Exception("AudioDecoderThread pthread_create failed.\n");
-//		}
-//
-//		isAudioThreadStarted = true;
-//	}
-//	virtual void Stop() override
-//	{
-//		if (!isAudioThreadStarted)
-//			throw InvalidOperationException();
-//
-//		Flush();
-//
-//		isRunning = false;
-//
-//		pthread_join(audioThread, NULL);
-//
-//		isAudioThreadStarted = false;
-//	}
-//
-//	virtual void SetState(MediaState state) override
-//	{
-//		if (!isRunning)
-//			throw InvalidOperationException();
-//
-//		this->state = state;
-//	}
-//
-//	virtual void Flush() override
-//	{
-//		pthread_mutex_lock(&audioMutex);
-//
-//		while (audioBuffers.size() > 0)
-//		{
-//			audioBuffers.pop();
-//		}
-//
-//		pthread_mutex_unlock(&audioMutex);
-//	}
-//
-//
-//private:
-//
-//	static void* ThreadTrampoline(void* argument)
-//	{
-//		AlsaAudioSink* ptr = (AlsaAudioSink*)argument;
-//		ptr->AudioDecoderThread();
-//	}
-
-	protected:
+protected:
 
 	virtual void WorkThread() override
 	{
@@ -202,11 +125,6 @@ public:
 			throw Exception("avcodec_alloc_context3 failed.\n");
 		}
 
-		//if (audio_channels == 0)
-		//	audio_channels = 2;
-
-		//if (audio_sample_rate == 0)
-		//	audio_sample_rate = 48000;
 
 		soundCodecContext->channels = alsa_channels;
 		soundCodecContext->sample_rate = sampleRate;
@@ -235,31 +153,34 @@ public:
 		int totalAudioFrames = 0;
 		double pcrElapsedTime = 0;
 		double frameTimeStamp = -1.0;
+		MediaState lastState = State();
 
+		if (canPause)
+		{
+			snd_pcm_pause(handle, 0);
+		}
 
 		while (IsRunning())
 		{
-			if (State() != MediaState::Play)
+			MediaState state = State();
+
+			if (state != MediaState::Play)
 			{
+				if (lastState == MediaState::Play &&
+					canPause)
+				{
+					int ret = snd_pcm_pause(handle, 1);
+				}
+
 				usleep(1);
 			}
 			else
-			{
-
-				//pthread_mutex_lock(&audioMutex);
-				//size_t count = audioBuffers.size();
-
-				//if (count < 1)
-				//{
-				//	pthread_mutex_unlock(&audioMutex);
-				//	usleep(1);
-				//}
-				//else
-				//{
-				//	PacketBufferPtr buffer = audioBuffers.front();
-				//	audioBuffers.pop();
-
-				//	pthread_mutex_unlock(&audioMutex);
+			{				
+				if (lastState == MediaState::Play &&
+					canPause)
+				{
+					int ret = snd_pcm_pause(handle, 0);
+				}
 
 				PacketBufferPtr buffer;
 
@@ -271,14 +192,18 @@ public:
 				{
 					//printf("AlsaAudioSink got buffer.\n");
 
+					if (lastState == MediaState::Pause)
+					{
+						int ret = snd_pcm_pause(handle, 0);
+					}
+
 					if (frameTimeStamp < 0)
 					{
 						frameTimeStamp = buffer->GetTimeStamp();
 					}
 
 
-					// ---
-
+					// Decode audio
 					int got_frame = 0;
 					int len = avcodec_decode_audio4(soundCodecContext,
 						decoded_frame,
@@ -297,6 +222,8 @@ public:
 
 					//printf("decoded audio frame OK (len=%x, pkt.size=%x)\n", len, pkt.size);
 
+
+					// Convert audio to ALSA format
 					if (got_frame)
 					{
 						int leftChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_LEFT);
@@ -384,8 +311,7 @@ public:
 						}
 
 
-
-
+						// Send data to ALSA
 						snd_pcm_sframes_t frames = snd_pcm_writei(handle,
 							(void*)data,
 							decoded_frame->nb_samples);
@@ -402,40 +328,30 @@ public:
 						}
 
 
+						// Update the reference clock
+						if (frameTimeStamp < 0)
 						{
-							if (frameTimeStamp < 0)
-							{
-								printf("WARNING: frameTimeStamp not set.\n");
-							}
-
-
-							// TODO: Clock setting
-#if 1
-							if (clockSink.get() != nullptr)
-							{
-								//unsigned long pts = (unsigned long)((frameTimeStamp + AUDIO_ADJUST_SECONDS) * PTS_FREQ);
-
-								//int codecCall = codec_set_pcrscr(&codecContext, (int)pts);
-								//if (codecCall != 0)
-								//{
-								//	printf("codec_set_pcrscr failed.\n");
-								//}
-
-								clockSink->SetTimeStamp(frameTimeStamp + AUDIO_ADJUST_SECONDS);
-							}
-#endif
-							frameTimeStamp = -1;
-
+							printf("WARNING: frameTimeStamp not set.\n");
 						}
 
+						lastTimeStamp = frameTimeStamp + AUDIO_ADJUST_SECONDS;
+						frameTimeStamp = -1;
 
-
+						if (clockSink)
+						{
+							clockSink->SetTimeStamp(lastTimeStamp);
+						}					
 					}
 				}
 			}
+
+			lastState = state;
 		}
 
 		printf("AlsaAudioSink exiting running state.\n");
 	}
 
 };
+
+
+typedef std::shared_ptr<AlsaAudioSink> AlsaAudioSinkPtr;

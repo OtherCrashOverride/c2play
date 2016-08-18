@@ -86,7 +86,15 @@ protected:
 
 public:
 
-	virtual ~Sink() {}
+	virtual ~Sink()
+	{
+		isRunning = false;
+
+		if (isThreadStarted)
+		{
+			pthread_join(thread, NULL);
+		}
+	}
 
 
 	virtual void AddBuffer(PacketBufferPtr buffer)
@@ -152,15 +160,15 @@ public:
 
 	virtual MediaState State()
 	{
-		if (!isRunning)
-			throw InvalidOperationException();
+		//if (!isRunning)
+		//	throw InvalidOperationException();
 
 		return state;
 	}
 	virtual void SetState(MediaState state)
 	{
-		if (!isRunning)
-			throw InvalidOperationException();
+		//if (!isRunning)
+		//	throw InvalidOperationException();
 
 		this->state = state;
 	}
@@ -177,6 +185,8 @@ public:
 		pthread_mutex_unlock(&mutex);
 	}
 };
+
+typedef std::shared_ptr<Sink> SinkPtr;
 
 
 class IClockSource
@@ -207,6 +217,13 @@ public:
 typedef std::shared_ptr<IClockSink> IClockSinkPtr;
 
 
+
+//class Clock
+//{
+//
+//public:
+//	Clock(IClockSink)
+//};
 
 
 //class TestClockSink : public virtual IClockSink

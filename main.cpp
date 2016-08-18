@@ -39,8 +39,15 @@ extern "C"
 #include "PacketBuffer.h"
 #include "AlsaAudioSink.h"
 #include "AmlVideoSink.h"
+#include "InputDevice.h"
 
+#include <dirent.h>
+#include <sys/stat.h>
+#include <string>
+#include <linux/input.h>
+#include <linux/uinput.h>
 
+#include <linux/kd.h>
 
 
 AVFormatContext* ctx = NULL;
@@ -61,6 +68,8 @@ int audio_channels = 0;
 
 
 bool isRunning = true;
+std::vector<SinkPtr> sinks;
+std::vector<InputDevicePtr> inputDevices;
 
 
 void SetupPins()
@@ -90,9 +99,6 @@ void SetupPins()
 		{
 		case AVMEDIA_TYPE_VIDEO:
 		{
-			double fps = av_q2d(streamPtr->avg_frame_rate);
-
-
 			if (video_stream_idx < 0)
 			{
 				video_stream_idx = i;
@@ -138,7 +144,7 @@ void SetupPins()
 				//throw NotSupportedException();
 			}
 
-			printf("\tfps=%f(%d/%d) ", fps,
+			printf("\tfps=%f(%d/%d) ", frameRate,
 				streamPtr->avg_frame_rate.num,
 				streamPtr->avg_frame_rate.den);
 
@@ -294,6 +300,117 @@ void PrintDictionary(AVDictionary* dictionary)
 }
 
 
+std::vector<std::string> devices;
+
+
+
+
+void GetDevices()
+{
+	inputDevices.clear();
+
+
+	DIR *dpdf;
+	struct dirent *epdf;
+
+	std::string path = "/dev/input/";
+
+	dpdf = opendir(path.c_str());
+	if (dpdf != NULL)
+	{
+		while (epdf = readdir(dpdf))
+		{
+			//printf("Filename: %s\n", epdf->d_name);
+			// std::cout << epdf->d_name << std::endl;
+			
+			std::string entryName = path + std::string(epdf->d_name);
+			//printf("Filename: %s\n", entryName.c_str());
+
+			struct stat sb;
+			if (stat(entryName.c_str(), &sb) == -1) {
+				perror("stat");
+				exit(EXIT_FAILURE);
+			}
+
+			//printf("File type:");
+
+			//switch (sb.st_mode & S_IFMT) {
+			//case S_IFBLK:  printf("block device\n");            break;
+			//case S_IFCHR:  printf("character device\n");        break;
+			//case S_IFDIR:  printf("directory\n");               break;
+			//case S_IFIFO:  printf("FIFO/pipe\n");               break;
+			//case S_IFLNK:  printf("symlink\n");                 break;
+			//case S_IFREG:  printf("regular file\n");            break;
+			//case S_IFSOCK: printf("socket\n");                  break;
+			//default:       printf("unknown?\n");                break;
+			//}
+
+			//printf("\n");
+
+			if (sb.st_mode & S_IFCHR)
+			{
+				devices.push_back(entryName);
+				printf("added device: %s\n", entryName.c_str());
+			}
+		}
+
+		for(auto device : devices)
+		{
+			printf("Device: %s\n", device.c_str());
+
+			int fd = open(device.c_str(), O_RDONLY);
+			if (fd < 0)
+				throw Exception("device open failed.");
+
+			//input_id id;
+			//int io = ioctl(fd, EVIOCGID, &id);
+			//if (io < 0)
+			//{
+			//	printf("EVIOCGID failed.\n");
+			//}
+			//else
+			//{
+			//	printf("\tbustype=%d, vendor=%d, product=%d, version=%d\n",
+			//		id.bustype, id.vendor, id.product, id.version);
+			//}
+
+			//char name[255];
+			//io = ioctl(fd, EVIOCGNAME(255), name);
+			//if (io < 0)
+			//{
+			//	printf("EVIOCGNAME failed.\n");
+			//}
+			//else
+			//{
+			//	printf("\tname=%s\n", name);
+			//}
+
+			
+			int bitsRequired = EV_MAX;
+			int bytesRequired = (bitsRequired + 1) / 8;
+
+			unsigned char buffer[bytesRequired];
+			int io = ioctl(fd, EVIOCGBIT(0, bytesRequired), buffer);
+			if (io < 0)
+			{
+				printf("EVIOCGBIT failed.\n");
+			}
+			else
+			{
+				unsigned int events = *((unsigned int*)buffer);
+
+				if (events & EV_KEY)
+				{
+					InputDevicePtr inputDevice = std::make_shared<InputDevice>(device);
+					inputDevices.push_back(inputDevice);
+				}
+			}
+			
+			close(fd);
+		}
+	}
+}
+
 struct option longopts[] = {
 	{ "time",         required_argument,  NULL,          't' },
 	{ "chapter",      required_argument,  NULL,          'c' },
@@ -301,8 +418,65 @@ struct option longopts[] = {
 };
 
 
+
+void Seek(double time)
+{
+	if (time < 0)
+		time = 0;
+
+	for (SinkPtr sink : sinks)
+	{
+		sink->Stop();
+	}
+
+	if (av_seek_frame(ctx, -1, (long)(time * AV_TIME_BASE), 0) < 0)
+	{
+		printf("av_seek_frame (%f) failed\n", time);
+}
+	else
+	{
+		printf("Seeked to %f\n", time);
+	}
+
+	for (SinkPtr sink : sinks)
+	{
+		sink->Start();
+	}
+}
+
 int main(int argc, char** argv)
 {
+#if 1
+	GetDevices();
+#endif
+
+#if 0
+	InputDevicePtr inputDevice = std::make_shared<InputDevice>(std::string("/dev/input/event3"));
+
+#endif
+
+	for (InputDevicePtr dev : inputDevices)
+	{
+		printf("Using input device: %s\n", dev->Name().c_str());
+	}
+
+
+	// Set graphics mode
+	int ttyfd = open("/dev/tty0", O_RDWR);
+	if (ttyfd < 0)
+	{
+		printf("Could not open /dev/tty0\n");
+	}
+	else
+	{
+		int ret = ioctl(ttyfd, KDSETMODE, KD_GRAPHICS);
+		if (ret < 0)
+			throw Exception("KDSETMODE failed.");
+
+		close(ttyfd);
+	}
+
+
 	if (argc < 2)
 	{
 		// TODO: Usage
@@ -459,67 +633,190 @@ int main(int argc, char** argv)
 	}
 
 	// ---
+	//std::vector<SinkPtr> sinks;
+	AlsaAudioSinkPtr audioSink;
+	AmlVideoSinkPtr videoSink;
 
-	AlsaAudioSink* audioSink = new AlsaAudioSink(audio_codec_id, audio_sample_rate);
-	audioSink->Start();
-	audioSink->SetState(MediaState::Play);
+	if (audio_stream_idx > -1)
+	{
+		audioSink = std::make_shared<AlsaAudioSink>(audio_codec_id, audio_sample_rate);
+		audioSink->Start();
+		audioSink->SetState(MediaState::Play);
 
+		sinks.push_back(audioSink);
+	}
 
-	std::shared_ptr<AmlVideoSink> videoSink = std::make_shared<AmlVideoSink>(video_codec_id, frameRate, time_base);
-	videoSink->Start();
-	videoSink->SetState(MediaState::Play);
-	
-	audioSink->SetClockSink(videoSink);
+	if (video_stream_idx > -1)
+	{
+		videoSink = std::make_shared<AmlVideoSink>(video_codec_id, frameRate, time_base);
+		videoSink->Start();
+		videoSink->SetState(MediaState::Play);
 
+		if (audioSink)
+		{
+			audioSink->SetClockSink(videoSink);
+		}
 
-	AVStream* streamPtr = ctx->streams[video_stream_idx];
-	AVCodecContext* codecCtxPtr = streamPtr->codec;
+		AVStream* streamPtr = ctx->streams[video_stream_idx];
+		AVCodecContext* codecCtxPtr = streamPtr->codec;
 
-	videoSink->SetExtraData(codecCtxPtr->extradata);
-	videoSink->SetExtraDataSize(codecCtxPtr->extradata_size);
+		videoSink->SetExtraData(codecCtxPtr->extradata);
+		videoSink->SetExtraDataSize(codecCtxPtr->extradata_size);
+
+		sinks.push_back(videoSink);
+	}
 
 
 	// Demux
-	AVPacket pkt;
+	/*AVPacket pkt;
 	av_init_packet(&pkt);
 	pkt.data = NULL;
-	pkt.size = 0;
+	pkt.size = 0;*/
 	
+	bool isPaused = false;
+
 
 	while (isRunning )
-	{
-		//printf("Read packet.\n");
-
-		PacketBufferPtr buffer = std::make_shared<PacketBuffer>();
-
-		if (av_read_frame(ctx, buffer->GetAVPacket()) < 0)
-			break;
-
-		AVPacket* pkt = buffer->GetAVPacket();
-
-		if (pkt->pts != AV_NOPTS_VALUE)
+	{		
+		if (isPaused)
 		{
-			AVStream* streamPtr = ctx->streams[pkt->stream_index];
-			buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
+			usleep(1);
+		}
+		else
+		{
+			//printf("Read packet.\n");
+
+			PacketBufferPtr buffer = std::make_shared<PacketBuffer>();
+
+			if (av_read_frame(ctx, buffer->GetAVPacket()) < 0)
+				break;
+
+			AVPacket* pkt = buffer->GetAVPacket();
+
+			if (pkt->pts != AV_NOPTS_VALUE)
+			{
+				AVStream* streamPtr = ctx->streams[pkt->stream_index];
+				buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
+			}
+
+
+			if (pkt->stream_index == video_stream_idx)
+			{
+				videoSink->AddBuffer(buffer);
+			}
+			else if (pkt->stream_index == audio_stream_idx)
+			{
+				audioSink->AddBuffer(buffer);
+			}
 		}
 
 
-		if (pkt->stream_index == video_stream_idx)
+		// Process Input
+		int keycode;
+
+		double currentTime = -1;
+		if (audioSink)
 		{
-			videoSink->AddBuffer(buffer);
+			currentTime = audioSink->GetLastTimeStamp();
 		}
-		else if (pkt->stream_index == audio_stream_idx)
+		else if(videoSink)
 		{
-			audioSink->AddBuffer(buffer);
+			currentTime = videoSink->GetLastTimeStamp();
+		}
+
+		double newTime;
+
+		for (InputDevicePtr dev : inputDevices)
+		{
+			while (dev->TryGetKeyPress(&keycode))
+			{
+				switch (keycode)
+				{
+				case KEY_FASTFORWARD:
+					//TODO
+					break;
+
+				case KEY_REWIND:
+					//TODO
+					break;
+
+				case KEY_ENTER:
+					//TODO
+					break;
+
+				case KEY_SPACE:
+				case KEY_PLAYPAUSE:
+				{
+					// Pause
+					for (SinkPtr sink : sinks)
+					{
+						if (isPaused)
+						{
+							sink->SetState(MediaState::Play);
+						}
+						else
+						{
+							sink->SetState(MediaState::Pause);
+						}
+					}
+
+					isPaused = !isPaused;
+				}
+				break;
+
+				case KEY_LEFT:
+					// Backward
+					newTime = currentTime - 10.0; // 10 seconds
+					Seek(newTime);
+					break;
+
+				case KEY_RIGHT:
+					// Forward
+					newTime = currentTime + 10.0; // 10 seconds				
+					Seek(newTime);
+					break;
+
+				case KEY_UP:
+					newTime = currentTime - 10.0 * 60; // 10 minutes
+					Seek(newTime);
+					break;
+
+				case KEY_DOWN:
+					newTime = currentTime + 10.0 * 60; // 10 minutes
+					Seek(newTime);
+					break;
+
+				default:
+					break;
+				}
+			}
 		}
 	}
 
 
 	// If not terminating, wait until all buffers are
 	// finished playing
-	audioSink->Stop();
-	videoSink->Stop();
+	if (audioSink)
+		audioSink->Stop();
 
+	if (videoSink)
+		videoSink->Stop();
+
+
+	// Set text mode
+	ttyfd = open("/dev/tty0", O_RDWR);
+	if (ttyfd < 0)
+	{
+		printf("Could not open /dev/tty0\n");
+	}
+	else
+	{
+		int ret = ioctl(ttyfd, KDSETMODE, KD_TEXT);
+		if (ret < 0)
+			throw Exception("KDSETMODE failed.");
+
+		close(ttyfd);
+	}
 
 	return 0;
 }
