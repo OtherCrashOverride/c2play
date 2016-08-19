@@ -63,7 +63,7 @@ public:
 
 		codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
 		codecContext.has_video = 1;
-		codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
+		codecContext.am_sysinfo.param = (void*)(0 ); // EXTERNAL_PTS | SYNC_OUTSIDE
 		codecContext.am_sysinfo.rate = 96000.5 * (1.0 / frameRate);
 
 		switch (codec_id)
@@ -136,12 +136,12 @@ public:
 			exit(1);
 		}
 
-		api = codec_set_syncenable(&codecContext, 1);
-		if (api != 0)
-		{
-			printf("codec_set_syncenable failed (%x).\n", api);
-			exit(1);
-		}
+		//api = codec_set_syncenable(&codecContext, 1);
+		//if (api != 0)
+		//{
+		//	printf("codec_set_syncenable failed (%x).\n", api);
+		//	exit(1);
+		//}
 
 
 		WriteToFile("/sys/class/graphics/fb0/blank", "1");
@@ -165,6 +165,13 @@ public:
 	virtual void SetTimeStamp(double value) override
 	{
 		unsigned long pts = (unsigned long)(value * PTS_FREQ);
+
+#if 1
+		int vpts = codec_get_vpts(&codecContext);
+		int drift = vpts - pts;
+
+		printf("Clock drift = %f\n", drift / (double)PTS_FREQ);
+#endif
 
 		int codecCall = codec_set_pcrscr(&codecContext, (int)pts);
 		if (codecCall != 0)
