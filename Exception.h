@@ -1,6 +1,7 @@
 #pragma once
 
 #include <exception>
+#include <cstdio>
 
 
 class Exception : std::exception

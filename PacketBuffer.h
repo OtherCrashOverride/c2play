@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Exception.h"
+
 extern "C"
 {
 #include <libavformat/avformat.h>
@@ -12,11 +14,23 @@ extern "C"
 // abstract
 class Buffer
 {
+	void* owner = nullptr;
+
 protected:
 	Buffer() {}
-
+	
+	Buffer(void* owner)
+		: owner(owner)
+	{
+	}
 
 public:
+	void* Owner() const
+	{
+		return owner;
+	}
+
+
 	virtual ~Buffer() {};
 
 
@@ -27,6 +41,12 @@ public:
 	virtual double TimeStamp() = 0;
 
 };
+
+typedef std::shared_ptr<Buffer> BufferPTR;	// TODO: Change type to Buffer*
+typedef std::shared_ptr<Buffer> BufferSPTR;
+typedef std::unique_ptr<Buffer> BufferUPTR;
+typedef std::weak_ptr<Buffer> BufferWPTR;
+
 
 
 template<typename T>
@@ -39,7 +59,10 @@ protected:
 		: payload(payload)
 	{
 	}
-
+	GenericBuffer(void* owner, T payload)
+		: Buffer(owner), payload(payload)
+	{
+	}
 
 	virtual T Payload()
 	{
@@ -218,7 +241,7 @@ typedef std::shared_ptr<PcmDataBuffer> PcmDataBufferPtr;
 
 class AVPacketBuffer : public GenericBuffer<AVPacket*>
 {
-	AVRational timeBase;
+	double timeStamp = -1;
 
 
 	static AVPacket* CreatePayload()
@@ -233,12 +256,15 @@ class AVPacketBuffer : public GenericBuffer<AVPacket*>
 
 
 public:
-	AVPacketBuffer(AVRational timeBase)
-		: GenericBuffer(CreatePayload()),
-		timeBase(timeBase)
+	AVPacketBuffer()
+		: GenericBuffer(CreatePayload())
 	{
-
 	}
+	AVPacketBuffer(void* owner)
+		: GenericBuffer(owner, CreatePayload())
+	{
+	}
+
 	~AVPacketBuffer()
 	{
 		AVPacket* avpkt = Payload();
@@ -260,7 +286,11 @@ public:
 
 	virtual double TimeStamp() override
 	{
-		return av_q2d(timeBase) * Payload()->pts;
+		return timeStamp;
+	}
+	void SetTimeStamp(double value)
+	{
+		timeStamp = value;
 	}
 
 
@@ -273,7 +303,7 @@ public:
 };
 
 typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferPtr;
-
+typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferPTR;
 
 
 class AVFrameBuffer : public GenericBuffer<AVFrame*>
@@ -344,60 +374,60 @@ typedef std::shared_ptr<AVFrameBuffer> AVFrameBufferPtr;
 
 
 
-class PacketBuffer
-{
-private:
-	AVPacket* avpkt;
-	double timeStamp = -1.0;
-
-protected:
-
-
-
-public:
-
-
-	void* GetDataPtr() const
-	{
-		return avpkt->data;
-	}
-
-	int GetDataLength() const
-	{
-		return avpkt->size;
-	}
-
-	AVPacket* GetAVPacket() const
-	{
-		return avpkt;
-	}
-
-	double GetTimeStamp()
-	{
-		return timeStamp;
-	}
-	void SetTimeStamp(double value)
-	{
-		timeStamp = value;
-	}
-
-
-	PacketBuffer()
-	{
-		avpkt = (AVPacket*)calloc(1, sizeof(*avpkt));
-		av_init_packet(avpkt);
-		
-		//pkt.data = NULL;
-		//pkt.size = 0;
-	}
-
-	~PacketBuffer()
-	{
-		av_free_packet(avpkt);
-		free(avpkt);
-	}
-};
-
-
-typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
-
+//class PacketBuffer
+//{
+//private:
+//	AVPacket* avpkt;
+//	double timeStamp = -1.0;
+//
+//protected:
+//
+//
+//
+//public:
+//
+//
+//	void* GetDataPtr() const
+//	{
+//		return avpkt->data;
+//	}
+//
+//	int GetDataLength() const
+//	{
+//		return avpkt->size;
+//	}
+//
+//	AVPacket* GetAVPacket() const
+//	{
+//		return avpkt;
+//	}
+//
+//	double GetTimeStamp()
+//	{
+//		return timeStamp;
+//	}
+//	void SetTimeStamp(double value)
+//	{
+//		timeStamp = value;
+//	}
+//
+//
+//	PacketBuffer()
+//	{
+//		avpkt = (AVPacket*)calloc(1, sizeof(*avpkt));
+//		av_init_packet(avpkt);
+//		
+//		//pkt.data = NULL;
+//		//pkt.size = 0;
+//	}
+//
+//	~PacketBuffer()
+//	{
+//		av_free_packet(avpkt);
+//		free(avpkt);
+//	}
+//};
+//
+//
+//typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
+//

@@ -40,6 +40,7 @@ extern "C"
 #include "AlsaAudioSink.h"
 #include "AmlVideoSink.h"
 #include "InputDevice.h"
+#include "MediaSourceElement.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -444,7 +445,8 @@ void Seek(double time)
 	}
 }
 
-int main(int argc, char** argv)
+#if 0
+int main_old(int argc, char** argv)
 {
 #if 1
 	GetDevices();
@@ -686,7 +688,8 @@ int main(int argc, char** argv)
 		{
 			//printf("Read packet.\n");
 
-			PacketBufferPtr buffer = std::make_shared<PacketBuffer>();
+
+			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>();
 
 			if (av_read_frame(ctx, buffer->GetAVPacket()) < 0)
 				break;
@@ -838,6 +841,106 @@ int main(int argc, char** argv)
 			throw Exception("KDSETMODE failed.");
 
 		close(ttyfd);
+	}
+
+	return 0;
+}
+#endif
+
+
+int main(int argc, char** argv)
+{
+	if (argc < 2)
+	{
+		// TODO: Usage
+		printf("TODO: Usage\n");
+		return 0;
+	}
+
+
+	// options
+	int c;
+	double optionStartPosition = 0;
+	int optionChapter = -1;
+
+	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
+	{
+		switch (c)
+		{
+		case 't':
+		{
+			if (strchr(optarg, ':'))
+			{
+				unsigned int h;
+				unsigned int m;
+				double s;
+				if (sscanf(optarg, "%u:%u:%lf", &h, &m, &s) == 3)
+				{
+					optionStartPosition = h * 3600 + m * 60 + s;
+				}
+				else
+				{
+					printf("invalid time specification.\n");
+					throw Exception();
+				}
+			}
+			else
+			{
+				optionStartPosition = atof(optarg);
+			}
+
+			printf("startPosition=%f\n", optionStartPosition);
+		}
+		break;
+
+		case 'c':
+			optionChapter = atoi(optarg);
+			printf("optionChapter=%d\n", optionChapter);
+			break;
+
+		default:
+			throw NotSupportedException();
+
+			//printf("?? getopt returned character code 0%o ??\n", c);
+			//break;
+		}
+	}
+
+
+	const char* url = nullptr;
+	if (optind < argc)
+	{
+		//printf("non-option ARGV-elements: ");
+		while (optind < argc)
+		{
+			url = argv[optind++];
+			//printf("%s\n", url);
+			break;
+		}
+	}
+
+
+	if (url == nullptr)
+	{
+		// TODO: Usage
+		printf("TODO: Usage\n");
+		return 0;
+	}
+
+	
+	// Initialize libav
+	av_log_set_level(AV_LOG_VERBOSE);
+	av_register_all();
+	avformat_network_init();
+
+
+	auto source = std::make_shared<MediaSourceElement>(std::string(url));
+	source->Execute();
+	//source->SetState(MediaState::Play);
+
+	while (true) //source->Status() == ExecutionState::Executing)
+	{
+		usleep(1);
 	}
 
 	return 0;

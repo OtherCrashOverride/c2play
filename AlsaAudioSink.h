@@ -1,118 +1,12 @@
 #pragma once
 
 #include "Codec.h"
+#include "Thread.h"
+#include "LockedQueue.h"
 
 #include <alsa/asoundlib.h>
 
 
-template <typename T>
-class LockedQueue
-{
-	const int limit;
-	std::queue<T> queue;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-public:
-
-	LockedQueue(int limit)
-		: limit(limit)
-	{
-		if (limit < 1)
-		{
-			throw ArgumentOutOfRangeException();
-		}
-	}
-
-
-	void Push(T value)
-	{
-		pthread_mutex_lock(&mutex);
-
-		while (queue.size() >= limit)
-		{
-			pthread_mutex_unlock(&mutex);
-			usleep(1);
-			pthread_mutex_lock(&mutex);
-		}
-
-		queue.push(value);
-
-		pthread_mutex_unlock(&mutex);
-	}
-
-	bool TryPush(T value)
-	{
-		bool result;
-
-		pthread_mutex_lock(&mutex);
-
-		if (queue.size() >= limit)
-		{
-			result = false;
-		}
-		else
-		{
-			queue.push(value);
-			result = true;
-		}
-
-		pthread_mutex_unlock(&mutex);
-
-		return result;
-	}
-
-	T Pop()
-	{
-		pthread_mutex_lock(&mutex);
-
-		while (queue.size() < 1)
-		{
-			pthread_mutex_unlock(&mutex);
-			usleep(1);
-			pthread_mutex_lock(&mutex);
-		}
-
-		T result = queue.front();
-		queue.pop();
-
-		pthread_mutex_unlock(&mutex);
-	}
-
-	bool TryPop(T* outValue)
-	{
-		bool result;
-
-		pthread_mutex_lock(&mutex);
-
-		if (queue.size() < 1)
-		{
-			//memset(outValue, 0, sizeof(*outValue));
-			result = false;
-		}
-		else
-		{
-			*outValue = queue.front();
-			queue.pop();
-			result = true;
-		}
-
-		pthread_mutex_unlock(&mutex);
-
-		return result;
-	}
-
-	void Flush()
-	{
-		pthread_mutex_lock(&mutex);
-
-		while (queue.size() > 0)
-		{
-			queue.pop();
-		}
-
-		pthread_mutex_unlock(&mutex);
-	}
-};
 
 
 class AlsaAudioSink : public Sink, public virtual IClockSource
@@ -131,6 +25,7 @@ class AlsaAudioSink : public Sink, public virtual IClockSource
 	bool canPause = true;
 	LockedQueue<PcmDataBufferPtr> pcmBuffers = LockedQueue<PcmDataBufferPtr>(128);
 	pthread_t audioThread;
+	Thread audThread = Thread(std::function<void()>(std::bind(&AlsaAudioSink::AudioThread, this)));
 
 public:
 
@@ -242,17 +137,19 @@ public:
 	{
 		Sink::Start();
 
-		int result_code = pthread_create(&audioThread, NULL, AudioThreadTrampoline, (void*)this);
-		if (result_code != 0)
-		{
-			throw Exception("AlsaAudioSink pthread_create failed.\n");
-		}
+		//int result_code = pthread_create(&audioThread, NULL, AudioThreadTrampoline, (void*)this);
+		//if (result_code != 0)
+		//{
+		//	throw Exception("AlsaAudioSink pthread_create failed.\n");
+		//}
 
-		result_code = pthread_setname_np(audioThread, "AudioPcmThread");
-		if (result_code != 0)
-		{
-			throw Exception("AlsaAudioSink pthread_setname_np failed.\n");
-		}
+		//result_code = pthread_setname_np(audioThread, "AudioPcmThread");
+		//if (result_code != 0)
+		//{
+		//	throw Exception("AlsaAudioSink pthread_setname_np failed.\n");
+		//}
+
+		audThread.Start();
 	}
 
 	virtual void Stop() override
@@ -261,7 +158,8 @@ public:
 
 		Sink::Stop();
 
-		pthread_join(audioThread, NULL);
+		//pthread_join(audioThread, NULL);
+		audThread.Join();
 	}
 
 protected:
@@ -282,7 +180,7 @@ protected:
 		snd_pcm_hw_params_t *hw_params;
 		snd_pcm_sw_params_t *sw_params;
 		snd_pcm_uframes_t period_size = FRAME_SIZE * alsa_channels * 2;
-		snd_pcm_uframes_t buffer_size = 12 * period_size;
+		snd_pcm_uframes_t buffer_size = 2 * period_size;
 
 
 		(snd_pcm_hw_params_malloc(&hw_params));
@@ -483,7 +381,7 @@ protected:
 					}
 
 
-					snd_pcm_wait(handle, 1000);
+					snd_pcm_wait(handle, 500);
 
 
 					//snd_pcm_sframes_t frames_to_deliver;
@@ -512,7 +410,7 @@ protected:
 					{
 						if (clockSink)
 						{
-							double time = frame->TimeStamp() + AUDIO_ADJUST_SECONDS;
+							double time = frame->TimeStamp() + (pcmData->Samples / (double)sampleRate); // AUDIO_ADJUST_SECONDS;
 							clockSink->SetTimeStamp(time);
 						}
 					}
@@ -622,7 +520,7 @@ protected:
 				//	int ret = snd_pcm_pause(handle, 0);
 				//}
 
-				PacketBufferPtr buffer;
+				AVPacketBufferPtr buffer;
 
 				if (!TryGetBuffer(&buffer))
 				{
@@ -639,14 +537,14 @@ protected:
 
 					//if (frameTimeStamp < 0)
 					{
-						frameTimeStamp = buffer->GetTimeStamp();
+						frameTimeStamp = buffer->TimeStamp();
 					}
 
 
 					if (!frame)
 					{
 						//printf("Creating decoder frame.\n");
-						frame = std::make_shared<AVFrameBuffer>(buffer->GetTimeStamp());
+						frame = std::make_shared<AVFrameBuffer>(buffer->TimeStamp());
 					}
 
 					AVFrame* decoded_frame = frame->GetAVFrame();
@@ -699,7 +597,7 @@ protected:
 						}
 
 						PcmDataBufferPtr pcmDataBuffer = std::make_shared<PcmDataBuffer>(format, decoded_frame->channels, decoded_frame->nb_samples);
-						pcmDataBuffer->SetTimeStamp(buffer->GetTimeStamp());
+						pcmDataBuffer->SetTimeStamp(buffer->TimeStamp());
 
 						int leftChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_LEFT);
 						int rightChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_RIGHT);

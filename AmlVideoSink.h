@@ -9,6 +9,15 @@ extern "C"
 #include <vector>
 
 #include "Codec.h"
+#include "Element.h"
+
+
+class AmlVideoSinkElement : public Element
+{
+
+
+};
+
 
 
 class AmlVideoSink : public Sink, public virtual IClockSink
@@ -166,7 +175,7 @@ public:
 	{
 		unsigned long pts = (unsigned long)(value * PTS_FREQ);
 
-#if 1
+#if 0
 		int vpts = codec_get_vpts(&codecContext);
 		int drift = vpts - pts;
 
@@ -353,7 +362,7 @@ protected:
 					int ret = codec_resume(&codecContext);
 				}
 
-				PacketBufferPtr buffer;
+				AVPacketBufferPtr buffer;
 
 				if (!TryGetBuffer(&buffer))
 				{
