@@ -59,6 +59,16 @@ all:    $(MAIN)
 $(MAIN): $(OBJS) 
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
 
+
+# dependencies
+%.d: %.cpp
+	@set -e; rm -f $@; \
+	$(CC) -M $(CPPFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+include $(SRCS:.cpp=.d)
+
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
 # the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
@@ -66,8 +76,8 @@ $(MAIN): $(OBJS)
 .cpp.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
-#clean:
-#        $(RM) *.o *~ $(MAIN)
+clean:
+	$(RM) *.d *.o *~ $(MAIN)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

@@ -70,6 +70,9 @@ public:
 };
 typedef std::shared_ptr<PinInfo> PinInfoSPTR;
 
+
+typedef std::vector<unsigned char> ExtraData;
+typedef std::shared_ptr<std::vector<unsigned char>> ExtraDataSPTR;
 class VideoPinInfo : public PinInfo
 {
 public:
@@ -80,8 +83,10 @@ public:
 
 	VideoStreamType StreamType = VideoStreamType::Unknown;
 	double FrameRate = 0;
+	ExtraDataSPTR ExtraData;
 };
 typedef std::shared_ptr<VideoPinInfo> VideoPinInfoSPTR;
+
 
 class AudioPinInfo : public PinInfo
 {

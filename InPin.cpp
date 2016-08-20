@@ -8,18 +8,21 @@
 	{
 		sourceMutex.Lock();
 
-		if (!source)
-			throw InvalidOperationException("Can not return buffers to a null source");
+		//if (!source)
+		//	throw InvalidOperationException("Can not return buffers to a null source");
 
-		BufferPTR buffer;
-		while (processedBuffers.TryPop(&buffer))
+		if (source)
 		{
-			source->AcceptProcessedBuffer(buffer);
-		}
+			BufferPTR buffer;
+			while (processedBuffers.TryPop(&buffer))
+			{
+				source->AcceptProcessedBuffer(buffer);
+			}
 
-		while (filledBuffers.TryPop(&buffer))
-		{
-			source->AcceptProcessedBuffer(buffer);
+			while (filledBuffers.TryPop(&buffer))
+			{
+				source->AcceptProcessedBuffer(buffer);
+			}
 		}
 
 		sourceMutex.Unlock();
@@ -40,6 +43,27 @@
 	}
 
 
+	void InPin::ReturnProcessedBuffers()
+	{
+		sourceMutex.Lock();
+
+		//if (!source)
+		//	throw InvalidOperationException("Can not return buffers to a null source");
+
+		if (source)
+		{
+			BufferPTR buffer;
+			while (processedBuffers.TryPop(&buffer))
+			{
+				source->AcceptProcessedBuffer(buffer);
+			}
+		}
+
+		sourceMutex.Unlock();
+	}
+
+
+
 	void InPin::AcceptConnection(OutPinSPTR source)
 	{
 		if (!source)
@@ -58,6 +82,10 @@
 		sourceMutex.Lock();
 		this->source = source;
 		sourceMutex.Unlock();
+
+
+		ElementSPTR parent = Owner().lock();
+		parent->Wake();
 	}
 
 	void InPin::Disconnect(OutPinSPTR source)

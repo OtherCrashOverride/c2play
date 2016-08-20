@@ -935,8 +935,25 @@ int main(int argc, char** argv)
 
 
 	auto source = std::make_shared<MediaSourceElement>(std::string(url));
+	source->SetName(std::string("Source"));
 	source->Execute();
-	//source->SetState(MediaState::Play);
+
+
+	auto videoSink = std::make_shared<AmlVideoSinkElement>();
+	videoSink->SetName(std::string("Sink"));
+	videoSink->Execute();
+
+
+	// Wait for the source to create the pins
+	source->WaitForExecutionState(ExecutionState::Executing);
+	videoSink->WaitForExecutionState(ExecutionState::Executing);
+
+	source->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(0));
+
+	
+	videoSink->SetState(MediaState::Play);
+	source->SetState(MediaState::Play);
+	
 
 	while (true) //source->Status() == ExecutionState::Executing)
 	{

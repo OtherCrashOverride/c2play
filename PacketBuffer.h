@@ -242,6 +242,7 @@ typedef std::shared_ptr<PcmDataBuffer> PcmDataBufferPtr;
 class AVPacketBuffer : public GenericBuffer<AVPacket*>
 {
 	double timeStamp = -1;
+	AVRational time_base;
 
 
 	static AVPacket* CreatePayload()
@@ -251,6 +252,7 @@ class AVPacketBuffer : public GenericBuffer<AVPacket*>
 		
 		av_init_packet(avpkt);
 
+
 		return avpkt;
 	}
 
@@ -259,10 +261,14 @@ public:
 	AVPacketBuffer()
 		: GenericBuffer(CreatePayload())
 	{
+		time_base.num = 1;
+		time_base.den = 1;
 	}
 	AVPacketBuffer(void* owner)
 		: GenericBuffer(owner, CreatePayload())
 	{
+		time_base.num = 1;
+		time_base.den = 1;
 	}
 
 	~AVPacketBuffer()
@@ -300,10 +306,36 @@ public:
 	{
 		return Payload();
 	}
+
+	void Reset()
+	{
+		AVPacket* avpkt = Payload();
+
+		av_free_packet(avpkt);
+		av_init_packet(avpkt);
+		avpkt->data = NULL;
+		avpkt->size = 0;
+
+		time_base.num = 1;
+		time_base.den = 1;
+
+		timeStamp = -1;
+	}
+
+	AVRational TimeBase()
+	{
+		return time_base;
+	}
+	void SetTimeBase(AVRational value)
+	{
+		time_base = value;
+	}
+
 };
 
 typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferPtr;
 typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferPTR;
+typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferSPTR;
 
 
 class AVFrameBuffer : public GenericBuffer<AVFrame*>

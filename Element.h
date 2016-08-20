@@ -111,6 +111,7 @@ class Element : public std::enable_shared_from_this<Element>
 
 	pthread_cond_t waitCondition = PTHREAD_COND_INITIALIZER;
 	pthread_mutex_t waitMutex = PTHREAD_MUTEX_INITIALIZER;
+	bool canSleep = true;
 
 	std::string name = "Element";
 
@@ -140,7 +141,7 @@ protected:
 
 	virtual void DoWork()
 	{
-		printf("Element (%s) DoWork exited.\n", name.c_str());
+		//printf("Element (%s) DoWork exited.\n", name.c_str());
 	}
 
 	virtual void Flush()
@@ -148,36 +149,45 @@ protected:
 		inputs.Flush();
 		outputs.Flush();
 
-		printf("Element (%s) Flush exited.\n", name.c_str());
+		//printf("Element (%s) Flush exited.\n", name.c_str());
 	}
 
 	void InternalWorkThread()
 	{
-		printf("Element (%s) InternalWorkThread entered.\n", name.c_str());
+		//printf("Element (%s) InternalWorkThread entered.\n", name.c_str());
 
-		status = ExecutionState::Initializing;
+		SetExecutionState(ExecutionState::Initializing);
 		Initialize();
 
-		status = ExecutionState::Executing;
+		SetExecutionState(ExecutionState::Executing);
 		while (status == ExecutionState::Executing)
 		{
-			DoWork();
+			if (state == MediaState::Play)
+			{
+				DoWork();
+			}
 
-			printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
+			//printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
 
 			pthread_mutex_lock(&waitMutex);
-			//while (waitCondition)
+
+			while (canSleep)
 			{
 				pthread_cond_wait(&waitCondition, &waitMutex);
 			}
+
+			canSleep = true;
+
 			pthread_mutex_unlock(&waitMutex);
 
-			printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
+			//printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
+
+
 		}
 
-		status = ExecutionState::WaitingForExecute;
+		SetExecutionState(ExecutionState::WaitingForExecute);
 
-		printf("Element (%s) InternalWorkThread exited.\n", name.c_str());
+		//printf("Element (%s) InternalWorkThread exited.\n", name.c_str());
 	}
 
 
@@ -221,7 +231,7 @@ public:
 	{
 		return name;
 	}
-	void SetName(std::string& name)
+	void SetName(std::string name)
 	{
 		this->name = name;
 	}
@@ -241,16 +251,24 @@ public:
 
 		thread.Start();
 
-		printf("Element (%s) Execute.\n", name.c_str());
+		//printf("Element (%s) Execute.\n", name.c_str());
 	}
 
 	virtual void Wake()
 	{
 		pthread_mutex_lock(&waitMutex);
-		pthread_cond_signal(&waitCondition);
+
+		canSleep = false;
+
+		//pthread_cond_signal(&waitCondition);
+		if (pthread_cond_broadcast(&waitCondition) != 0)
+		{
+			throw Exception("Element::Wake - pthread_cond_broadcast failed.");
+		}
+
 		pthread_mutex_unlock(&waitMutex);
 
-		printf("Element (%s) Wake.\n", name.c_str());
+		//printf("Element (%s) Wake.\n", name.c_str());
 	}
 
 	virtual void Terminate()
@@ -258,13 +276,13 @@ public:
 		if (status != ExecutionState::Executing)
 			throw InvalidOperationException();
 
-		status = ExecutionState::Terminating;
+		SetExecutionState(ExecutionState::Terminating);
 		Flush();
 
 		thread.Cancel();
 		thread.Join();
 
-		printf("Element (%s) Terminate.\n", name.c_str());
+		//printf("Element (%s) Terminate.\n", name.c_str());
 	}
 
 
@@ -272,6 +290,8 @@ public:
 	{
 		// TODO: Allow to abort change?
 		state = newState;
+
+		Wake();
 
 		printf("Element (%s) ChangeState.\n", name.c_str());
 	}

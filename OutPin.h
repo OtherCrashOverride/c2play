@@ -22,13 +22,13 @@ protected:
 
 
 
-
 public:
 	OutPin(ElementWPTR owner, PinInfoSPTR info);
 
 	virtual ~OutPin();
 
 	
+
 	bool TryGetAvailableBuffer(BufferSPTR* outValue);
 	void SendBuffer(BufferSPTR buffer);
 	virtual void Flush() override;

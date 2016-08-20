@@ -23,6 +23,8 @@
 		availableBuffers.Push(buffer);
 
 		element->Wake();
+
+		//printf("OutPin::AddAvailableBuffer (%s).\n", element->Name().c_str());
 	}
 
 	bool OutPin::TryGetAvailableBuffer(BufferSPTR* outValue)
@@ -76,7 +78,13 @@
 
 		OutPinSPTR thisPin = std::static_pointer_cast<OutPin>(shared_from_this());
 
-		this->sink->Disconnect(thisPin);
+		// If a pin is connected, disconnect it
+		if (this->sink)
+		{
+			this->sink->Disconnect(thisPin);
+		}
+
+		// Connect new pin
 		this->sink = sink;
 		this->sink->AcceptConnection(thisPin);
 

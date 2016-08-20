@@ -35,8 +35,9 @@ class MediaSourceElement : public Element
 	int audio_channels = 0;
 	OutPinSPTR audioPin;
 
-	std::map<int, OutPinSPTR> streamMap;
+	//std::map<int, OutPinSPTR> streamMap;
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
+	std::vector<OutPinSPTR> streamList;
 
 
 	static void PrintDictionary(AVDictionary* dictionary)
@@ -72,11 +73,16 @@ class MediaSourceElement : public Element
 			throw Exception("No streams found");
 		}
 
+		for (int i = 0; i < streamCount; ++i)
+		{
+			streamList.push_back(nullptr);
+		}
+
 		printf("Streams (count=%d):\n", streamCount);
 
 		for (int i = 0; i < streamCount; ++i)
 		{
-			streamMap[i] = nullptr;
+			//streamMap[i] = nullptr;
 
 
 			AVStream* streamPtr = ctx->streams[i];
@@ -105,11 +111,38 @@ class MediaSourceElement : public Element
 					info = std::make_shared<VideoPinInfo>();
 					info->FrameRate = frameRate;
 					
+					
+					ExtraDataSPTR ext = std::make_shared<ExtraData>();
+					info->ExtraData = ext;
+
+					// Copy codec extra data
+					unsigned char* src = codecCtxPtr->extradata;
+					int size = codecCtxPtr->extradata_size;
+
+					for (int j = 0; j < size; ++j)
+					{
+						ext->push_back(src[j]);
+					}
+					printf("MediaSourceElement: copied extra data (size=%d)\n", size);
+#if 1
+					printf("EXTRA DATA = ");
+
+					for (int j = 0; j < size; ++j)
+					{
+						printf("%02x ", src[j]);
+
+					}
+
+					printf("\n");
+#endif
+
 					ElementWPTR weakPtr = shared_from_this();
 					videoPin = std::make_shared<OutPin>(weakPtr, info);
+
 					AddOutputPin(videoPin);
 
-					streamMap[i] = videoPin;
+					//streamMap[i] = videoPin;
+					streamList[i] = videoPin;
 				}
 
 
@@ -125,28 +158,28 @@ class MediaSourceElement : public Element
 				case CODEC_ID_MPEG4:
 					printf("stream #%d - VIDEO/MPEG4\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg2;
+						info->StreamType = VideoStreamType::Mpeg4;
 					break;
 
 				case CODEC_ID_H264:
 				{
 					printf("stream #%d - VIDEO/H264\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg2;
+						info->StreamType = VideoStreamType::Avc;
 				}
 				break;
 
 				case AV_CODEC_ID_HEVC:
 					printf("stream #%d - VIDEO/HEVC\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg2;
+						info->StreamType = VideoStreamType::Hevc;
 					break;
 
 
 				case CODEC_ID_VC1:
 					printf("stream #%d - VIDEO/VC1\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg2;
+						info->StreamType = VideoStreamType::VC1;
 					break;
 
 				default:
@@ -357,21 +390,8 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 128; ++i)
 		{
-			//if (videoPin)
-			//{
-			//	AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
-			//	//AddAvailableBuffer(buffer);
-			//	videoPin->AcceptProcessedBuffer(buffer);
-			//}
-
-			//if (audioPin)
-			//{
-			//	AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
-			//	audioPin->AcceptProcessedBuffer(buffer);
-			//}
-
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
 			availableBuffers.Push(buffer);
 		}
@@ -407,47 +427,50 @@ public:
 		}
 	}
 
+	void RetireBuffer(AVPacketBufferSPTR buffer)
+	{
+		AVPacketBufferPtr newBuffer = std::make_shared<AVPacketBuffer>((void*)this);
+		availableBuffers.Push(newBuffer);
+
+		Wake();
+	}
 
 	virtual void DoWork() override
 	{
 		BufferPTR freeBuffer;
 
 		// Reap freed buffers
-		for (auto entry : streamMap)
+		for (auto& entry : streamList)
 		{
-			//if (videoPin)
-			//{
-			//	while (videoPin->TryGetAvailableBuffer(&freeBuffer))
-			//	{
-			//		availableBuffers.Push(freeBuffer);
-			//	}
-			//}
+			//printf("MediaElement (%s) DoWork checking pin for reaping.\n", Name().c_str());
 
-			//if (audioPin)
-			//{
-			//	while (audioPin->TryGetAvailableBuffer(&freeBuffer))
-			//	{
-			//		availableBuffers.Push(freeBuffer);
-			//	}
-			//}
-			OutPinSPTR pin = entry.second;
+			OutPinSPTR pin = entry;
 			if (pin)
 			{
+				//printf("MediaElement (%s) DoWork reaping buffers for pin.\n", Name().c_str());
+
 				while (pin->TryGetAvailableBuffer(&freeBuffer))
 				{
-					availableBuffers.Push(freeBuffer);
-					printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
+					//// Free the memory allocated to the buffers by libav
+					AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
+					//buffer->Reset();
+
+					//// Reuse the buffer
+					//availableBuffers.Push(freeBuffer);
+					////printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
+
+					RetireBuffer(buffer);
 				}
 			}
 		}
 
 
-		printf("MediaElement (%s) DoWork availableBuffers count=%d.\n", Name().c_str(), availableBuffers.Count());
+		//printf("MediaElement (%s) DoWork availableBuffers count=%d.\n", Name().c_str(), availableBuffers.Count());
 
 		// Process
 		while (availableBuffers.TryPop(&freeBuffer))
 		{
-			printf("MediaElement (%s) DoWork availableBuffers.TryPop=true.\n", Name().c_str());
+			//printf("MediaElement (%s) DoWork availableBuffers.TryPop=true.\n", Name().c_str());
 
 			AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
 
@@ -455,38 +478,49 @@ public:
 			{
 				// End of file
 				// TODO: Terminate? (return false)
+				
+				// Free the memory allocated to the buffers by libav
+				buffer->Reset();
 				availableBuffers.Push(buffer);
 				Wake();
 
 				usleep(1);
 
-				printf("MediaElement (%s) DoWork av_read_frame failed.\n", Name().c_str());
+				//printf("MediaElement (%s) DoWork av_read_frame failed.\n", Name().c_str());
 			}
 			else
 			{
 				AVPacket* pkt = buffer->GetAVPacket();
 
-				printf("MediaElement (%s) DoWork pin[%d] got AVPacket.\n", Name().c_str(), pkt->stream_index);
+				//printf("MediaElement (%s) DoWork pin[%d] got AVPacket.\n", Name().c_str(), pkt->stream_index);
 
 				if (pkt->pts != AV_NOPTS_VALUE)
 				{
 					AVStream* streamPtr = ctx->streams[pkt->stream_index];
 					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
+					buffer->SetTimeBase(streamPtr->time_base);
+
+					//printf("MediaSourceElement: Set buffer timestamp=%f\n", buffer->TimeStamp());
 				}
 
 				//AddFilledBuffer(buffer);
-				OutPinSPTR pin = streamMap[pkt->stream_index];
+				OutPinSPTR pin = streamList[pkt->stream_index];
 				if(pin)
 				{
 					pin->SendBuffer(freeBuffer);
-					printf("MediaElement (%s) DoWork pin[%d] buffer sent.\n", Name().c_str(), pkt->stream_index);
+					//printf("MediaElement (%s) DoWork pin[%d] buffer sent.\n", Name().c_str(), pkt->stream_index);
 				}
 				else
 				{
-					availableBuffers.Push(buffer);
-					Wake();
+					// Free the memory allocated to the buffers by libav
+					//buffer->Reset();
 
-					printf("MediaElement (%s) DoWork pin[%d] = nullptr.\n", Name().c_str(), pkt->stream_index);
+					//availableBuffers.Push(buffer);
+					//Wake();
+
+					RetireBuffer(buffer);
+
+					//printf("MediaElement (%s) DoWork pin[%d] = nullptr.\n", Name().c_str(), pkt->stream_index);
 				}
 			}
 		}

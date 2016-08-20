@@ -15,17 +15,46 @@ class InPin : public Pin
 	ThreadSafeQueue<BufferPTR> processedBuffers;
 
 
-	void ReturnAllBuffers();
 
 protected:
+	void ReturnAllBuffers();
 
 
 public:
+
+	OutPinSPTR Source()
+	{
+		return source;
+	}
+
+
+
 	InPin(ElementWPTR owner, PinInfoSPTR info);
 
 	virtual ~InPin();
 
 
+	// From this element
+	//ThreadSafeQueue<BufferPTR>* FilledBuffers()
+	//{
+	//	return &filledBuffers;
+	//}
+
+	bool TryGetFilledBuffer(BufferSPTR* buffer)
+	{
+		return filledBuffers.TryPop(buffer);
+	}
+
+	void PushProcessedBuffer(BufferSPTR buffer)
+	{
+		processedBuffers.Push(buffer);
+	}
+
+	void ReturnProcessedBuffers();
+
+
+
+	// From other element
 	void AcceptConnection(OutPinSPTR source);
 	void Disconnect(OutPinSPTR source);
 	
