@@ -217,13 +217,17 @@ class MediaSourceElement : public Element
 					audio_stream_idx = i;
 					audio_codec_id = codec_id;
 
-					//info = std::make_shared<AudioPinInfo>();
-					//// TODO: fill in info
+					info = std::make_shared<AudioPinInfo>();
+					info->Channels = codecCtxPtr->channels;
+					info->SampleRate = codecCtxPtr->sample_rate;
+					info->StreamType = AudioStreamType::Unknown;
 
-					//audioPin = std::make_shared<OutPin>(shared_from_this(), info);
-					//AddOutputPin(audioPin);
+					printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
 
-					//streamMap[i] = audioPin;
+					audioPin = std::make_shared<OutPin>(shared_from_this(), info);
+					AddOutputPin(audioPin);
+
+					streamList[i] = audioPin;
 				}
 
 
@@ -231,18 +235,26 @@ class MediaSourceElement : public Element
 				{
 				case CODEC_ID_MP3:
 					printf("stream #%d - AUDIO/MP3\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::Mpeg2Layer3;
 					break;
 
 				case CODEC_ID_AAC:
 					printf("stream #%d - AUDIO/AAC\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::Aac;
 					break;
 
 				case CODEC_ID_AC3:
 					printf("stream #%d - AUDIO/AC3\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::Ac3;
 					break;
 
 				case CODEC_ID_DTS:
 					printf("stream #%d - AUDIO/DTS\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::Dts;
 					break;
 
 					//case AVCodecID.CODEC_ID_WMAV2:
@@ -390,7 +402,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 128; ++i)
+		for (int i = 0; i < 64; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
 			availableBuffers.Push(buffer);
@@ -427,13 +439,13 @@ public:
 		}
 	}
 
-	void RetireBuffer(AVPacketBufferSPTR buffer)
-	{
-		AVPacketBufferPtr newBuffer = std::make_shared<AVPacketBuffer>((void*)this);
-		availableBuffers.Push(newBuffer);
+	//void RetireBuffer(AVPacketBufferSPTR buffer)
+	//{
+	//	AVPacketBufferPtr newBuffer = std::make_shared<AVPacketBuffer>((void*)this);
+	//	availableBuffers.Push(newBuffer);
 
-		Wake();
-	}
+	//	Wake();
+	//}
 
 	virtual void DoWork() override
 	{
@@ -453,13 +465,15 @@ public:
 				{
 					//// Free the memory allocated to the buffers by libav
 					AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
-					//buffer->Reset();
+					buffer->Reset();
 
-					//// Reuse the buffer
-					//availableBuffers.Push(freeBuffer);
+					// Reuse the buffer
+					availableBuffers.Push(freeBuffer);
+					Wake();
+
 					////printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
 
-					RetireBuffer(buffer);
+					//RetireBuffer(buffer);
 				}
 			}
 		}
@@ -513,12 +527,12 @@ public:
 				else
 				{
 					// Free the memory allocated to the buffers by libav
-					//buffer->Reset();
+					buffer->Reset();
 
-					//availableBuffers.Push(buffer);
-					//Wake();
+					availableBuffers.Push(buffer);
+					Wake();
 
-					RetireBuffer(buffer);
+					//RetireBuffer(buffer);
 
 					//printf("MediaElement (%s) DoWork pin[%d] = nullptr.\n", Name().c_str(), pkt->stream_index);
 				}

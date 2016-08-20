@@ -45,6 +45,11 @@ public:
 		return filledBuffers.TryPop(buffer);
 	}
 
+	bool TryPeekFilledBuffer(BufferSPTR* buffer)
+	{
+		return filledBuffers.TryPeek(buffer);
+	}
+
 	void PushProcessedBuffer(BufferSPTR buffer)
 	{
 		processedBuffers.Push(buffer);

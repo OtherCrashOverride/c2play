@@ -7,6 +7,332 @@
 #include <alsa/asoundlib.h>
 
 
+#include <vector>
+
+#include "Codec.h"
+#include "Element.h"
+#include "InPin.h"
+
+
+
+class AlsaAudioSinkElement : public Element
+{
+	InPinSPTR audioPin;
+	OutPinSPTR clockOutPin;
+
+	const int AUDIO_FRAME_BUFFERCOUNT = 4;
+	const double AUDIO_ADJUST_SECONDS = (0.0);
+	const char* device = "default"; //default   //plughw                     /* playback device */
+	const int alsa_channels = 2;
+
+	AVCodecID codec_id = AV_CODEC_ID_NONE;
+	unsigned int sampleRate = 0;
+	snd_pcm_t* handle = nullptr;
+	snd_pcm_sframes_t frames;
+	IClockSinkPtr clockSink;
+	double lastTimeStamp = -1;
+	bool canPause = true;
+	LockedQueue<PcmDataBufferPtr> pcmBuffers = LockedQueue<PcmDataBufferPtr>(128);
+	//pthread_t audioThread;
+	//Thread audThread = Thread(std::function<void()>(std::bind(&AlsaAudioSink::AudioThread, this)));
+
+	bool isFirstData = true;
+	AudioStreamType audioFormat = AudioStreamType::Unknown;
+	int streamChannels = 0;
+
+	bool isFirstBuffer = true;
+
+
+	void SetupAlsa(int frameSize)
+	{
+		if (sampleRate == 0)
+		{
+			throw ArgumentException();
+		}
+
+
+		int err;
+		if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) //SND_PCM_NONBLOCK
+		{
+			printf("snd_pcm_open error: %s\n", snd_strerror(err));
+			exit(EXIT_FAILURE);
+		}
+
+		printf("SetupAlsa: frameSize=%d\n", frameSize);
+
+
+		int FRAME_SIZE = frameSize; // 1536;
+		snd_pcm_hw_params_t *hw_params;
+		snd_pcm_sw_params_t *sw_params;
+		snd_pcm_uframes_t period_size = FRAME_SIZE * alsa_channels * 2;
+		snd_pcm_uframes_t buffer_size = AUDIO_FRAME_BUFFERCOUNT * period_size;
+
+
+		(snd_pcm_hw_params_malloc(&hw_params));
+		(snd_pcm_hw_params_any(handle, hw_params));
+		(snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED));
+		(snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16_LE));
+		(snd_pcm_hw_params_set_rate_near(handle, hw_params, &sampleRate, NULL));
+		(snd_pcm_hw_params_set_channels(handle, hw_params, alsa_channels));
+		(snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size));
+		(snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, NULL));
+		(snd_pcm_hw_params(handle, hw_params));
+
+		//if (snd_pcm_hw_params_can_pause(hw_params))
+		//{
+		//	printf("ALSA device can pause.\n");
+		//	canPause = true;
+		//}
+		//else
+		//{
+		//	printf("ALSA device can NOT pause.\n");
+		//	canPause = false;
+		//}
+
+		snd_pcm_hw_params_free(hw_params);
+
+
+		snd_pcm_sw_params_malloc(&sw_params);
+		snd_pcm_sw_params_current(handle, sw_params);
+		snd_pcm_sw_params_set_start_threshold(handle, sw_params, buffer_size - period_size);
+		snd_pcm_sw_params_set_avail_min(handle, sw_params, period_size);
+		snd_pcm_sw_params(handle, sw_params);
+		snd_pcm_sw_params_free(sw_params);
+
+
+		snd_pcm_prepare(handle);
+	}
+
+	void ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
+	{
+		PcmData* pcmData = pcmBuffer->GetPcmData();
+
+		if (isFirstBuffer)
+		{
+			SetupAlsa(pcmData->Samples);
+			isFirstBuffer = false;
+		}
+
+
+		short data[alsa_channels * pcmData->Samples];
+
+		if (pcmData->Format == PcmFormat::Int16Planes)
+		{
+			short* channels[alsa_channels] = { 0 };
+
+			channels[0] = (short*)pcmData->Channel[0];
+			channels[1] = (short*)pcmData->Channel[1];
+
+
+			int index = 0;
+			for (int i = 0; i < pcmData->Samples; ++i)
+			{
+				for (int j = 0; j < alsa_channels; ++j)
+				{
+					short* samples = channels[j];
+					data[index++] = samples[i];
+				}
+			}
+		}
+		else if (pcmData->Format == PcmFormat::Float32Planes)
+		{
+			if (alsa_channels != 2)
+			{
+				throw InvalidOperationException();
+			}
+
+
+			float* channels[alsa_channels] = { 0 };
+
+			channels[0] = (float*)pcmData->Channel[0];
+			channels[1] = (float*)pcmData->Channel[1];
+			channels[2] = (float*)pcmData->Channel[2];
+
+
+			int index = 0;
+			for (int i = 0; i < pcmData->Samples; ++i)
+			{
+				float* leftSamples = channels[0];
+				float* rightSamples = channels[1];
+				float* centerSamples = channels[2];
+
+				float left;
+				float right;
+				if (pcmData->Channels > 2)
+				{
+					// Downmix
+					const float CENTER_WEIGHT = 0.1666666666666667f;
+
+					left = (leftSamples[i] * (1.0f - CENTER_WEIGHT)) + (centerSamples[i] * CENTER_WEIGHT);
+					right = (rightSamples[i] * (1.0f - CENTER_WEIGHT)) + (centerSamples[i] * CENTER_WEIGHT);
+				}
+				else
+				{
+					left = leftSamples[i];
+					right = rightSamples[i];
+				}
+
+
+				if (left > 1.0f)
+					left = 1.0f;
+				else if (left < -1.0f)
+					left = -1.0f;
+
+				if (right > 1.0f)
+					right = 1.0f;
+				else if (right < -1.0f)
+					right = -1.0f;
+
+
+				data[index++] = (short)(left * 0x7fff);
+				data[index++] = (short)(right * 0x7fff);
+			}
+		}
+		else
+		{
+			throw NotSupportedException();
+		}
+
+
+		snd_pcm_wait(handle, 500);
+
+
+
+
+		// Send data to ALSA
+		snd_pcm_sframes_t frames = snd_pcm_writei(handle,
+			(void*)data,
+			pcmData->Samples);
+
+		if (frames < 0)
+		{
+			printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+
+			if (frames == -EPIPE)
+			{
+				snd_pcm_recover(handle, frames, 1);
+				printf("snd_pcm_recover\n");
+			}
+		}
+
+		// Update the reference clock
+		if (pcmBuffer->TimeStamp() < 0)
+		{
+			printf("WARNING: frameTimeStamp not set.\n");
+		}
+		else
+		{
+			//if (clockSink)
+			//{
+			//	double time = pcmBuffer->TimeStamp() + (pcmData->Samples / (double)sampleRate); // AUDIO_ADJUST_SECONDS;
+			//	clockSink->SetTimeStamp(time);
+			//}
+
+			BufferSPTR clockPinBuffer;
+			if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
+			{
+				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
+
+				//((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT + 1))
+				double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS; // +((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT));
+				clockDataBuffer->SetTimeStamp(time);
+
+				clockOutPin->SendBuffer(clockDataBuffer);
+
+				//printf("AmlAudioSinkElement: clock=%f\n", clockPinBuffer->TimeStamp());
+			}
+		}
+
+	}
+
+public:
+
+	virtual void Initialize() override
+	{
+		ClearOutputPins();
+		ClearInputPins();
+
+		// TODO: Pin format negotiation
+
+		{
+			// Create an audio pin
+			AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
+			info->StreamType = AudioStreamType::Pcm;
+			info->Channels = 2;
+			info->SampleRate = 0;
+
+
+			ElementWPTR weakPtr = shared_from_this();
+			audioPin = std::make_shared<InPin>(weakPtr, info);
+			AddInputPin(audioPin);
+		}
+
+		{
+			// Create the clock pin
+			PinInfoSPTR clockInfo = std::make_shared<PinInfo>(MediaCategory::Clock);
+
+			ElementWPTR weakPtr = shared_from_this();
+			clockOutPin = std::make_shared<OutPin>(weakPtr, clockInfo);
+			AddOutputPin(clockOutPin);
+
+
+			// Create a buffer
+			for (int i = 0; i < 1; ++i)
+			{
+				ClockDataBufferSPTR clockBuffer = std::make_shared<ClockDataBuffer>((void*)this);
+				clockOutPin->AcceptProcessedBuffer(clockBuffer);
+			}
+		}
+	}
+
+	virtual void DoWork() override
+	{
+		BufferSPTR buffer;
+		while (audioPin->TryGetFilledBuffer(&buffer))
+		{
+			if (isFirstData)
+			{
+				OutPinSPTR otherPin = audioPin->Source();
+				if (otherPin)
+				{
+					if (otherPin->Info()->Category() != MediaCategory::Audio)
+					{
+						throw InvalidOperationException("AlsaAudioSinkElement: Not connected to an audio pin.");
+					}
+
+					AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(otherPin->Info());
+					audioFormat = info->StreamType;
+					sampleRate = info->SampleRate;
+					streamChannels = info->Channels;
+
+					//SetupAlsa();
+
+					isFirstData = false;
+
+					printf("AlsaAudioSinkElement: isFirstData changed.\n");
+				}
+
+			}
+
+			PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
+
+			ProcessBuffer(pcmBuffer);
+
+			audioPin->PushProcessedBuffer(buffer);
+			audioPin->ReturnProcessedBuffers();
+		}
+
+		
+	}
+
+	virtual void ChangeState(MediaState oldState, MediaState newState) override
+	{
+		// TODO: pause audio
+
+		Element::ChangeState(oldState, newState);
+	}
+};
+
 
 
 class AlsaAudioSink : public Sink, public virtual IClockSource

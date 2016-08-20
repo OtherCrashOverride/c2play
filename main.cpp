@@ -41,6 +41,7 @@ extern "C"
 #include "AmlVideoSink.h"
 #include "InputDevice.h"
 #include "MediaSourceElement.h"
+#include "AudioCodec.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -940,24 +941,53 @@ int main(int argc, char** argv)
 
 
 	auto videoSink = std::make_shared<AmlVideoSinkElement>();
-	videoSink->SetName(std::string("Sink"));
+	videoSink->SetName(std::string("VideoSink"));
+	videoSink->SetLogEnabled(true);
 	videoSink->Execute();
+
+
+	auto audioCodec = std::make_shared<AudioCodecElement>();
+	audioCodec->SetName(std::string("AudioCodec"));
+	audioCodec->Execute();
+
+
+	//auto nullSink = std::make_shared<NullSink>();
+	//nullSink->SetName(std::string("NullSink"));
+	//nullSink->Execute();
+
+	
+	auto audioSink = std::make_shared<AlsaAudioSinkElement>();
+	audioSink->SetName(std::string("AudioSink"));
+	audioSink->Execute();
 
 
 	// Wait for the source to create the pins
 	source->WaitForExecutionState(ExecutionState::Executing);
 	videoSink->WaitForExecutionState(ExecutionState::Executing);
+	audioCodec->WaitForExecutionState(ExecutionState::Executing);
+	audioSink->WaitForExecutionState(ExecutionState::Executing);
 
+
+	// Connections
 	source->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(0));
-
+	source->Outputs()->Item(1)->Connect(audioCodec->Inputs()->Item(0));
 	
+	audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
+	
+	audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1)); //clock
+
+
+	// Start feeding data
+	audioSink->SetState(MediaState::Play);
+	//nullSink->SetState(MediaState::Play);
+	audioCodec->SetState(MediaState::Play);
 	videoSink->SetState(MediaState::Play);
 	source->SetState(MediaState::Play);
 	
 
 	while (true) //source->Status() == ExecutionState::Executing)
 	{
-		usleep(1);
+		usleep(5000);
 	}
 
 	return 0;

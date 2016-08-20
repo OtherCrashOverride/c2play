@@ -5,6 +5,7 @@
 #include "OutPin.h"
 
 #include <pthread.h>
+#include <sys/time.h>
 
 
 // Push model
@@ -118,6 +119,8 @@ class Element : public std::enable_shared_from_this<Element>
 	pthread_cond_t executionWaitCondition = PTHREAD_COND_INITIALIZER;
 	pthread_mutex_t executionWaitMutex = PTHREAD_MUTEX_INITIALIZER;
 
+	bool logEnabled = false;
+
 
 	void SetExecutionState(ExecutionState state)
 	{
@@ -141,7 +144,7 @@ protected:
 
 	virtual void DoWork()
 	{
-		//printf("Element (%s) DoWork exited.\n", name.c_str());
+		Log("Element (%s) DoWork exited.\n", name.c_str());
 	}
 
 	virtual void Flush()
@@ -149,12 +152,12 @@ protected:
 		inputs.Flush();
 		outputs.Flush();
 
-		//printf("Element (%s) Flush exited.\n", name.c_str());
+		Log("Element (%s) Flush exited.\n", name.c_str());
 	}
 
 	void InternalWorkThread()
 	{
-		//printf("Element (%s) InternalWorkThread entered.\n", name.c_str());
+		Log("Element (%s) InternalWorkThread entered.\n", name.c_str());
 
 		SetExecutionState(ExecutionState::Initializing);
 		Initialize();
@@ -167,7 +170,7 @@ protected:
 				DoWork();
 			}
 
-			//printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
+			Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
 
 			pthread_mutex_lock(&waitMutex);
 
@@ -180,14 +183,14 @@ protected:
 
 			pthread_mutex_unlock(&waitMutex);
 
-			//printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
+			Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
 
 
 		}
 
 		SetExecutionState(ExecutionState::WaitingForExecute);
 
-		//printf("Element (%s) InternalWorkThread exited.\n", name.c_str());
+		Log("Element (%s) InternalWorkThread exited.\n", name.c_str());
 	}
 
 
@@ -208,6 +211,7 @@ protected:
 	{
 		outputs.Clear();
 	}
+
 
 
 
@@ -236,6 +240,15 @@ public:
 		this->name = name;
 	}
 
+	bool LogEnabled() const
+	{
+		return logEnabled;
+	}
+	void SetLogEnabled(bool value)
+	{
+		logEnabled = value;
+	}
+
 
 
 	virtual ~Element()
@@ -251,7 +264,7 @@ public:
 
 		thread.Start();
 
-		//printf("Element (%s) Execute.\n", name.c_str());
+		Log("Element (%s) Execute.\n", name.c_str());
 	}
 
 	virtual void Wake()
@@ -268,7 +281,7 @@ public:
 
 		pthread_mutex_unlock(&waitMutex);
 
-		//printf("Element (%s) Wake.\n", name.c_str());
+		Log("Element (%s) Wake.\n", name.c_str());
 	}
 
 	virtual void Terminate()
@@ -282,7 +295,7 @@ public:
 		thread.Cancel();
 		thread.Join();
 
-		//printf("Element (%s) Terminate.\n", name.c_str());
+		Log("Element (%s) Terminate.\n", name.c_str());
 	}
 
 
@@ -293,7 +306,7 @@ public:
 
 		Wake();
 
-		printf("Element (%s) ChangeState.\n", name.c_str());
+		Log("Element (%s) ChangeState oldState=%d newState=%d.\n", name.c_str(), (int)oldState, (int)newState);
 	}
 
 	virtual MediaState State()
@@ -322,6 +335,27 @@ public:
 		
 		pthread_mutex_unlock(&executionWaitMutex);
 
+	}
+
+
+	// DEBUG
+	void Log(const char* message, ...)
+	{
+		if (logEnabled)
+		{
+			struct timeval tp;
+			gettimeofday(&tp, NULL);
+			double ms = tp.tv_sec + tp.tv_usec * 0.0001;
+
+			char text[1024];
+			sprintf(text, "[%s : %f] %s", Name().c_str(), ms, message);
+
+
+			va_list argptr;
+			va_start(argptr, message);
+			vfprintf(stderr, text, argptr);
+			va_end(argptr);
+		}
 	}
 };
 

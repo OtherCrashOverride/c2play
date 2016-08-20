@@ -75,6 +75,46 @@ public:
 };
 
 
+class ClockData
+{
+public:
+	double TimeStamp = -1;
+
+};
+
+class ClockDataBuffer : public GenericBuffer<ClockData*>
+{
+	ClockData clockData;
+
+public:
+	ClockDataBuffer(void* owner)
+		: GenericBuffer(owner, &clockData)
+	{
+	}
+
+
+	virtual void* DataPtr() override
+	{
+		return Payload();
+	}
+
+	virtual int DataLength() override
+	{
+		return sizeof(*Payload());
+	}
+
+	virtual double TimeStamp() override
+	{
+		return clockData.TimeStamp;
+	}
+	void SetTimeStamp(double value)
+	{
+		clockData.TimeStamp = value;
+	}
+};
+
+typedef std::shared_ptr<ClockDataBuffer> ClockDataBufferSPTR;
+
 
 enum class PcmFormat
 {
@@ -154,8 +194,13 @@ class PcmDataBuffer : public GenericBuffer<PcmData*>
 
 
 public:
-	PcmDataBuffer(PcmFormat format, int channels, int samples)
-		: GenericBuffer(&pcmData)
+	PcmDataBuffer( PcmFormat format, int channels, int samples)
+		: PcmDataBuffer(nullptr, format, channels, samples)
+	{
+	}
+
+	PcmDataBuffer(void* owner, PcmFormat format, int channels, int samples)
+		: GenericBuffer(owner, &pcmData)
 
 	{
 		//printf("PcmDataBuffer ctor: format=%d, channels=%d, samples=%d\n",
@@ -236,6 +281,7 @@ public:
 };
 
 typedef std::shared_ptr<PcmDataBuffer> PcmDataBufferPtr;
+typedef std::shared_ptr<PcmDataBuffer> PcmDataBufferSPTR;
 
 
 
@@ -403,7 +449,7 @@ public:
 };
 
 typedef std::shared_ptr<AVFrameBuffer> AVFrameBufferPtr;
-
+typedef std::shared_ptr<AVFrameBuffer> AVFrameBufferSPTR;
 
 
 //class PacketBuffer

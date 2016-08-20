@@ -58,6 +58,27 @@ public:
 		return result;
 	}
 
+	bool TryPeek(T* outValue)
+	{
+		bool result;
+
+		mutex.Lock();
+
+		if (queue.size() < 1)
+		{
+			result = false;
+		}
+		else
+		{
+			*outValue = queue.front();
+			result = true;
+		}
+
+		mutex.Unlock();
+
+		return result;
+	}
+
 	void Clear()
 	{
 		mutex.Lock();

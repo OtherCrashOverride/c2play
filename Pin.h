@@ -22,7 +22,8 @@ enum class MediaCategory
 	Unknown = 0,
 	Audio,
 	Video,
-	Subtitle
+	Subtitle,
+	Clock
 };
 
 enum class VideoStreamType
@@ -41,6 +42,7 @@ enum class AudioStreamType
 	Pcm,
 	Mpeg2Layer3,
 	Ac3,
+	Aac,
 	Dts
 };
 

@@ -6,6 +6,8 @@
 
 	void InPin::ReturnAllBuffers()
 	{
+		ElementSPTR parent = Owner().lock();
+
 		sourceMutex.Lock();
 
 		//if (!source)
@@ -26,6 +28,8 @@
 		}
 
 		sourceMutex.Unlock();
+
+		parent->Log("InPin::ReturnAllBuffers completed\n");
 	}
 
 
@@ -45,6 +49,8 @@
 
 	void InPin::ReturnProcessedBuffers()
 	{
+		ElementSPTR parent = Owner().lock();
+
 		sourceMutex.Lock();
 
 		//if (!source)
@@ -56,10 +62,13 @@
 			while (processedBuffers.TryPop(&buffer))
 			{
 				source->AcceptProcessedBuffer(buffer);
+				parent->Log("InPin::ReturnProcessedBuffers returned a buffer\n");
 			}
 		}
 
 		sourceMutex.Unlock();
+
+		parent->Log("InPin::ReturnProcessedBuffers completed\n");
 	}
 
 
@@ -74,6 +83,8 @@
 			throw InvalidOperationException("A source is already connected.");
 		}
 
+
+		ElementSPTR parent = Owner().lock();
 		//ElementSPTR parent = Owner().lock();
 		//if (parent->IsExecuting())
 		//	throw InvalidOperationException("Can not connect while executing.");
@@ -84,8 +95,9 @@
 		sourceMutex.Unlock();
 
 
-		ElementSPTR parent = Owner().lock();
 		parent->Wake();
+
+		parent->Log("InPin::AcceptConnection completed\n");
 	}
 
 	void InPin::Disconnect(OutPinSPTR source)
@@ -101,6 +113,8 @@
 		if (safeSource != source)
 			throw InvalidOperationException("Attempt to disconnect a source that is not connected.");
 
+
+		ElementSPTR parent = Owner().lock();
 		//ElementSPTR parent = Owner().lock();
 		//if (parent->IsExecuting())
 		//	throw InvalidOperationException("Can not disconnect while executing.");
@@ -111,6 +125,8 @@
 		sourceMutex.Lock();
 		source = nullptr;
 		sourceMutex.Unlock();
+
+		parent->Log("InPin::Disconnect completed\n");
 	}
 
 	void InPin::ReceiveBuffer(BufferSPTR buffer)
@@ -118,17 +134,28 @@
 		if (!buffer)
 			throw ArgumentNullException();
 
-		filledBuffers.Push(buffer);
 
 		ElementSPTR parent = Owner().lock();
+
+
+		filledBuffers.Push(buffer);
+
+
 		if (parent)
 		{
 			parent->Wake();
 		}
+
+		parent->Log("InPin::ReceiveBuffer completed\n");
 	}
 
 
 	void InPin::Flush()
 	{
+		ElementSPTR parent = Owner().lock();
+
+
 		ReturnAllBuffers();
+
+		parent->Log("InPin::Flush completed\n");
 	}
