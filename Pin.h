@@ -128,11 +128,16 @@ class Pin : public std::enable_shared_from_this<Pin>
 	PinDirection direction;
 	ElementWPTR owner;
 	PinInfoSPTR info;
+	std::string name;
 
 
 protected:
 	Pin(PinDirection direction, ElementWPTR owner, PinInfoSPTR info)
-		: direction(direction), owner(owner), info(info)
+		: Pin(direction, owner, info, "Pin")
+	{
+	}
+	Pin(PinDirection direction, ElementWPTR owner, PinInfoSPTR info, std::string name)
+		: direction(direction), owner(owner), info(info), name(name)
 	{
 		if (owner.expired())
 			throw ArgumentNullException();
@@ -158,6 +163,16 @@ public:
 	{
 		return info;
 	}
+
+	std::string Name() const
+	{
+		return name;
+	}
+	void SetName(std::string value)
+	{
+		name = value;
+	}
+
 
 
 	virtual ~Pin()

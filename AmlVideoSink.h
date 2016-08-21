@@ -46,6 +46,8 @@ class AmlVideoSinkElement : public Element
 	InPinSPTR clockInPin;
 	Thread clockThread = Thread(std::function<void()>(std::bind(&AmlVideoSinkElement::ClockWorkThread, this)));
 	unsigned long clockPts = 0;
+	unsigned long lastClockPts = 0;
+	
 
 
 
@@ -61,7 +63,7 @@ class AmlVideoSinkElement : public Element
 		codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
 		codecContext.has_video = 1;
 		codecContext.am_sysinfo.param = (void*)0; // (EXTERNAL_PTS | SYNC_OUTSIDE);
-		codecContext.am_sysinfo.rate = 96000.5 * (1.0 / frameRate);
+		codecContext.am_sysinfo.rate = 96000.5 / frameRate;
 		//codecContext.noblock = 1;
 
 		switch (videoFormat)
@@ -87,7 +89,7 @@ class AmlVideoSinkElement : public Element
 
 			codecContext.video_type = VFORMAT_H264_4K2K;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
-			//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
+			//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS);
 		}
 		break;
 
@@ -96,7 +98,7 @@ class AmlVideoSinkElement : public Element
 
 			codecContext.video_type = VFORMAT_HEVC;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
-			codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); // (EXTERNAL_PTS | SYNC_OUTSIDE);
+			//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); // (EXTERNAL_PTS | SYNC_OUTSIDE);
 			break;
 
 
@@ -136,12 +138,12 @@ class AmlVideoSinkElement : public Element
 
 		//codec_reset(&codecContext);
 
-		api = codec_set_syncenable(&codecContext, 1);
-		if (api != 0)
-		{
-			printf("codec_set_syncenable failed (%x).\n", api);
-			exit(1);
-		}
+		//api = codec_set_syncenable(&codecContext, 1);
+		//if (api != 0)
+		//{
+		//	printf("codec_set_syncenable failed (%x).\n", api);
+		//	exit(1);
+		//}
 
 		WriteToFile("/sys/class/graphics/fb0/blank", "1");
 		WriteToFile("/sys/module/amvdec_h265/parameters/dynamic_buf_num_margin", "16");
@@ -420,7 +422,7 @@ class AmlVideoSinkElement : public Element
 			api = codec_write(&codecContext, data + offset, length - offset);
 			if (api < 0)
 			{
-				printf("codec_write error: %x\n", api);
+				//printf("codec_write error: %x\n", api);
 				//codec_reset(&codecContext);
 			}
 			else
@@ -429,9 +431,49 @@ class AmlVideoSinkElement : public Element
 				//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
 			}
 
-			// The sleep is needed to prevent codec write errors
-			usleep(1);
+			// Testing has show that for 4K video, this loop can NOT sleep without
+			// disrupting playback
+			//usleep(1);
 		}
+
+
+		//if (clockPts > 0)
+		//{
+		//	int codecCall = codec_set_pcrscr(&codecContext, (int)clockPts);
+		//	if (codecCall != 0)
+		//	{
+		//		printf("codec_set_pcrscr failed.\n");
+		//	}
+
+		//	long delta = (long)pts - (long)clockPts;
+		//	Log("pts=%lu, clockPts=%lu (%ld=%f)\n", pts, clockPts, delta, delta / (double)PTS_FREQ);
+		//}
+	}
+
+	void ProcessClockBuffer(BufferSPTR buffer)
+	{
+		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+
+#if 1
+		int vpts = codec_get_vpts(&codecContext);
+		int drift = vpts - pts;
+
+		Log("Clock drift = %f\n", drift / (double)PTS_FREQ);
+#endif
+
+
+#if 1
+		clockPts = pts;
+#else
+		// Exponential smoothing
+		// https://en.wikipedia.org/wiki/Exponential_smoothing
+		const float SMOOTH_FACTOR = 0.95f;
+
+		clockPts = (SMOOTH_FACTOR * pts) + ((1.0f - SMOOTH_FACTOR) * lastClockPts);
+#endif
+
+		lastClockPts = clockPts;
+		//printf("AmlVideoSinkElement: clock=%f, pts=%lu, clockPts=%lu\n", buffer->TimeStamp(), pts, clockPts);
 
 
 		if (clockPts > 0)
@@ -443,30 +485,10 @@ class AmlVideoSinkElement : public Element
 			}
 
 			long delta = (long)pts - (long)clockPts;
-			Log("pts=%lu, clockPts=%lu (%ld=%f)\n", pts, clockPts, delta, delta / (double)PTS_FREQ);
+			Log("codec_set_pcrscr - pts=%lu, clockPts=%lu (%ld=%f)\n", pts, clockPts, delta, delta / (double)PTS_FREQ);
 		}
-	}
 
-	void ProcessClockBuffer(BufferSPTR buffer)
-	{
-		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
 
-#if 0
-		int vpts = codec_get_vpts(&codecContext);
-		int drift = vpts - pts;
-
-		printf("Clock drift = %f\n", drift / (double)PTS_FREQ);
-#endif
-
-		//int codecCall = codec_set_pcrscr(&codecContext, (int)pts);
-		//if (codecCall != 0)
-		//{
-		//	printf("codec_set_pcrscr failed.\n");
-		//}
-
-		clockPts = pts;
-
-		//printf("AmlVideoSinkElement: clock=%f (%lu)\n", buffer->TimeStamp(), pts);
 	}
 
 	void ClockWorkThread()
@@ -533,20 +555,20 @@ public:
 		{
 			AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
-			// Test if the codec has room for the buffer
-			buf_status status;
-			int api = codec_get_vbuf_state(&codecContext, &status);
-			if (api != 0)
-			{
-				printf("AmlVideoSinkElement: codec_get_vbuf_state failed.\n");
-			}
+			//// Test if the codec has room for the buffer
+			//buf_status status;
+			//int api = codec_get_vbuf_state(&codecContext, &status);
+			//if (api != 0)
+			//{
+			//	printf("AmlVideoSinkElement: codec_get_vbuf_state failed.\n");
+			//}
 
-			if (status.free_len < avPacketBuffer->GetAVPacket()->size)
-			{
-				//sleep(1);
-				Wake();
-				break;
-			}
+			//if (status.free_len < avPacketBuffer->GetAVPacket()->size)
+			//{
+			//	sleep(1);
+			//	Wake();
+			//	break;
+			//}
 
 
 			// Video

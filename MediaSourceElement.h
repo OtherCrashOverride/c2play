@@ -138,6 +138,7 @@ class MediaSourceElement : public Element
 
 					ElementWPTR weakPtr = shared_from_this();
 					videoPin = std::make_shared<OutPin>(weakPtr, info);
+					videoPin->SetName("Video");
 
 					AddOutputPin(videoPin);
 
@@ -225,6 +226,8 @@ class MediaSourceElement : public Element
 					printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
 
 					audioPin = std::make_shared<OutPin>(shared_from_this(), info);
+					audioPin->SetName("Audio");
+
 					AddOutputPin(audioPin);
 
 					streamList[i] = audioPin;
@@ -402,7 +405,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 64; ++i)
+		for (int i = 0; i < 128; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
 			availableBuffers.Push(buffer);
@@ -411,6 +414,7 @@ public:
 
 	virtual void Initialize() override
 	{
+		ClearInputPins();
 		ClearOutputPins();
 
 		SetupPins();

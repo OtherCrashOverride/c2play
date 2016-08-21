@@ -942,7 +942,7 @@ int main(int argc, char** argv)
 
 	auto videoSink = std::make_shared<AmlVideoSinkElement>();
 	videoSink->SetName(std::string("VideoSink"));
-	videoSink->SetLogEnabled(true);
+	//videoSink->SetLogEnabled(true);
 	videoSink->Execute();
 
 
@@ -987,7 +987,7 @@ int main(int argc, char** argv)
 
 	while (true) //source->Status() == ExecutionState::Executing)
 	{
-		usleep(5000);
+		usleep(1000);
 	}
 
 	return 0;

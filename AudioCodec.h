@@ -65,7 +65,7 @@ class AudioCodecElement : public Element
 	int streamChannels = 0;
 	int outputChannels = 0;
 	int sampleRate = 0;
-	AVFrameBufferSPTR frame;
+	AVFrameBufferSPTR frame = std::make_shared<AVFrameBuffer>(0);;
 
 
 	void SetupCodec()
@@ -119,43 +119,11 @@ class AudioCodecElement : public Element
 		{
 			throw Exception("could not open codec\n");
 		}
-
-
-
 	}
-
-	//void CreateAudioOutBuffers(PcmFormat format, int channels, int samples)
-	//{
-	//	// Create buffers
-	//	PcmDataBufferSPTR pcmDataBuffer = std::make_shared<PcmDataBuffer>(format, decoded_frame->channels, decoded_frame->nb_samples);
-	//}
 
 
 	void ProcessBuffer(AVPacketBufferSPTR buffer)
 	{
-		int totalAudioFrames = 0;
-		double pcrElapsedTime = 0;
-		double frameTimeStamp = -1.0;
-		MediaState lastState = State();
-		//snd_pcm_sframes_t framesWritten = 0;
-		//snd_pcm_uframes_t prev_avail;
-		//snd_htimestamp_t prev_tstamp;
-		double elapsedFrameTime = 0;
-		bool isFirstFrame = true;
-
-
-
-		//{
-		//	frameTimeStamp = buffer->TimeStamp();
-		//}
-
-
-		if (!frame)
-		{
-			//printf("Creating decoder frame.\n");
-			frame = std::make_shared<AVFrameBuffer>(buffer->TimeStamp());
-		}
-
 		AVPacket* pkt = buffer->GetAVPacket();
 		AVFrame* decoded_frame = frame->GetAVFrame();
 
@@ -177,25 +145,25 @@ class AudioCodecElement : public Element
 
 			if (len < 0)
 			{
+				// Report the error, but otherwise ignore it.				
 				char errmsg[1024] = { 0 };
 				av_strerror(len, errmsg, 1024);
 
-				fprintf(stderr, "Error while decoding: %s\n", errmsg);
-				throw Exception();
+				Log("Error while decoding: %s\n", errmsg);
+
+				break;
 			}
 			else
 			{
 				bytesDecoded += len;
 			}
 
-			//printf("decoded audio frame OK (len=%x, pkt.size=%x)\n", len, buffer->GetAVPacket()->size);
+			Log("decoded audio frame OK (len=%x, pkt.size=%x)\n", len, buffer->GetAVPacket()->size);
 
 
 			// Convert audio to ALSA format
 			if (got_frame)
 			{
-				//printf("Submitting Decoding frame to audio thread.\n");
-
 				// Copy out the PCM data because libav fills the frame
 				// with re-used data pointers.
 				PcmFormat format;
@@ -213,15 +181,30 @@ class AudioCodecElement : public Element
 					throw NotSupportedException();
 				}
 
-				PcmDataBufferSPTR pcmDataBuffer = std::make_shared<PcmDataBuffer>((void*)this, format, decoded_frame->channels, decoded_frame->nb_samples);
-				//pcmDataBuffer->SetTimeStamp(buffer->TimeStamp());
-				//decoded_frame->pts
-				pcmDataBuffer->SetTimeStamp(av_frame_get_best_effort_timestamp(frame->GetAVFrame()) * av_q2d(buffer->TimeBase()));
+				PcmDataBufferSPTR pcmDataBuffer = std::make_shared<PcmDataBuffer>(
+					(void*)this,
+					format,
+					decoded_frame->channels,
+					decoded_frame->nb_samples);
+				
+				pcmDataBuffer->SetTimeStamp(
+					av_frame_get_best_effort_timestamp(frame->GetAVFrame()) *
+					av_q2d(buffer->TimeBase()));
+				
 				//printf("decodec audio frame pts=%f\n", pcmDataBuffer->TimeStamp());
 
-				int leftChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_LEFT);
-				int rightChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_RIGHT);
-				int centerChannelIndex = av_get_channel_layout_channel_index(decoded_frame->channel_layout, AV_CH_FRONT_CENTER);
+
+				int leftChannelIndex = av_get_channel_layout_channel_index(
+					decoded_frame->channel_layout,
+					AV_CH_FRONT_LEFT);
+
+				int rightChannelIndex = av_get_channel_layout_channel_index(
+					decoded_frame->channel_layout,
+					AV_CH_FRONT_RIGHT);
+
+				int centerChannelIndex = av_get_channel_layout_channel_index(
+					decoded_frame->channel_layout,
+					AV_CH_FRONT_CENTER);
 
 				void* channels[3];
 				channels[0] = (void*)decoded_frame->data[leftChannelIndex];
