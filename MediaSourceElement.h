@@ -15,6 +15,24 @@ extern "C"
 }
 
 
+#include <memory>
+
+
+struct Chapter
+{
+	std::string Title;
+	double Start;
+	double End;
+};
+
+typedef std::vector<Chapter> ChapterList;
+typedef std::shared_ptr<ChapterList> ChapterListSPTR;
+
+
+#define NewSPTR std::make_shared
+#define NewUPTR std::make_unique
+
+
 class MediaSourceElement : public Element
 {
 	std::string url;
@@ -38,6 +56,8 @@ class MediaSourceElement : public Element
 	//std::map<int, OutPinSPTR> streamMap;
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
 	std::vector<OutPinSPTR> streamList;
+
+	ChapterListSPTR chapters = NewSPTR<ChapterList>();
 
 
 	static void PrintDictionary(AVDictionary* dictionary)
@@ -110,7 +130,9 @@ class MediaSourceElement : public Element
 
 					info = std::make_shared<VideoPinInfo>();
 					info->FrameRate = frameRate;
-					
+					info->Width = codecCtxPtr->width;
+					info->Height = codecCtxPtr->height;
+
 					
 					ExtraDataSPTR ext = std::make_shared<ExtraData>();
 					info->ExtraData = ext;
@@ -190,12 +212,15 @@ class MediaSourceElement : public Element
 					//throw NotSupportedException();
 				}
 
-				printf("\tfps=%f(%d/%d) ", frameRate,
-					streamPtr->avg_frame_rate.num,
-					streamPtr->avg_frame_rate.den);
 
 				int width = codecCtxPtr->width;
 				int height = codecCtxPtr->height;
+
+				printf("\tw=%d h=%d ", width, height);
+
+				printf("fps=%f(%d/%d) ", frameRate,
+					streamPtr->avg_frame_rate.num,
+					streamPtr->avg_frame_rate.den);
 
 				printf("SAR=(%d/%d) ",
 					streamPtr->sample_aspect_ratio.num,
@@ -258,6 +283,18 @@ class MediaSourceElement : public Element
 					printf("stream #%d - AUDIO/DTS\n", i);
 					if (info)
 						info->StreamType = AudioStreamType::Dts;
+					break;
+
+				case AV_CODEC_ID_WMAPRO:
+					printf("stream #%d - AUDIO/WMAPRO\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::WmaPro;
+					break;
+
+				case AV_CODEC_ID_TRUEHD:
+					printf("stream #%d - AUDIO/TRUEHD\n", i);
+					if (info)
+						info->StreamType = AudioStreamType::DolbyTrueHD;
 					break;
 
 					//case AVCodecID.CODEC_ID_WMAV2:
@@ -371,28 +408,40 @@ public:
 		//SetupPins();
 
 
-		//// Chapters
-		//int chapterCount = ctx->nb_chapters;
+		// Chapters
+		int chapterCount = ctx->nb_chapters;
 		//printf("Chapters (count=%d):\n", chapterCount);
 
-		//AVChapter** chapters = ctx->chapters;
-		//for (int i = 0; i < chapterCount; ++i)
-		//{
-		//	AVChapter* avChapter = chapters[i];
+		AVChapter** avChapters = ctx->chapters;
+		for (int i = 0; i < chapterCount; ++i)
+		{
+			AVChapter* avChapter = avChapters[i];
 
-		//	int index = i + 1;
-		//	double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
-		//	double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
-		//	AVDictionary* metadata = avChapter->metadata;
+			int index = i + 1;
+			double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
+			double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
+			AVDictionary* metadata = avChapter->metadata;
 
-		//	printf("Chapter #%02d: %f -> %f\n", index, start, end);
-		//	PrintDictionary(metadata);
+			//printf("Chapter #%02d: %f -> %f\n", index, start, end);
+			//PrintDictionary(metadata);
 
-		//	//if (optionChapter > -1 && optionChapter == index)
-		//	//{
-		//	//	optionStartPosition = start;
-		//	//}
-		//}
+			Chapter chapter;
+			chapter.Start = start;
+			chapter.End = end;
+
+			AVDictionaryEntry* titleEntry = av_dict_get(
+				metadata,
+				"title",
+				NULL,
+				0);
+
+			if (titleEntry)
+			{
+				chapter.Title = std::string(titleEntry->value);
+			}
+			
+			chapters->push_back(chapter);
+		}
 
 
 		//if (optionStartPosition > 0)
@@ -405,7 +454,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 128; ++i)
+		for (int i = 0; i < 64; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
 			availableBuffers.Push(buffer);

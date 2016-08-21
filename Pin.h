@@ -43,7 +43,9 @@ enum class AudioStreamType
 	Mpeg2Layer3,
 	Ac3,
 	Aac,
-	Dts
+	Dts,
+	WmaPro,
+	DolbyTrueHD
 };
 
 enum class SubtitleStreamType
@@ -84,6 +86,8 @@ public:
 	}
 
 	VideoStreamType StreamType = VideoStreamType::Unknown;
+	int Width;
+	int Height;
 	double FrameRate = 0;
 	ExtraDataSPTR ExtraData;
 };
@@ -185,11 +189,69 @@ public:
 	}
 };
 
-//typedef std::shared_ptr<Pin> PinSPTR;
-//
-//
-//class InPin;
-//typedef std::shared_ptr<InPin> InPinSPTR;
-//
-//class OutPin;
-//typedef std::shared_ptr<OutPin> OutPinSPTR;
+
+template <typename T>	// where T : PinSPTR
+class PinCollection
+{
+	friend class Element;
+
+	std::vector<T> pins;
+
+
+protected:
+
+	void Add(T value)
+	{
+		if (!value)
+			throw ArgumentNullException();
+
+		pins.push_back(value);
+	}
+
+	void Clear()
+	{
+		pins.clear();
+	}
+
+
+public:
+
+	PinCollection()
+	{
+	}
+
+
+	int Count() const
+	{
+		return pins.size();
+	}
+
+	T Item(int index)
+	{
+		if (index < 0 || index > pins.size())
+			throw ArgumentOutOfRangeException();
+
+		return pins[index];
+	}
+
+	void Flush()
+	{
+		for (auto pin : pins)
+		{
+			pin->Flush();
+		}
+	}
+
+	T FindFirst(MediaCategory category)
+	{
+		for (auto item : pins)
+		{
+			if (item->Info()->Category() == category)
+			{
+				return item;
+			}
+		}
+
+		return nullptr;
+	}
+};

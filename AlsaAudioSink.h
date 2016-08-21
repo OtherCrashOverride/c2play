@@ -188,6 +188,29 @@ class AlsaAudioSinkElement : public Element
 				data[index++] = (short)(right * 0x7fff);
 			}
 		}
+		else if (pcmData->Format == PcmFormat::Int32)
+		{
+			if (pcmData->Channels < 2)
+				throw NotSupportedException();
+
+			// Signed 32 bit, interleaved
+			int srcIndex = 0;
+			int dstIndex = 0;
+			
+			int* source = (int*)pcmData->Channel[0];
+			short* dest = data;
+			
+			for (int i = 0; i < pcmData->Samples; ++i)
+			{
+				int left = source[srcIndex++];
+				int right = source[srcIndex];
+
+				srcIndex += (pcmData->Channels - 2);
+
+				data[dstIndex++] = (short)(left >> 16);
+				data[dstIndex++] = (short)(right >> 16);
+			}
+		}
 		else
 		{
 			throw NotSupportedException();

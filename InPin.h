@@ -69,3 +69,41 @@ public:
 };
 
 //typedef std::shared_ptr<InPin> InPinSPTR;
+
+class InPinCollection : public PinCollection<InPinSPTR>
+{
+public:
+	InPinCollection()
+		: PinCollection()
+	{
+	}
+};
+
+
+template <typename T>	//where T:PinInfo
+class GenericInPin : public InPin
+{
+public:
+	GenericInPin(ElementWPTR owner, std::shared_ptr<T> info)
+		: InPin(owner, info)
+	{
+	}
+
+
+	std::shared_ptr<T> InfoAs() const
+	{
+		return std::static_pointer_cast<T>(Info());
+	}
+};
+
+
+class VideoInPin : public GenericInPin<VideoPinInfo>
+{
+public:
+	VideoInPin(ElementWPTR owner, VideoPinInfoSPTR info)
+		: GenericInPin(owner, info)
+	{
+	}
+};
+
+typedef std::shared_ptr<VideoInPin> VideoInPinSPTR;

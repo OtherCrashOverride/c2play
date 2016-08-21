@@ -25,73 +25,10 @@
 
 
 
-template <typename T>	// where T : Pin*
-class PinCollection
-{
-	friend class Element;
-
-	std::vector<T> pins;
-
-	
-protected:
-	
-	void Add(T value)
-	{
-		pins.push_back(value);
-	}
-
-	void Clear()
-	{
-		pins.clear();
-	}
 
 
-public:
-
-	PinCollection()
-	{
-	}
 
 
-	int Count() const
-	{
-		return pins.size();
-	}
-
-	T Item(int index)
-	{
-		if (index < 0 || index > pins.size())
-			throw ArgumentOutOfRangeException();
-
-		return pins[index];
-	}
-
-	void Flush()
-	{
-		for (auto pin : pins)
-		{
-			pin->Flush();
-		}
-	}
-};
-
-class InPinCollection : public PinCollection<InPinSPTR>
-{
-public:
-	InPinCollection()
-		: PinCollection()
-	{
-	}
-};
-
-class OutPinCollection : public PinCollection<OutPinSPTR>
-{
-public:
-	OutPinCollection()
-		: PinCollection()
-	{
-	}
-};
 
 
 enum class ExecutionState

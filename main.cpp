@@ -969,11 +969,22 @@ int main(int argc, char** argv)
 
 
 	// Connections
-	source->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(0));
-	source->Outputs()->Item(1)->Connect(audioCodec->Inputs()->Item(0));
-	
+	OutPinSPTR sourceVideoPin = std::static_pointer_cast<OutPin>(
+		source->Outputs()->FindFirst(MediaCategory::Video));
+	if (sourceVideoPin)
+	{
+		sourceVideoPin->Connect(videoSink->Inputs()->Item(0));
+	}
+
+	OutPinSPTR sourceAudioPin = std::static_pointer_cast<OutPin>(
+		source->Outputs()->FindFirst(MediaCategory::Audio));
+	if (sourceAudioPin)
+	{
+		sourceAudioPin->Connect(audioCodec->Inputs()->Item(0));
+	}
+
 	audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
-	
+		
 	audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1)); //clock
 
 

@@ -88,6 +88,14 @@ class AudioCodecElement : public Element
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_MP3);
 			break;
 
+		case AudioStreamType::WmaPro:
+			soundCodec = avcodec_find_decoder(AV_CODEC_ID_WMAPRO);
+			break;
+
+		case AudioStreamType::DolbyTrueHD:
+			soundCodec = avcodec_find_decoder(AV_CODEC_ID_TRUEHD);
+			break;
+
 		//case AudioStreamType::Pcm:
 
 		default:
@@ -167,17 +175,41 @@ class AudioCodecElement : public Element
 				// Copy out the PCM data because libav fills the frame
 				// with re-used data pointers.
 				PcmFormat format;
+				bool isInterleaved;
 				switch (decoded_frame->format)
 				{
+				case AV_SAMPLE_FMT_S16:
+					format = PcmFormat::Int16;
+					isInterleaved = true;
+					break;
+
+				case AV_SAMPLE_FMT_S32:
+					format = PcmFormat::Int32;
+					isInterleaved = true;
+					break;
+
+				case AV_SAMPLE_FMT_FLT:
+					format = PcmFormat::Float32;
+					isInterleaved = true;
+					break;
+
 				case AV_SAMPLE_FMT_S16P:
 					format = PcmFormat::Int16Planes;
+					isInterleaved = false;
+					break;
+
+				case AV_SAMPLE_FMT_S32P:
+					format = PcmFormat::Int32Planes;
+					isInterleaved = false;
 					break;
 
 				case AV_SAMPLE_FMT_FLTP:
 					format = PcmFormat::Float32Planes;
+					isInterleaved = false;
 					break;
 
 				default:
+					printf("Sample format (%d) not supported.\n", decoded_frame->format);
 					throw NotSupportedException();
 				}
 
@@ -193,36 +225,43 @@ class AudioCodecElement : public Element
 				
 				//printf("decodec audio frame pts=%f\n", pcmDataBuffer->TimeStamp());
 
-
-				int leftChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_LEFT);
-
-				int rightChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_RIGHT);
-
-				int centerChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_CENTER);
-
-				void* channels[3];
-				channels[0] = (void*)decoded_frame->data[leftChannelIndex];
-				channels[1] = (void*)decoded_frame->data[rightChannelIndex];
-
-				if (decoded_frame->channels > 2)
+				if (isInterleaved)
 				{
-					channels[2] = (void*)decoded_frame->data[centerChannelIndex];
+					PcmData* pcmData = pcmDataBuffer->GetPcmData();
+					memcpy(pcmData->Channel[0], decoded_frame->data[0], pcmData->ChannelSize);
 				}
 				else
 				{
-					channels[2] = nullptr;
-				}
+					int leftChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_LEFT);
 
-				for (int i = 0; i < decoded_frame->channels; ++i)
-				{
-					PcmData* pcmData = pcmDataBuffer->GetPcmData();
-					memcpy(pcmData->Channel[i], channels[i], pcmData->ChannelSize);
+					int rightChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_RIGHT);
+
+					int centerChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_CENTER);
+
+					void* channels[3];
+					channels[0] = (void*)decoded_frame->data[leftChannelIndex];
+					channels[1] = (void*)decoded_frame->data[rightChannelIndex];
+
+					if (decoded_frame->channels > 2)
+					{
+						channels[2] = (void*)decoded_frame->data[centerChannelIndex];
+					}
+					else
+					{
+						channels[2] = nullptr;
+					}
+
+					for (int i = 0; i < decoded_frame->channels; ++i)
+					{
+						PcmData* pcmData = pcmDataBuffer->GetPcmData();
+						memcpy(pcmData->Channel[i], channels[i], pcmData->ChannelSize);
+					}
 				}
 
 				audioOutPin->SendBuffer(pcmDataBuffer);

@@ -121,6 +121,8 @@ enum class PcmFormat
 	Unknown = 0,
 	Int16,
 	Int16Planes,
+	Int32,
+	Int32Planes,
 	Float32,
 	Float32Planes
 };
@@ -155,6 +157,8 @@ class PcmDataBuffer : public GenericBuffer<PcmData*>
 			sampleSize = 2;
 			break;
 
+		case PcmFormat::Int32:
+		case PcmFormat::Int32Planes:
 		case PcmFormat::Float32:
 		case PcmFormat::Float32Planes:
 			sampleSize = 4;
@@ -175,11 +179,13 @@ class PcmDataBuffer : public GenericBuffer<PcmData*>
 		switch (format)
 		{
 		case PcmFormat::Int16:
+		case PcmFormat::Int32:
 		case PcmFormat::Float32:		
 			result = true;
 			break;
 		
 		case PcmFormat::Int16Planes:
+		case PcmFormat::Int32Planes:
 		case PcmFormat::Float32Planes:
 			result = false;
 			break;
@@ -223,7 +229,7 @@ public:
 
 		if (IsInterleaved(format))
 		{
-			printf("PcmDataBuffer ctor: IsInterleaved=true\n");
+			//printf("PcmDataBuffer ctor: IsInterleaved=true\n");
 
 			int size = samples * GetSampleSize(format) * channels;
 			pcmData.Channel[0] = malloc(size);

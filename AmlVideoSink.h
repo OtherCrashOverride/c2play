@@ -26,7 +26,7 @@ class AmlVideoSinkElement : public Element
 
 	std::vector<unsigned char> videoExtraData;
 	//AVCodecID codec_id;
-	double frameRate;
+	//double frameRate;
 	codec_para_t codecContext;
 	//void* extraData = nullptr;
 	//int extraDataSize = 0;
@@ -39,7 +39,7 @@ class AmlVideoSinkElement : public Element
 	long estimatedNextPts = 0;
 
 	VideoStreamType videoFormat = VideoStreamType::Unknown;
-	InPinSPTR videoPin;
+	VideoInPinSPTR videoPin;
 	bool isFirstData = true;
 	std::vector<unsigned char> extraData;
 
@@ -58,6 +58,11 @@ class AmlVideoSinkElement : public Element
 
 	void SetupHardware()
 	{
+		int width = videoPin->InfoAs()->Width;
+		int height = videoPin->InfoAs()->Height;
+		double frameRate = videoPin->InfoAs()->FrameRate;
+
+
 		memset(&codecContext, 0, sizeof(codecContext));
 
 		codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
@@ -85,11 +90,21 @@ class AmlVideoSinkElement : public Element
 
 		case VideoStreamType::Avc:
 		{
-			printf("AmlVideoSink - VIDEO/H264\n");
+			if (width > 1920 ||	height > 1080)
+			{
+				printf("AmlVideoSink - VIDEO/H264 (4K)\n");
 
-			codecContext.video_type = VFORMAT_H264_4K2K;
-			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
-			//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS);
+				codecContext.video_type = VFORMAT_H264_4K2K;
+				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
+				//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS);
+			}
+			else
+			{
+				printf("AmlVideoSink - VIDEO/H264\n");
+
+				codecContext.video_type = VFORMAT_H264;
+				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;
+			}
 		}
 		break;
 
@@ -102,21 +117,16 @@ class AmlVideoSinkElement : public Element
 			break;
 
 
-			//case CODEC_ID_VC1:
-			//	printf("stream #%d - VIDEO/VC1\n", i);
-			//	break;
+		case VideoStreamType::VC1:
+			printf("AmlVideoSink - VIDEO/VC1\n");
+			codecContext.video_type = VFORMAT_VC1;
+			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_WVC1;
+			break;
 
 		default:
 			printf("AmlVideoSink - VIDEO/UNKNOWN(%d)\n", (int)videoFormat);
 			throw NotSupportedException();
 		}
-
-		printf("\tfps=%f ", frameRate);
-
-		printf("am_sysinfo.rate=%d ",
-			codecContext.am_sysinfo.rate);
-
-		printf("\n");
 
 
 		// Rotation
@@ -125,6 +135,18 @@ class AmlVideoSinkElement : public Element
 		//codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x30000); //270
 
 
+		// Debug info
+		printf("\tw=%d h=%d ", width, height);
+
+		printf("fps=%f ", frameRate);
+
+		printf("am_sysinfo.rate=%d ",
+			codecContext.am_sysinfo.rate);
+
+		printf("\n");
+
+
+		// Intialize the hardware codec
 		int api = codec_init(&codecContext);
 		if (api != 0)
 		{
@@ -525,7 +547,7 @@ public:
 			info->FrameRate = 0;
 
 			ElementWPTR weakPtr = shared_from_this();
-			videoPin = std::make_shared<InPin>(weakPtr, info);
+			videoPin = std::make_shared<VideoInPin>(weakPtr, info);
 			AddInputPin(videoPin);
 		}
 
@@ -586,8 +608,16 @@ public:
 
 						VideoPinInfoSPTR info = std::static_pointer_cast<VideoPinInfo>(otherPin->Info());
 						videoFormat = info->StreamType;
-						frameRate = info->FrameRate;
+						//frameRate = info->FrameRate;
 						extraData = *(info->ExtraData);
+
+						// TODO: This information should be copied
+						//       as part of pin negotiation
+						videoPin->InfoAs()->Width = info->Width;
+						videoPin->InfoAs()->Height = info->Height;
+						videoPin->InfoAs()->FrameRate = info->FrameRate;
+						videoPin->InfoAs()->ExtraData = info->ExtraData;
+
 
 						printf("AmlVideoSink: ExtraData size=%ld\n", extraData.size());
 

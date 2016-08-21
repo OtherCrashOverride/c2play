@@ -39,3 +39,13 @@ public:
 };
 
 //typedef std::shared_ptr<OutPin> OutPinSPTR;
+
+
+class OutPinCollection : public PinCollection<OutPinSPTR>
+{
+public:
+	OutPinCollection()
+		: PinCollection()
+	{
+	}
+};
