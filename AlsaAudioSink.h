@@ -337,6 +337,7 @@ public:
 				case BufferTypeEnum::Marker:
 				{
 					MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+					printf("AlsaAudioSink: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
 
 					switch (markerBuffer->Marker())
 					{

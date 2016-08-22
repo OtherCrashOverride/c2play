@@ -998,18 +998,30 @@ int main(int argc, char** argv)
 
 
 
+	// Wait for playback to finish
+	//source->WaitForExecutionState(ExecutionStateEnum::Idle);
+	//videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+	//audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
+	
+	if (audioSink)
+	{
+		audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+		printf("MAIN: audioSink idle.\n");
+	}
 
-		source->WaitForExecutionState(ExecutionStateEnum::Idle);
+	if (videoSink)
+	{
 		videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-		audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
+		printf("MAIN: videoSink idle.\n");
+	}
 
-		printf("MAIN: IDLE\n");
+	printf("MAIN: Playback finished.\n");
 
 
-		while (true)
-		{
-			usleep(1000);
-		}
+	while (true)
+	{
+		usleep(1000);
+	}
 
 	return 0;
 }
