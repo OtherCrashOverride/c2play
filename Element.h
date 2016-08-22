@@ -1,16 +1,18 @@
 #pragma once
 
-#include "Codec.h"
-#include "InPin.h"
-#include "OutPin.h"
 
 #include <pthread.h>
 #include <sys/time.h>
 
+#include "Codec.h"
+#include "InPin.h"
+#include "OutPin.h"
+#include "WaitCondition.h"
+
 
 // Push model
 //
-// source.Executre()
+// source.Execute()
 // source.Connect(sink)
 //										->	sink.AcceptConnection(source)
 //
@@ -23,21 +25,28 @@
 //
 
 
+// Execution Flow:
+//	-->	 Waiting
+//	|	    |
+//	|	    V
+//	|   Initializing
+//	|	    |
+//	|	    V
+//	|	Executing  <-->  Idle
+//	|	    |             |
+//	|	    V             |
+//	---	Terminated <-------
 
 
-
-
-
-
-
-
-enum class ExecutionState
+enum class ExecutionStateEnum
 {
 	WaitingForExecute = 0,
 	Initializing,
 	Executing,
+	Idle,
 	Terminating
 };
+
 
 class Element : public std::enable_shared_from_this<Element>
 {
@@ -45,7 +54,7 @@ class Element : public std::enable_shared_from_this<Element>
 	MediaState state = MediaState::Pause;
 	InPinCollection inputs;
 	OutPinCollection outputs;
-	ExecutionState status = ExecutionState::WaitingForExecute;
+	ExecutionStateEnum executionState = ExecutionStateEnum::WaitingForExecute;
 
 	pthread_cond_t waitCondition = PTHREAD_COND_INITIALIZER;
 	pthread_mutex_t waitMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -53,22 +62,78 @@ class Element : public std::enable_shared_from_this<Element>
 
 	std::string name = "Element";
 
-	pthread_cond_t executionWaitCondition = PTHREAD_COND_INITIALIZER;
-	pthread_mutex_t executionWaitMutex = PTHREAD_MUTEX_INITIALIZER;
+	//pthread_cond_t executionWaitCondition = PTHREAD_COND_INITIALIZER;
+	//pthread_mutex_t executionWaitMutex = PTHREAD_MUTEX_INITIALIZER;
 
 	bool logEnabled = false;
 
+	WaitCondition executionStateWaitCondition;
 
-	void SetExecutionState(ExecutionState state)
-	{
-		status = state;
 
-		pthread_mutex_lock(&executionWaitMutex);
-		pthread_cond_signal(&executionWaitCondition);
-		pthread_mutex_unlock(&executionWaitMutex);
-	}
 
 protected:
+
+	void SetExecutionState(ExecutionStateEnum newState)
+	{
+		ExecutionStateEnum current = executionState;
+
+		if (newState != current)
+		{
+			switch (current)
+			{
+			case ExecutionStateEnum::WaitingForExecute:
+				if (newState != ExecutionStateEnum::Initializing)
+				{
+					throw InvalidOperationException();
+				}
+				break;
+
+			case ExecutionStateEnum::Initializing:
+				if (newState != ExecutionStateEnum::Executing)
+				{
+					throw InvalidOperationException();
+				}
+				break;
+
+			case ExecutionStateEnum::Executing:
+				if (newState != ExecutionStateEnum::Idle &&
+					newState != ExecutionStateEnum::Terminating)
+				{
+					throw InvalidOperationException();
+				}
+				break;
+
+			case ExecutionStateEnum::Idle:
+				if (newState != ExecutionStateEnum::Executing &&
+					newState != ExecutionStateEnum::Terminating)
+				{
+					throw InvalidOperationException();
+				}
+				break;
+
+			case ExecutionStateEnum::Terminating:
+				throw InvalidOperationException();
+				break;
+
+			default:
+				break;
+			}
+
+
+			//pthread_mutex_lock(&executionWaitMutex);
+
+			executionState = newState;
+
+			//pthread_cond_signal(&executionWaitCondition);
+
+			//pthread_mutex_unlock(&executionWaitMutex);
+
+			executionStateWaitCondition.Signal();
+		}
+	}
+
+
+
 	Element()
 	{
 	}
@@ -96,38 +161,51 @@ protected:
 	{
 		Log("Element (%s) InternalWorkThread entered.\n", name.c_str());
 
-		SetExecutionState(ExecutionState::Initializing);
+		SetExecutionState(ExecutionStateEnum::Initializing);
 		Initialize();
 
-		SetExecutionState(ExecutionState::Executing);
-		while (status == ExecutionState::Executing)
-		{
-			if (state == MediaState::Play)
+		SetExecutionState(ExecutionStateEnum::Executing);
+		while (executionState == ExecutionStateEnum::Executing)
+		{			
+			while (executionState == ExecutionStateEnum::Executing)
 			{
-				DoWork();
+				if (state == MediaState::Play)
+				{
+					DoWork();
+				}
+
+
+				if (executionState == ExecutionStateEnum::Executing)
+				{
+					Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
+
+					pthread_mutex_lock(&waitMutex);
+
+					while (canSleep)
+					{
+						pthread_cond_wait(&waitCondition, &waitMutex);
+					}
+
+					canSleep = true;
+
+					pthread_mutex_unlock(&waitMutex);
+
+					Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
+				}
 			}
 
-			Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
-
-			pthread_mutex_lock(&waitMutex);
-
-			while (canSleep)
+			// Idle State
+			while (executionState == ExecutionStateEnum::Idle)
 			{
-				pthread_cond_wait(&waitCondition, &waitMutex);
+				executionStateWaitCondition.WaitForSignal();
 			}
-
-			canSleep = true;
-
-			pthread_mutex_unlock(&waitMutex);
-
-			Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
-
-
 		}
 
-		SetExecutionState(ExecutionState::WaitingForExecute);
 
-		Log("Element (%s) InternalWorkThread exited.\n", name.c_str());
+		// Termination
+		SetExecutionState(ExecutionStateEnum::WaitingForExecute);
+
+		printf("Element (%s) InternalWorkThread exited.\n", name.c_str());
 	}
 
 
@@ -163,9 +241,9 @@ public:
 		return &outputs;
 	}
 
-	ExecutionState Status() const
+	ExecutionStateEnum ExecutionState() const
 	{
-		return status;
+		return executionState;
 	}
 
 	std::string Name() const
@@ -186,6 +264,18 @@ public:
 		logEnabled = value;
 	}
 
+	virtual MediaState State()
+	{
+		return state;
+	}
+	virtual void SetState(MediaState value)
+	{
+		if (state != value)
+		{
+			ChangeState(state, value);
+		}
+	}
+
 
 
 	virtual ~Element()
@@ -196,10 +286,20 @@ public:
 
 	virtual void Execute()
 	{
-		if (status != ExecutionState::WaitingForExecute)
-			throw InvalidOperationException("status != ExecutionState::WaitingForExecute");
+		if (executionState != ExecutionStateEnum::WaitingForExecute &&
+			executionState != ExecutionStateEnum::Idle)
+		{
+			throw InvalidOperationException();
+		}
 
-		thread.Start();
+		if (executionState == ExecutionStateEnum::WaitingForExecute)
+		{
+			thread.Start();
+		}
+		else
+		{
+			SetExecutionState(ExecutionStateEnum::Executing);
+		}
 
 		Log("Element (%s) Execute.\n", name.c_str());
 	}
@@ -223,10 +323,13 @@ public:
 
 	virtual void Terminate()
 	{
-		if (status != ExecutionState::Executing)
+		if (executionState != ExecutionStateEnum::Executing &&
+			executionState != ExecutionStateEnum::Idle)
+		{
 			throw InvalidOperationException();
+		}
 
-		SetExecutionState(ExecutionState::Terminating);
+		SetExecutionState(ExecutionStateEnum::Terminating);
 		Flush();
 
 		thread.Cancel();
@@ -246,32 +349,23 @@ public:
 		Log("Element (%s) ChangeState oldState=%d newState=%d.\n", name.c_str(), (int)oldState, (int)newState);
 	}
 
-	virtual MediaState State()
+
+
+	void WaitForExecutionState(ExecutionStateEnum state)
 	{
-		return state;
-	}
-	virtual void SetState(MediaState value)
-	{
-		if (state != value)
+		//pthread_mutex_lock(&executionWaitMutex);
+		//
+		//while (status != state)
+		//{
+		//	pthread_cond_wait(&executionWaitCondition, &executionWaitMutex);
+		//}
+		//
+		//pthread_mutex_unlock(&executionWaitMutex);
+
+		while (executionState != state)
 		{
-			//MediaState oldState = state;
-			//state = value;
-
-			ChangeState(state, value);
+			executionStateWaitCondition.WaitForSignal();
 		}
-	}
-
-	void WaitForExecutionState(ExecutionState state)
-	{
-		pthread_mutex_lock(&executionWaitMutex);
-		
-		while (status != state)
-		{
-			pthread_cond_wait(&executionWaitCondition, &executionWaitMutex);
-		}
-		
-		pthread_mutex_unlock(&executionWaitMutex);
-
 	}
 
 

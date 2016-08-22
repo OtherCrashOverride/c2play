@@ -23,7 +23,7 @@ public:
 		ClearInputPins();
 
 		// Create a pin
-		PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategory::Unknown);
+		PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Unknown);
 
 		ElementWPTR weakPtr = shared_from_this();
 		pin = std::make_shared<InPin>(weakPtr, info);
@@ -60,39 +60,39 @@ class AudioCodecElement : public Element
 	AVCodec* soundCodec = nullptr;
 	AVCodecContext* soundCodecContext = nullptr;
 	bool isFirstData = true;
-	AudioStreamType audioFormat = AudioStreamType::Unknown;
+	AudioFormatEnum audioFormat = AudioFormatEnum::Unknown;
 
 	int streamChannels = 0;
 	int outputChannels = 0;
 	int sampleRate = 0;
-	AVFrameBufferSPTR frame = std::make_shared<AVFrameBuffer>(0);;
+	AVFrameBufferSPTR frame; // = std::make_shared<AVFrameBuffer>(shared_from_this());
 
 
 	void SetupCodec()
 	{
 		switch (audioFormat)
 		{				
-		case AudioStreamType::Aac:
+		case AudioFormatEnum::Aac:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_AAC);
 			break;
 
-		case AudioStreamType::Ac3:
+		case AudioFormatEnum::Ac3:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_AC3);
 			break;
 
-		case AudioStreamType::Dts:
+		case AudioFormatEnum::Dts:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_DTS);
 			break;
 
-		case AudioStreamType::Mpeg2Layer3:
+		case AudioFormatEnum::Mpeg2Layer3:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_MP3);
 			break;
 
-		case AudioStreamType::WmaPro:
+		case AudioFormatEnum::WmaPro:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_WMAPRO);
 			break;
 
-		case AudioStreamType::DolbyTrueHD:
+		case AudioFormatEnum::DolbyTrueHD:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_TRUEHD);
 			break;
 
@@ -214,7 +214,7 @@ class AudioCodecElement : public Element
 				}
 
 				PcmDataBufferSPTR pcmDataBuffer = std::make_shared<PcmDataBuffer>(
-					(void*)this,
+					shared_from_this(),
 					format,
 					decoded_frame->channels,
 					decoded_frame->nb_samples);
@@ -282,7 +282,7 @@ public:
 		{
 			// Create an audio in pin
 			AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
-			info->StreamType = AudioStreamType::Unknown;
+			info->Format = AudioFormatEnum::Unknown;
 			info->Channels = 0;
 			info->SampleRate = 0;
 
@@ -294,7 +294,7 @@ public:
 		{
 			// Create an audio out pin
 			outInfo = std::make_shared<AudioPinInfo>();
-			outInfo->StreamType = AudioStreamType::Unknown;
+			outInfo->Format = AudioFormatEnum::Unknown;
 			outInfo->Channels = 0;
 			outInfo->SampleRate = 0;
 
@@ -302,6 +302,10 @@ public:
 			audioOutPin = std::make_shared<OutPin>(weakPtr, outInfo);
 			AddOutputPin(audioOutPin);
 		}
+
+
+		// Create buffer(s)
+		frame = std::make_shared<AVFrameBuffer>(shared_from_this());
 	}
 
 	virtual void DoWork() override
@@ -325,13 +329,13 @@ public:
 				OutPinSPTR otherPin = audioInPin->Source();
 				if (otherPin)
 				{
-					if (otherPin->Info()->Category() != MediaCategory::Audio)
+					if (otherPin->Info()->Category() != MediaCategoryEnum::Audio)
 					{
 						throw InvalidOperationException("AlsaAudioSinkElement: Not connected to an audio pin.");
 					}
 
 					AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(otherPin->Info());
-					audioFormat = info->StreamType;
+					audioFormat = info->Format;
 					sampleRate = info->SampleRate;
 					streamChannels = info->Channels;
 
@@ -346,13 +350,46 @@ public:
 				}
 			}
 
+			switch (buffer->Type())
+			{
+				case BufferTypeEnum::Marker:
+				{
+					MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
 
-			AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+					switch (markerBuffer->Marker())
+					{
+					case MarkerEnum::EndOfStream:
+						SetExecutionState(ExecutionStateEnum::Idle);
+						break;
 
-			ProcessBuffer(avPacketBuffer);
+					case MarkerEnum::Play:						
+						SetState(MediaState::Play);
+						break;
+
+					case MarkerEnum::Pause:
+						SetState(MediaState::Pause);
+						break;
+
+					default:
+						// ignore unknown 
+						break;
+					}
+
+					break;
+				}
+
+				case BufferTypeEnum::AVPacket:
+				{
+					AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+
+					ProcessBuffer(avPacketBuffer);
+
+					break;
+				}
+			}
 
 			audioInPin->PushProcessedBuffer(buffer);
-			audioInPin->ReturnProcessedBuffers();
+			audioInPin->ReturnProcessedBuffers();			
 		}
 
 		

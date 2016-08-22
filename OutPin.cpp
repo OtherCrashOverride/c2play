@@ -4,7 +4,7 @@
 #include "Element.h"
 
 	OutPin::OutPin(ElementWPTR owner, PinInfoSPTR info)
-		: Pin(PinDirection::Out, owner, info)
+		: Pin(PinDirectionEnum::Out, owner, info)
 	{
 	}
 
@@ -15,7 +15,7 @@
 			throw ArgumentNullException();
 
 		ElementSPTR element = Owner().lock();
-		if (buffer->Owner() != (void*)element.get())
+		if (buffer->Owner() != element)
 		{
 			throw InvalidOperationException("The buffer being added does not belong to this object.");
 		}

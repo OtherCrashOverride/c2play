@@ -175,40 +175,40 @@ class MediaSourceElement : public Element
 				case CODEC_ID_MPEG2VIDEO:
 					printf("stream #%d - VIDEO/MPEG2\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg2;
+						info->Format = VideoFormatEnum::Mpeg2;
 					break;
 
 				case CODEC_ID_MPEG4:
 					printf("stream #%d - VIDEO/MPEG4\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Mpeg4;
+						info->Format = VideoFormatEnum::Mpeg4;
 					break;
 
 				case CODEC_ID_H264:
 				{
 					printf("stream #%d - VIDEO/H264\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Avc;
+						info->Format = VideoFormatEnum::Avc;
 				}
 				break;
 
 				case AV_CODEC_ID_HEVC:
 					printf("stream #%d - VIDEO/HEVC\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::Hevc;
+						info->Format = VideoFormatEnum::Hevc;
 					break;
 
 
 				case CODEC_ID_VC1:
 					printf("stream #%d - VIDEO/VC1\n", i);
 					if (info)
-						info->StreamType = VideoStreamType::VC1;
+						info->Format = VideoFormatEnum::VC1;
 					break;
 
 				default:
 					printf("stream #%d - VIDEO/UNKNOWN(%x)\n", i, codec_id);
 					if (info)
-						info->StreamType = VideoStreamType::Unknown;
+						info->Format = VideoFormatEnum::Unknown;
 					//throw NotSupportedException();
 				}
 
@@ -246,7 +246,7 @@ class MediaSourceElement : public Element
 					info = std::make_shared<AudioPinInfo>();
 					info->Channels = codecCtxPtr->channels;
 					info->SampleRate = codecCtxPtr->sample_rate;
-					info->StreamType = AudioStreamType::Unknown;
+					info->Format = AudioFormatEnum::Unknown;
 
 					printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
 
@@ -264,37 +264,37 @@ class MediaSourceElement : public Element
 				case CODEC_ID_MP3:
 					printf("stream #%d - AUDIO/MP3\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::Mpeg2Layer3;
+						info->Format = AudioFormatEnum::Mpeg2Layer3;
 					break;
 
 				case CODEC_ID_AAC:
 					printf("stream #%d - AUDIO/AAC\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::Aac;
+						info->Format = AudioFormatEnum::Aac;
 					break;
 
 				case CODEC_ID_AC3:
 					printf("stream #%d - AUDIO/AC3\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::Ac3;
+						info->Format = AudioFormatEnum::Ac3;
 					break;
 
 				case CODEC_ID_DTS:
 					printf("stream #%d - AUDIO/DTS\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::Dts;
+						info->Format = AudioFormatEnum::Dts;
 					break;
 
 				case AV_CODEC_ID_WMAPRO:
 					printf("stream #%d - AUDIO/WMAPRO\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::WmaPro;
+						info->Format = AudioFormatEnum::WmaPro;
 					break;
 
 				case AV_CODEC_ID_TRUEHD:
 					printf("stream #%d - AUDIO/TRUEHD\n", i);
 					if (info)
-						info->StreamType = AudioStreamType::DolbyTrueHD;
+						info->Format = AudioFormatEnum::DolbyTrueHD;
 					break;
 
 					//case AVCodecID.CODEC_ID_WMAV2:
@@ -453,12 +453,7 @@ public:
 		//}
 
 
-		// Create buffers
-		for (int i = 0; i < 64; ++i)
-		{
-			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>((void*)this);
-			availableBuffers.Push(buffer);
-		}
+
 	}
 
 	virtual void Initialize() override
@@ -469,40 +464,26 @@ public:
 		SetupPins();
 
 		// Chapters
-		int chapterCount = ctx->nb_chapters;
-		printf("Chapters (count=%d):\n", chapterCount);
-
-		AVChapter** chapters = ctx->chapters;
-		for (int i = 0; i < chapterCount; ++i)
+		int index = 0;
+		for (auto& chapter : *chapters)
 		{
-			AVChapter* avChapter = chapters[i];
+			printf("Chapter[%02d] = '%s' : %f - %f\n", index, chapter.Title.c_str(), chapter.Start, chapter.End);
+			++index;
+		}
 
-			int index = i + 1;
-			double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
-			double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
-			AVDictionary* metadata = avChapter->metadata;
 
-			printf("Chapter #%02d: %f -> %f\n", index, start, end);
-			PrintDictionary(metadata);
-
-			//if (optionChapter > -1 && optionChapter == index)
-			//{
-			//	optionStartPosition = start;
-			//}
+		// Create buffers
+		for (int i = 0; i < 64; ++i)
+		{
+			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>(shared_from_this());
+			availableBuffers.Push(buffer);
 		}
 	}
 
-	//void RetireBuffer(AVPacketBufferSPTR buffer)
-	//{
-	//	AVPacketBufferPtr newBuffer = std::make_shared<AVPacketBuffer>((void*)this);
-	//	availableBuffers.Push(newBuffer);
-
-	//	Wake();
-	//}
 
 	virtual void DoWork() override
 	{
-		BufferPTR freeBuffer;
+		BufferSPTR freeBuffer;
 
 		// Reap freed buffers
 		for (auto& entry : streamList)
@@ -516,13 +497,26 @@ public:
 
 				while (pin->TryGetAvailableBuffer(&freeBuffer))
 				{
-					//// Free the memory allocated to the buffers by libav
-					AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
-					buffer->Reset();
+					// Drop marker buffers
+					switch (freeBuffer->Type())
+					{
+						case BufferTypeEnum::AVPacket:
+						{
+							//// Free the memory allocated to the buffers by libav
+							AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
+							buffer->Reset();
 
-					// Reuse the buffer
-					availableBuffers.Push(freeBuffer);
-					Wake();
+							// Reuse the buffer
+							availableBuffers.Push(freeBuffer);
+							Wake();
+
+							break;
+						}
+
+						case BufferTypeEnum::Marker:
+						default:
+							break;
+					}
 
 					////printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
 
@@ -549,10 +543,19 @@ public:
 				// Free the memory allocated to the buffers by libav
 				buffer->Reset();
 				availableBuffers.Push(buffer);
-				Wake();
+				//Wake();
 
-				usleep(1);
+				// Send all Output Pins an EOS buffer
+				{
+					for (int i = 0; i < Outputs()->Count(); ++i)
+					{
+						MarkerBufferSPTR eosBuffer = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::EndOfStream);
+						Outputs()->Item(i)->SendBuffer(eosBuffer);
+					}
+				}
 
+				SetExecutionState(ExecutionStateEnum::Idle);
+				break;
 				//printf("MediaElement (%s) DoWork av_read_frame failed.\n", Name().c_str());
 			}
 			else

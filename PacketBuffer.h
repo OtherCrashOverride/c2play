@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Exception.h"
+//#include "Codec.h"
 
 extern "C"
 {
@@ -10,22 +11,43 @@ extern "C"
 #include <memory>
 
 
+enum class BufferTypeEnum
+{
+	Unknown = 0,
+	Marker,
+	ClockData,
+	PcmData,
+	AVPacket,
+	AVFrame
+};
+
+
+class Element;
+typedef std::shared_ptr<Element> ElementSPTR;
+
 
 // abstract
 class Buffer
 {
-	void* owner = nullptr;
+	BufferTypeEnum type;
+	ElementSPTR owner;
+
 
 protected:
-	Buffer() {}
+	//Buffer() {}
 	
-	Buffer(void* owner)
-		: owner(owner)
+	Buffer(BufferTypeEnum type, ElementSPTR owner)
+		: type(type), owner(owner)
 	{
 	}
 
 public:
-	void* Owner() const
+	BufferTypeEnum Type()
+	{
+		return type;
+	}
+
+	ElementSPTR Owner() const
 	{
 		return owner;
 	}
@@ -34,18 +56,75 @@ public:
 	virtual ~Buffer() {};
 
 
+	// TODO: Remove DataPtr/DataLength
+	//		 since they only make sense if
+	//		 the buffer payload is understood
 	virtual void* DataPtr() = 0;
-
 	virtual int DataLength() = 0;
 
 	virtual double TimeStamp() = 0;
 
 };
 
-typedef std::shared_ptr<Buffer> BufferPTR;	// TODO: Change type to Buffer*
+//typedef std::shared_ptr<Buffer> BufferPTR;	// TODO: Change type to Buffer*
 typedef std::shared_ptr<Buffer> BufferSPTR;
 typedef std::unique_ptr<Buffer> BufferUPTR;
 typedef std::weak_ptr<Buffer> BufferWPTR;
+
+
+
+enum class MarkerEnum
+{
+	Unknown = 0,
+	EndOfStream,
+	Play,
+	Pause
+};
+
+class MarkerBuffer : public Buffer
+{
+	//double timeStamp = 0;
+	MarkerEnum status;
+
+public:
+	
+	MarkerEnum Marker() const
+	{
+		return status;
+	}
+	
+	
+	MarkerBuffer(ElementSPTR owner, MarkerEnum status)
+		: Buffer(BufferTypeEnum::Marker, owner),
+		status(status)
+	{
+	}
+
+
+	virtual void* DataPtr() override
+	{
+		return nullptr;
+	}
+
+	virtual int DataLength() override
+	{
+		return 0;
+	}
+
+	virtual double TimeStamp() override
+	{
+		// Time stamps are not significant
+		// since the buffer is temporally located
+		// in the stream
+		return 0;
+	}
+	//void SetTimeStamp(double value)
+	//{
+	//	timeStamp = value;
+	//}
+};
+
+typedef std::shared_ptr<MarkerBuffer> MarkerBufferSPTR;
 
 
 
@@ -55,12 +134,12 @@ class GenericBuffer : public Buffer
 	T payload;
 
 protected:
-	GenericBuffer(T payload)
-		: payload(payload)
-	{
-	}
-	GenericBuffer(void* owner, T payload)
-		: Buffer(owner), payload(payload)
+	//GenericBuffer(T payload)
+	//	: payload(payload)
+	//{
+	//}
+	GenericBuffer(BufferTypeEnum type, ElementSPTR owner, T payload)
+		: Buffer(type, owner), payload(payload)
 	{
 	}
 
@@ -87,8 +166,8 @@ class ClockDataBuffer : public GenericBuffer<ClockData*>
 	ClockData clockData;
 
 public:
-	ClockDataBuffer(void* owner)
-		: GenericBuffer(owner, &clockData)
+	ClockDataBuffer(ElementSPTR owner)
+		: GenericBuffer(BufferTypeEnum::ClockData, owner, &clockData)
 	{
 	}
 
@@ -200,13 +279,13 @@ class PcmDataBuffer : public GenericBuffer<PcmData*>
 
 
 public:
-	PcmDataBuffer( PcmFormat format, int channels, int samples)
-		: PcmDataBuffer(nullptr, format, channels, samples)
-	{
-	}
+	//PcmDataBuffer( PcmFormat format, int channels, int samples)
+	//	: PcmDataBuffer(nullptr, format, channels, samples)
+	//{
+	//}
 
-	PcmDataBuffer(void* owner, PcmFormat format, int channels, int samples)
-		: GenericBuffer(owner, &pcmData)
+	PcmDataBuffer(ElementSPTR owner, PcmFormat format, int channels, int samples)
+		: GenericBuffer(BufferTypeEnum::PcmData, owner, &pcmData)
 
 	{
 		//printf("PcmDataBuffer ctor: format=%d, channels=%d, samples=%d\n",
@@ -310,14 +389,14 @@ class AVPacketBuffer : public GenericBuffer<AVPacket*>
 
 
 public:
-	AVPacketBuffer()
-		: GenericBuffer(CreatePayload())
-	{
-		time_base.num = 1;
-		time_base.den = 1;
-	}
-	AVPacketBuffer(void* owner)
-		: GenericBuffer(owner, CreatePayload())
+	//AVPacketBuffer()
+	//	: GenericBuffer(CreatePayload())
+	//{
+	//	time_base.num = 1;
+	//	time_base.den = 1;
+	//}
+	AVPacketBuffer(ElementSPTR owner)
+		: GenericBuffer(BufferTypeEnum::AVPacket, owner, CreatePayload())
 	{
 		time_base.num = 1;
 		time_base.den = 1;
@@ -393,7 +472,7 @@ typedef std::shared_ptr<AVPacketBuffer> AVPacketBufferSPTR;
 class AVFrameBuffer : public GenericBuffer<AVFrame*>
 {
 	//AVRational timeBase;
-	double timeStamp;
+	double timeStamp = -1;
 
 
 	static AVFrame* CreatePayload()
@@ -414,8 +493,8 @@ public:
 	//	timeBase(timeBase)
 	//{
 	//}
-	AVFrameBuffer(double timeStamp)
-		: GenericBuffer(CreatePayload()),
+	AVFrameBuffer(ElementSPTR owner)
+		: GenericBuffer(BufferTypeEnum::AVFrame, owner, CreatePayload()),
 		timeStamp(timeStamp)
 	{
 		//printf("AVFrameBuffer ctor: payload=%p, timeStamp=%f\n", Payload(), timeStamp);
@@ -444,7 +523,10 @@ public:
 	{
 		return timeStamp;
 	}
-
+	void SetTimeStamp(double value)
+	{
+		timeStamp = value;
+	}
 
 	// Named GetAVFrame() instead of AVFrame()
 	// to avoid compiler name collisions

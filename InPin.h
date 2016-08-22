@@ -11,8 +11,8 @@ class InPin : public Pin
 
 	OutPinSPTR source;	// TODO: WeakPointer
 	Mutex sourceMutex;
-	ThreadSafeQueue<BufferPTR> filledBuffers;
-	ThreadSafeQueue<BufferPTR> processedBuffers;
+	ThreadSafeQueue<BufferSPTR> filledBuffers;
+	ThreadSafeQueue<BufferSPTR> processedBuffers;
 
 
 

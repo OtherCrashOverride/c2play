@@ -37,7 +37,7 @@ class AlsaAudioSinkElement : public Element
 	//Thread audThread = Thread(std::function<void()>(std::bind(&AlsaAudioSink::AudioThread, this)));
 
 	bool isFirstData = true;
-	AudioStreamType audioFormat = AudioStreamType::Unknown;
+	AudioFormatEnum audioFormat = AudioFormatEnum::Unknown;
 	int streamChannels = 0;
 
 	bool isFirstBuffer = true;
@@ -237,6 +237,7 @@ class AlsaAudioSinkElement : public Element
 			}
 		}
 
+
 		// Update the reference clock
 		if (pcmBuffer->TimeStamp() < 0)
 		{
@@ -249,7 +250,9 @@ class AlsaAudioSinkElement : public Element
 			{
 				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
 
-				double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS; // +((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT));
+				double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS + 
+					((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT - 1));
+				
 				clockDataBuffer->SetTimeStamp(time);
 
 				clockOutPin->SendBuffer(clockDataBuffer);
@@ -271,7 +274,7 @@ public:
 		{
 			// Create an audio pin
 			AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
-			info->StreamType = AudioStreamType::Pcm;
+			info->Format = AudioFormatEnum::Pcm;
 			info->Channels = 2;
 			info->SampleRate = 0;
 
@@ -283,7 +286,7 @@ public:
 
 		{
 			// Create the clock pin
-			PinInfoSPTR clockInfo = std::make_shared<PinInfo>(MediaCategory::Clock);
+			PinInfoSPTR clockInfo = std::make_shared<PinInfo>(MediaCategoryEnum::Clock);
 
 			ElementWPTR weakPtr = shared_from_this();
 			clockOutPin = std::make_shared<OutPin>(weakPtr, clockInfo);
@@ -293,7 +296,7 @@ public:
 			// Create a buffer
 			for (int i = 0; i < 1; ++i)
 			{
-				ClockDataBufferSPTR clockBuffer = std::make_shared<ClockDataBuffer>((void*)this);
+				ClockDataBufferSPTR clockBuffer = std::make_shared<ClockDataBuffer>(shared_from_this());
 				clockOutPin->AcceptProcessedBuffer(clockBuffer);
 			}
 		}
@@ -309,13 +312,13 @@ public:
 				OutPinSPTR otherPin = audioPin->Source();
 				if (otherPin)
 				{
-					if (otherPin->Info()->Category() != MediaCategory::Audio)
+					if (otherPin->Info()->Category() != MediaCategoryEnum::Audio)
 					{
 						throw InvalidOperationException("AlsaAudioSinkElement: Not connected to an audio pin.");
 					}
 
 					AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(otherPin->Info());
-					audioFormat = info->StreamType;
+					audioFormat = info->Format;
 					sampleRate = info->SampleRate;
 					streamChannels = info->Channels;
 
@@ -328,9 +331,56 @@ public:
 
 			}
 
-			PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
 
-			ProcessBuffer(pcmBuffer);
+			switch (buffer->Type())
+			{
+				case BufferTypeEnum::Marker:
+				{
+					MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+
+					switch (markerBuffer->Marker())
+					{
+					case MarkerEnum::EndOfStream:
+						SetExecutionState(ExecutionStateEnum::Idle);
+						break;
+
+					case MarkerEnum::Play:
+						SetState(MediaState::Play);
+						break;
+
+					case MarkerEnum::Pause:
+						SetState(MediaState::Pause);
+						break;
+
+					default:
+						// ignore unknown 
+						break;
+					}
+
+					break;
+				}
+
+				case BufferTypeEnum::PcmData:
+				{
+					PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
+
+					ProcessBuffer(pcmBuffer);
+
+					break;
+				}
+			}
+
+			//if (buffer->Type() == BufferTypeEnum::EndOfStream)
+			//{
+			//	SetExecutionState(ExecutionStateEnum::Idle);
+			//	break;
+			//}
+			//else
+			//{
+			//	PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
+
+			//	ProcessBuffer(pcmBuffer);
+			//}
 
 			audioPin->PushProcessedBuffer(buffer);
 			audioPin->ReturnProcessedBuffers();

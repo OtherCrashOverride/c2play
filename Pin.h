@@ -7,17 +7,14 @@
 #include <memory>
 
 
-//
-// Element.Inputs[]
-// Element.Outputs[]
 
-enum class PinDirection
+enum class PinDirectionEnum
 {
 	Out = 0,
 	In
 };
 
-enum class MediaCategory
+enum class MediaCategoryEnum
 {
 	Unknown = 0,
 	Audio,
@@ -26,7 +23,7 @@ enum class MediaCategory
 	Clock
 };
 
-enum class VideoStreamType
+enum class VideoFormatEnum
 {
 	Unknown = 0,
 	Mpeg2,
@@ -36,7 +33,7 @@ enum class VideoStreamType
 	Hevc
 };
 
-enum class AudioStreamType
+enum class AudioFormatEnum
 {
 	Unknown = 0,
 	Pcm,
@@ -48,7 +45,7 @@ enum class AudioStreamType
 	DolbyTrueHD
 };
 
-enum class SubtitleStreamType
+enum class SubtitleFormatEnum
 {
 	Unknown = 0,
 	Text
@@ -57,17 +54,17 @@ enum class SubtitleStreamType
 
 class PinInfo
 {
-	MediaCategory category;
+	MediaCategoryEnum category;
 
 public:
 
-	MediaCategory Category() const
+	MediaCategoryEnum Category() const
 	{
 		return category;
 	}
 
 
-	PinInfo(MediaCategory category)
+	PinInfo(MediaCategoryEnum category)
 		: category(category)
 	{
 	}
@@ -81,11 +78,11 @@ class VideoPinInfo : public PinInfo
 {
 public:
 	VideoPinInfo()
-		: PinInfo(MediaCategory::Video)
+		: PinInfo(MediaCategoryEnum::Video)
 	{
 	}
 
-	VideoStreamType StreamType = VideoStreamType::Unknown;
+	VideoFormatEnum Format = VideoFormatEnum::Unknown;
 	int Width;
 	int Height;
 	double FrameRate = 0;
@@ -99,12 +96,12 @@ class AudioPinInfo : public PinInfo
 
 public:
 	AudioPinInfo()
-		: PinInfo(MediaCategory::Audio)
+		: PinInfo(MediaCategoryEnum::Audio)
 	{
 	}
 
 
-	AudioStreamType StreamType = AudioStreamType::Unknown;
+	AudioFormatEnum Format = AudioFormatEnum::Unknown;
 	int Channels = 0;
 	int SampleRate = 0;
 
@@ -117,30 +114,33 @@ class SubtitlePinInfo : public PinInfo
 public:
 
 	SubtitlePinInfo()
-		: PinInfo(MediaCategory::Subtitle)
+		: PinInfo(MediaCategoryEnum::Subtitle)
 	{
 	}
 
 
-	SubtitleStreamType StreamType = SubtitleStreamType::Unknown;
+	MediaCategoryEnum Format = MediaCategoryEnum::Unknown;
 };
 typedef std::shared_ptr<SubtitlePinInfo> SubtitlePinInfoSPTR;
 
 
+
+// TODO: Move stream processing thread to Pin
+
 class Pin : public std::enable_shared_from_this<Pin>
 {
-	PinDirection direction;
+	PinDirectionEnum direction;
 	ElementWPTR owner;
 	PinInfoSPTR info;
 	std::string name;
 
 
 protected:
-	Pin(PinDirection direction, ElementWPTR owner, PinInfoSPTR info)
+	Pin(PinDirectionEnum direction, ElementWPTR owner, PinInfoSPTR info)
 		: Pin(direction, owner, info, "Pin")
 	{
 	}
-	Pin(PinDirection direction, ElementWPTR owner, PinInfoSPTR info, std::string name)
+	Pin(PinDirectionEnum direction, ElementWPTR owner, PinInfoSPTR info, std::string name)
 		: direction(direction), owner(owner), info(info), name(name)
 	{
 		if (owner.expired())
@@ -153,7 +153,7 @@ protected:
 
 public:
 
-	PinDirection Direction() const
+	PinDirectionEnum Direction() const
 	{
 		return direction;
 	}
@@ -228,7 +228,7 @@ public:
 
 	T Item(int index)
 	{
-		if (index < 0 || index > pins.size())
+		if (index < 0 || index >= pins.size())
 			throw ArgumentOutOfRangeException();
 
 		return pins[index];
@@ -242,7 +242,7 @@ public:
 		}
 	}
 
-	T FindFirst(MediaCategory category)
+	T FindFirst(MediaCategoryEnum category)
 	{
 		for (auto item : pins)
 		{

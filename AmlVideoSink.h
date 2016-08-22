@@ -38,7 +38,7 @@ class AmlVideoSinkElement : public Element
 	bool isExtraDataSent = false;
 	long estimatedNextPts = 0;
 
-	VideoStreamType videoFormat = VideoStreamType::Unknown;
+	VideoFormatEnum videoFormat = VideoFormatEnum::Unknown;
 	VideoInPinSPTR videoPin;
 	bool isFirstData = true;
 	std::vector<unsigned char> extraData;
@@ -48,13 +48,6 @@ class AmlVideoSinkElement : public Element
 	unsigned long clockPts = 0;
 	unsigned long lastClockPts = 0;
 	
-
-
-
-	//static int vdec_func(vdec_status* status)
-	//{
-	//	printf("vdec_func: status
-	//}
 
 	void SetupHardware()
 	{
@@ -67,20 +60,20 @@ class AmlVideoSinkElement : public Element
 
 		codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
 		codecContext.has_video = 1;
-		codecContext.am_sysinfo.param = (void*)0; // (EXTERNAL_PTS | SYNC_OUTSIDE);
+		codecContext.am_sysinfo.param = (void*)0; //(EXTERNAL_PTS | SYNC_OUTSIDE);
 		codecContext.am_sysinfo.rate = 96000.5 / frameRate;
 		//codecContext.noblock = 1;
 
 		switch (videoFormat)
 		{
-		case VideoStreamType::Mpeg2:
+		case VideoFormatEnum::Mpeg2:
 			printf("AmlVideoSink - VIDEO/MPEG2\n");
 
 			codecContext.video_type = VFORMAT_MPEG12;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
 			break;
 
-		case VideoStreamType::Mpeg4:
+		case VideoFormatEnum::Mpeg4:
 			printf("AmlVideoSink - VIDEO/MPEG4\n");
 
 			codecContext.video_type = VFORMAT_MPEG4;
@@ -88,11 +81,11 @@ class AmlVideoSinkElement : public Element
 			//VIDEO_DEC_FORMAT_MP4; //VIDEO_DEC_FORMAT_MPEG4_3; //VIDEO_DEC_FORMAT_MPEG4_4; //VIDEO_DEC_FORMAT_MPEG4_5;
 			break;
 
-		case VideoStreamType::Avc:
+		case VideoFormatEnum::Avc:
 		{
 			if (width > 1920 ||	height > 1080)
 			{
-				printf("AmlVideoSink - VIDEO/H264 (4K)\n");
+				printf("AmlVideoSink - VIDEO/H264_4K2K\n");
 
 				codecContext.video_type = VFORMAT_H264_4K2K;
 				codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
@@ -108,16 +101,16 @@ class AmlVideoSinkElement : public Element
 		}
 		break;
 
-		case VideoStreamType::Hevc:
+		case VideoFormatEnum::Hevc:
 			printf("AmlVideoSink - VIDEO/HEVC\n");
 
 			codecContext.video_type = VFORMAT_HEVC;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
-			//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); // (EXTERNAL_PTS | SYNC_OUTSIDE);
+			codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
 			break;
 
 
-		case VideoStreamType::VC1:
+		case VideoFormatEnum::VC1:
 			printf("AmlVideoSink - VIDEO/VC1\n");
 			codecContext.video_type = VFORMAT_VC1;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_WVC1;
@@ -153,9 +146,6 @@ class AmlVideoSinkElement : public Element
 			printf("codec_init failed (%x).\n", api);
 			throw Exception();
 		}
-
-
-		void set_vdec_func(int(*vdec_func)(struct vdec_status *));
 
 
 		//codec_reset(&codecContext);
@@ -254,8 +244,8 @@ class AmlVideoSinkElement : public Element
 			SendCodecData(pts, pkt->data, pkt->size);
 		}
 		else if (!isAnnexB &&
-			(videoFormat == VideoStreamType::Avc ||
-			 videoFormat == VideoStreamType::Hevc))
+			(videoFormat == VideoFormatEnum::Avc ||
+			 videoFormat == VideoFormatEnum::Hevc))
 		{
 			//unsigned char* nalHeader = (unsigned char*)pkt.data;
 
@@ -267,7 +257,7 @@ class AmlVideoSinkElement : public Element
 			{
 				switch (videoFormat)
 				{
-					case VideoStreamType::Avc:
+					case VideoFormatEnum::Avc:
 					//if (!isExtraDataSent)
 					{
 						// Copy AnnexB data if NAL unit type is 5
@@ -284,7 +274,7 @@ class AmlVideoSinkElement : public Element
 					}
 					break;
 
-				case VideoStreamType::Hevc:
+				case VideoFormatEnum::Hevc:
 					//if (!isExtraDataSent)
 					{
 						nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
@@ -515,7 +505,7 @@ class AmlVideoSinkElement : public Element
 
 	void ClockWorkThread()
 	{
-		while (Status() == ExecutionState::Executing)
+		while (ExecutionState() == ExecutionStateEnum::Executing)
 		{
 			// Clock
 			BufferSPTR buffer;
@@ -543,7 +533,7 @@ public:
 		{
 			// Create a video pin
 			VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
-			info->StreamType = VideoStreamType::Unknown;
+			info->Format = VideoFormatEnum::Unknown;
 			info->FrameRate = 0;
 
 			ElementWPTR weakPtr = shared_from_this();
@@ -553,7 +543,7 @@ public:
 
 		{
 			// Create a clock pin
-			PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategory::Clock);
+			PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Clock);
 
 			ElementWPTR weakPtr = shared_from_this();
 			clockInPin = std::make_shared<InPin>(weakPtr, info);
@@ -601,13 +591,13 @@ public:
 					OutPinSPTR otherPin = videoPin->Source();
 					if (otherPin)
 					{
-						if (otherPin->Info()->Category() != MediaCategory::Video)
+						if (otherPin->Info()->Category() != MediaCategoryEnum::Video)
 						{
 							throw InvalidOperationException("AmlVideoSink: Not connected to a video pin.");
 						}
 
 						VideoPinInfoSPTR info = std::static_pointer_cast<VideoPinInfo>(otherPin->Info());
-						videoFormat = info->StreamType;
+						videoFormat = info->Format;
 						//frameRate = info->FrameRate;
 						extraData = *(info->ExtraData);
 
@@ -630,7 +620,52 @@ public:
 				}
 
 
-				ProcessBuffer(avPacketBuffer);
+
+				switch (buffer->Type())
+				{
+					case BufferTypeEnum::Marker:
+					{
+						MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+
+						switch (markerBuffer->Marker())
+						{
+						case MarkerEnum::EndOfStream:
+							SetExecutionState(ExecutionStateEnum::Idle);
+							break;
+
+						case MarkerEnum::Play:
+							SetState(MediaState::Play);
+							break;
+
+						case MarkerEnum::Pause:
+							SetState(MediaState::Pause);
+							break;
+
+						default:
+							// ignore unknown 
+							break;
+						}
+
+						break;
+					}
+
+					case BufferTypeEnum::AVPacket:
+					{
+						ProcessBuffer(avPacketBuffer);
+						break;
+					}
+				}
+
+
+				//if (buffer->Type() == BufferTypeEnum::EndOfStream)
+				//{
+				//	SetExecutionState(ExecutionStateEnum::Idle);
+				//	break;
+				//}
+				//else
+				//{
+				//	ProcessBuffer(avPacketBuffer);
+				//}
 
 				videoPin->PushProcessedBuffer(buffer);
 				videoPin->ReturnProcessedBuffers();

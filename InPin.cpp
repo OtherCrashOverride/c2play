@@ -15,7 +15,7 @@
 
 		if (source)
 		{
-			BufferPTR buffer;
+			BufferSPTR buffer;
 			while (processedBuffers.TryPop(&buffer))
 			{
 				source->AcceptProcessedBuffer(buffer);
@@ -34,7 +34,7 @@
 
 
 	InPin::InPin(ElementWPTR owner, PinInfoSPTR info)
-		: Pin(PinDirection::In, owner, info)
+		: Pin(PinDirectionEnum::In, owner, info)
 	{
 	}
 
@@ -58,7 +58,7 @@
 
 		if (source)
 		{
-			BufferPTR buffer;
+			BufferSPTR buffer;
 			while (processedBuffers.TryPop(&buffer))
 			{
 				source->AcceptProcessedBuffer(buffer);
