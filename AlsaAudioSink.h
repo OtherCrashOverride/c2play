@@ -44,6 +44,7 @@ class AlsaAudioSinkElement : public Element
 	snd_pcm_uframes_t period_size;
 	snd_pcm_uframes_t buffer_size;
 	double audioAdjustSeconds = 0.0;
+	double clock = 0.0;
 
 
 	void SetupAlsa(int frameSize)
@@ -254,18 +255,15 @@ class AlsaAudioSinkElement : public Element
 		}
 		else
 		{
+			double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
+			clock = time;
+
 			BufferSPTR clockPinBuffer;
 			if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
 			{
 				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
 
-				//double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS +
-				//	((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT - 1));
-
-				double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
-
 				clockDataBuffer->SetTimeStamp(time);
-
 				clockOutPin->SendBuffer(clockDataBuffer);
 
 				//printf("AmlAudioSinkElement: clock=%f\n", clockPinBuffer->TimeStamp());
@@ -317,6 +315,11 @@ public:
 	void SetAudioAdjustSeconds(double value)
 	{
 		audioAdjustSeconds = value;
+	}
+
+	double Clock() const
+	{
+		return clock;
 	}
 
 
@@ -404,13 +407,13 @@ public:
 						SetExecutionState(ExecutionStateEnum::Idle);
 						break;
 
-					case MarkerEnum::Play:
-						SetState(MediaState::Play);
-						break;
+					//case MarkerEnum::Play:
+					//	SetState(MediaState::Play);
+					//	break;
 
-					case MarkerEnum::Pause:
-						SetState(MediaState::Pause);
-						break;
+					//case MarkerEnum::Pause:
+					//	SetState(MediaState::Pause);
+					//	break;
 
 					default:
 						// ignore unknown 
@@ -454,6 +457,30 @@ public:
 		// TODO: pause audio
 
 		Element::ChangeState(oldState, newState);
+
+		if (handle)
+		{
+			if (ExecutionState() == ExecutionStateEnum::Executing)
+			{
+				switch (newState)
+				{
+				case MediaState::Play:
+				{
+					int ret = snd_pcm_pause(handle, 0);
+					break;
+				}
+
+				case MediaState::Pause:
+				{
+					int ret = snd_pcm_pause(handle, 1);
+					break;
+				}
+
+				default:
+					break;
+				}
+			}
+		}
 	}
 };
 

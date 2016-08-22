@@ -380,6 +380,13 @@ class MediaSourceElement : public Element
 
 
 public:
+
+	const ChapterListSPTR Chapters() const
+	{
+		return chapters;
+	}
+
+
 	MediaSourceElement(std::string url)
 		: url(url)
 	{
@@ -606,4 +613,19 @@ public:
 	//virtual void Flush() override
 	//{
 	//}
+
+	void Seek(double timeStamp)
+	{
+		if (ExecutionState() != ExecutionStateEnum::Executing &&
+			ExecutionState() != ExecutionStateEnum::Idle)
+		{
+			throw InvalidOperationException();
+		}
+
+		if (av_seek_frame(ctx, -1, (long)(timeStamp * AV_TIME_BASE), 0) < 0)
+		{
+			printf("av_seek_frame (%f) failed\n", timeStamp);
+		}		
+	}
+
 };

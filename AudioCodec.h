@@ -373,13 +373,13 @@ public:
 						SetExecutionState(ExecutionStateEnum::Idle);
 						break;
 
-					case MarkerEnum::Play:						
-						SetState(MediaState::Play);
-						break;
+					//case MarkerEnum::Play:						
+					//	SetState(MediaState::Play);
+					//	break;
 
-					case MarkerEnum::Pause:
-						SetState(MediaState::Pause);
-						break;
+					//case MarkerEnum::Pause:
+					//	SetState(MediaState::Pause);
+					//	break;
 
 					default:
 						// ignore unknown 

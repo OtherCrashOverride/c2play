@@ -77,8 +77,8 @@ enum class MarkerEnum
 {
 	Unknown = 0,
 	EndOfStream,
-	Play,
-	Pause
+	//Play,
+	//Pause
 };
 
 class MarkerBuffer : public Buffer

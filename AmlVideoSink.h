@@ -47,7 +47,8 @@ class AmlVideoSinkElement : public Element
 	Thread clockThread = Thread(std::function<void()>(std::bind(&AmlVideoSinkElement::ClockWorkThread, this)));
 	unsigned long clockPts = 0;
 	unsigned long lastClockPts = 0;
-	
+	double clock = 0;
+
 
 	void SetupHardware()
 	{
@@ -438,14 +439,19 @@ class AmlVideoSinkElement : public Element
 
 	void ProcessClockBuffer(BufferSPTR buffer)
 	{
+		clock = buffer->TimeStamp();
 		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
 
-#if 1
+
 		int vpts = codec_get_vpts(&codecContext);
 		int drift = vpts - pts;
 
+		if (clock < vpts * (double)PTS_FREQ)
+		{
+			clock = vpts * (double)PTS_FREQ;
+		}
+
 		Log("Clock drift = %f\n", drift / (double)PTS_FREQ);
-#endif
 
 
 #if 1
@@ -474,7 +480,7 @@ class AmlVideoSinkElement : public Element
 			Log("codec_set_pcrscr - pts=%lu, clockPts=%lu (%ld=%f)\n", pts, clockPts, delta, delta / (double)PTS_FREQ);
 		}
 
-
+		
 	}
 
 	void ClockWorkThread()
@@ -496,6 +502,13 @@ class AmlVideoSinkElement : public Element
 	}
 
 public:
+
+	double Clock() const
+	{
+		return clock;
+	}
+
+
 
 	virtual void Initialize() override
 	{
@@ -607,13 +620,13 @@ public:
 							SetExecutionState(ExecutionStateEnum::Idle);
 							break;
 
-						case MarkerEnum::Play:
-							SetState(MediaState::Play);
-							break;
+						//case MarkerEnum::Play:
+						//	SetState(MediaState::Play);
+						//	break;
 
-						case MarkerEnum::Pause:
-							SetState(MediaState::Pause);
-							break;
+						//case MarkerEnum::Pause:
+						//	SetState(MediaState::Pause);
+						//	break;
 
 						default:
 							// ignore unknown 
@@ -652,8 +665,36 @@ public:
 		// TODO: pause video
 
 		Element::ChangeState(oldState, newState);
+
+		if (ExecutionState() == ExecutionStateEnum::Executing)
+		{
+			switch (newState)
+			{
+			case MediaState::Play:
+			{
+				int ret = codec_resume(&codecContext);
+				break;
+			}
+
+			case MediaState::Pause:
+			{
+				int ret = codec_pause(&codecContext);
+				break;
+			}
+
+			default:
+				break;
+			}
+		}
 	}
 
+
+	virtual void Flush() override
+	{
+		Element::Flush();
+
+		codec_reset(&codecContext);
+	}
 
 private:
 	static void WriteToFile(const char* path, const char* value)

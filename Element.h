@@ -149,13 +149,7 @@ protected:
 		Log("Element (%s) DoWork exited.\n", name.c_str());
 	}
 
-	virtual void Flush()
-	{
-		inputs.Flush();
-		outputs.Flush();
 
-		Log("Element (%s) Flush exited.\n", name.c_str());
-	}
 
 	void InternalWorkThread()
 	{
@@ -368,6 +362,13 @@ public:
 		}
 	}
 
+	virtual void Flush()
+	{
+		inputs.Flush();
+		outputs.Flush();
+
+		Log("Element (%s) Flush exited.\n", name.c_str());
+	}
 
 	// DEBUG
 	void Log(const char* message, ...)
