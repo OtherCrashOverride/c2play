@@ -42,7 +42,8 @@ enum class AudioFormatEnum
 	Aac,
 	Dts,
 	WmaPro,
-	DolbyTrueHD
+	DolbyTrueHD,
+	EAc3
 };
 
 enum class SubtitleFormatEnum

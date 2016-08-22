@@ -21,7 +21,7 @@ class AlsaAudioSinkElement : public Element
 	OutPinSPTR clockOutPin;
 
 	const int AUDIO_FRAME_BUFFERCOUNT = 4;
-	const double AUDIO_ADJUST_SECONDS = (0.0);
+	//const double AUDIO_ADJUST_SECONDS = (0.0);
 	const char* device = "default"; //default   //plughw                     /* playback device */
 	const int alsa_channels = 2;
 
@@ -41,6 +41,9 @@ class AlsaAudioSinkElement : public Element
 	int streamChannels = 0;
 
 	bool isFirstBuffer = true;
+	snd_pcm_uframes_t period_size;
+	snd_pcm_uframes_t buffer_size;
+	double audioAdjustSeconds = 0.0;
 
 
 	void SetupAlsa(int frameSize)
@@ -64,8 +67,8 @@ class AlsaAudioSinkElement : public Element
 		int FRAME_SIZE = frameSize; // 1536;
 		snd_pcm_hw_params_t *hw_params;
 		snd_pcm_sw_params_t *sw_params;
-		snd_pcm_uframes_t period_size = FRAME_SIZE * alsa_channels * 2;
-		snd_pcm_uframes_t buffer_size = AUDIO_FRAME_BUFFERCOUNT * period_size;
+		period_size = FRAME_SIZE * alsa_channels * sizeof(short);
+		buffer_size = AUDIO_FRAME_BUFFERCOUNT * period_size;
 
 
 		(snd_pcm_hw_params_malloc(&hw_params));
@@ -221,24 +224,30 @@ class AlsaAudioSinkElement : public Element
 		snd_pcm_wait(handle, 500);
 
 
-		// Send data to ALSA
-		snd_pcm_sframes_t frames = snd_pcm_writei(handle,
-			(void*)data,
-			pcmData->Samples);
+		// Update the reference clock
+		double adjust = 0;
 
-		if (frames < 0)
+		snd_pcm_sframes_t frames_to_deliver;
+		if ((frames_to_deliver = snd_pcm_avail_update(handle)) < 0)
 		{
-			printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
-
-			if (frames == -EPIPE)
+			if (frames_to_deliver == -EPIPE)
 			{
-				snd_pcm_recover(handle, frames, 1);
-				printf("snd_pcm_recover\n");
+				fprintf(stderr, "an xrun occured\n");
 			}
 		}
+		else
+		{
+			// Calculate the time of the sample currently playing
+			int bufferLevel = buffer_size - frames_to_deliver;
+			int bufferLevelSamples = bufferLevel / alsa_channels / sizeof(short);
+			
+			// The sample currently playing is previous in time to this frame,
+			// so adjust negatively.
+			adjust = -(bufferLevelSamples / (double)sampleRate); 
 
+			//printf("AlsaAudioSink: buffer_size=%lu, frames_to_deliver=%lu, adjust=%f\n", buffer_size, frames_to_deliver,adjust);
+		}
 
-		// Update the reference clock
 		if (pcmBuffer->TimeStamp() < 0)
 		{
 			printf("WARNING: frameTimeStamp not set.\n");
@@ -250,9 +259,11 @@ class AlsaAudioSinkElement : public Element
 			{
 				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
 
-				double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS + 
-					((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT - 1));
-				
+				//double time = pcmBuffer->TimeStamp() + AUDIO_ADJUST_SECONDS +
+				//	((pcmData->Samples / (double)sampleRate) * (AUDIO_FRAME_BUFFERCOUNT - 1));
+
+				double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
+
 				clockDataBuffer->SetTimeStamp(time);
 
 				clockOutPin->SendBuffer(clockDataBuffer);
@@ -260,9 +271,55 @@ class AlsaAudioSinkElement : public Element
 				//printf("AmlAudioSinkElement: clock=%f\n", clockPinBuffer->TimeStamp());
 			}
 		}
+
+
+		// Send data to ALSA
+		int totalFramesWritten = 0;
+		while (totalFramesWritten < pcmData->Samples)
+		{
+			/*
+			From ALSA docs:
+				If the blocking behaviour is selected and it is running, then
+				routine waits until all	requested frames are played or put to
+				the playback ring buffer. The returned number of frames can be
+				less only if a signal or underrun occurred.
+			*/
+
+			void* ptr = data + (totalFramesWritten * alsa_channels * sizeof(short));
+
+			snd_pcm_sframes_t frames = snd_pcm_writei(handle,
+				ptr,
+				pcmData->Samples - totalFramesWritten);
+
+			if (frames < 0)
+			{
+				printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+
+				if (frames == -EPIPE)
+				{
+					snd_pcm_recover(handle, frames, 1);
+					printf("snd_pcm_recover\n");
+				}
+			}
+			else
+			{
+				totalFramesWritten += frames;
+			}
+		}
 	}
 
 public:
+
+	double AudioAdjustSeconds() const
+	{
+		return audioAdjustSeconds;
+	}
+	void SetAudioAdjustSeconds(double value)
+	{
+		audioAdjustSeconds = value;
+	}
+
+
 
 	virtual void Initialize() override
 	{
@@ -321,6 +378,8 @@ public:
 					audioFormat = info->Format;
 					sampleRate = info->SampleRate;
 					streamChannels = info->Channels;
+
+					//TODO: copy output pin info to input pin
 
 					//SetupAlsa();
 
@@ -397,6 +456,8 @@ public:
 		Element::ChangeState(oldState, newState);
 	}
 };
+
+typedef std::shared_ptr<AlsaAudioSinkElement> AlsaAudioSinkElementSPTR;
 
 
 

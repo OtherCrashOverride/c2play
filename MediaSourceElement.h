@@ -297,6 +297,12 @@ class MediaSourceElement : public Element
 						info->Format = AudioFormatEnum::DolbyTrueHD;
 					break;
 
+				case AV_CODEC_ID_EAC3:
+					printf("stream #%d - AUDIO/EAC3\n", i);
+					if (info)
+						info->Format = AudioFormatEnum::EAc3;
+					break;
+
 					//case AVCodecID.CODEC_ID_WMAV2:
 					//    break;
 
@@ -473,7 +479,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 64; ++i)
+		for (int i = 0; i < 32; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>(shared_from_this());
 			availableBuffers.Push(buffer);
@@ -564,11 +570,12 @@ public:
 
 				//printf("MediaElement (%s) DoWork pin[%d] got AVPacket.\n", Name().c_str(), pkt->stream_index);
 
+				AVStream* streamPtr = ctx->streams[pkt->stream_index];
+				buffer->SetTimeBase(streamPtr->time_base);
+
 				if (pkt->pts != AV_NOPTS_VALUE)
 				{
-					AVStream* streamPtr = ctx->streams[pkt->stream_index];
 					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
-					buffer->SetTimeBase(streamPtr->time_base);
 
 					//printf("MediaSourceElement: Set buffer timestamp=%f\n", buffer->TimeStamp());
 				}

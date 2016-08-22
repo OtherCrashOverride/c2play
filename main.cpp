@@ -940,15 +940,9 @@ int main(int argc, char** argv)
 	source->Execute();
 
 
-	auto videoSink = std::make_shared<AmlVideoSinkElement>();
-	videoSink->SetName(std::string("VideoSink"));
-	//videoSink->SetLogEnabled(true);
-	videoSink->Execute();
-
-
-	auto audioCodec = std::make_shared<AudioCodecElement>();
-	audioCodec->SetName(std::string("AudioCodec"));
-	audioCodec->Execute();
+	AmlVideoSinkElementSPTR videoSink;
+	AudioCodecElementSPTR audioCodec;
+	AlsaAudioSinkElementSPTR audioSink;
 
 
 	//auto nullSink = std::make_shared<NullSink>();
@@ -956,16 +950,10 @@ int main(int argc, char** argv)
 	//nullSink->Execute();
 
 	
-	auto audioSink = std::make_shared<AlsaAudioSinkElement>();
-	audioSink->SetName(std::string("AudioSink"));
-	audioSink->Execute();
 
 
 	// Wait for the source to create the pins
 	source->WaitForExecutionState(ExecutionStateEnum::Executing);
-	videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-	audioCodec->WaitForExecutionState(ExecutionStateEnum::Executing);
-	audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
 
 
 	// Connections
@@ -973,6 +961,13 @@ int main(int argc, char** argv)
 		source->Outputs()->FindFirst(MediaCategoryEnum::Video));
 	if (sourceVideoPin)
 	{
+		videoSink = std::make_shared<AmlVideoSinkElement>();
+		videoSink->SetName(std::string("VideoSink"));
+		//videoSink->SetLogEnabled(true);
+		videoSink->Execute();
+
+		videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+
 		sourceVideoPin->Connect(videoSink->Inputs()->Item(0));
 	}
 
@@ -980,19 +975,47 @@ int main(int argc, char** argv)
 		source->Outputs()->FindFirst(MediaCategoryEnum::Audio));
 	if (sourceAudioPin)
 	{
+		audioCodec = std::make_shared<AudioCodecElement>();
+		audioCodec->SetName(std::string("AudioCodec"));
+		audioCodec->Execute();
+
+		audioSink = std::make_shared<AlsaAudioSinkElement>();
+		audioSink->SetName(std::string("AudioSink"));
+		audioSink->Execute();
+
+		audioCodec->WaitForExecutionState(ExecutionStateEnum::Executing);
+		audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+
 		sourceAudioPin->Connect(audioCodec->Inputs()->Item(0));
+
+		audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
 	}
 
-	audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
 		
-	audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1)); //clock
+	if (audioSink && videoSink)
+	{
+		audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1)); //clock
+	}
 
 
 	// Start feeding data
-	audioSink->SetState(MediaState::Play);
+	if (audioSink)
+	{
+		audioSink->SetState(MediaState::Play);
+	}
+
 	//nullSink->SetState(MediaState::Play);
-	audioCodec->SetState(MediaState::Play);
-	videoSink->SetState(MediaState::Play);
+	
+	if (audioCodec)
+	{
+		audioCodec->SetState(MediaState::Play);
+	}
+
+	if (videoSink)
+	{
+		videoSink->SetState(MediaState::Play);
+	}
+
 	source->SetState(MediaState::Play);
 	
 
@@ -1018,10 +1041,10 @@ int main(int argc, char** argv)
 	printf("MAIN: Playback finished.\n");
 
 
-	while (true)
-	{
-		usleep(1000);
-	}
+	//while (true)
+	//{
+	//	usleep(1000);
+	//}
 
 	return 0;
 }

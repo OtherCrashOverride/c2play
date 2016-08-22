@@ -96,6 +96,10 @@ class AudioCodecElement : public Element
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_TRUEHD);
 			break;
 
+		case AudioFormatEnum::EAc3:
+			soundCodec = avcodec_find_decoder(AV_CODEC_ID_EAC3);
+			break;
+
 		//case AudioStreamType::Pcm:
 
 		default:
@@ -408,3 +412,6 @@ public:
 	}
 
 };
+
+
+typedef std::shared_ptr<AudioCodecElement> AudioCodecElementSPTR;

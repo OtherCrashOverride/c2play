@@ -205,29 +205,20 @@ class AmlVideoSinkElement : public Element
 		{
 			double timeStamp = av_q2d(buffer->TimeBase()) * pkt->pts;
 			pts = (unsigned long)(timeStamp * PTS_FREQ);
-			//printf("pts = %lu, timeStamp = %f\n", pts, timeStamp);
-			//if (codec_checkin_pts(&codecContext, pts))
-			//{
-			//	printf("codec_checkin_pts failed\n");
-			//}
 
 			estimatedNextPts = pkt->pts + pkt->duration;
 			lastTimeStamp = timeStamp;
 		}
 		else
 		{
-			//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt.duration);
+			//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt->duration);
 
+			// This happens for containers like AVI
 			if (pkt->duration > 0)
 			{
 				// Estimate PTS
 				double timeStamp = av_q2d(buffer->TimeBase()) * estimatedNextPts;
 				pts = (unsigned long)(timeStamp * PTS_FREQ);
-
-				//if (codec_checkin_pts(&codecContext, pts))
-				//{
-				//	printf("codec_checkin_pts failed\n");
-				//}
 
 				estimatedNextPts += pkt->duration;
 				lastTimeStamp = timeStamp;
@@ -398,26 +389,9 @@ class AmlVideoSinkElement : public Element
 	
 	void SendCodecData(unsigned long pts, unsigned char* data, int length)
 	{
+		//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
+
 		int api;
-		//buf_status status;
-
-		//while (true)
-		//{
-		//	api = codec_get_vbuf_state(&codecContext, &status);
-		//	if (api != 0)
-		//	{
-		//		printf("AmlVideoSinkElement: codec_get_vbuf_state failed.\n");
-		//	}
-
-		//	if (status.free_len > length)
-		//	{
-		//		break;
-		//	}
-
-		//	//printf("AmlVideoSinkElement: buffer status free=%d\n", status.free_len);
-		//	usleep(1);
-		//}
-
 
 		if (pts > 0)
 		{
@@ -812,6 +786,8 @@ private:
 	}
 
 };
+
+typedef std::shared_ptr<AmlVideoSinkElement> AmlVideoSinkElementSPTR;
 
 
 
