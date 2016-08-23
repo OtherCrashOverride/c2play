@@ -30,7 +30,10 @@ enum class VideoFormatEnum
 	Mpeg4,
 	Avc,
 	VC1,
-	Hevc
+	Hevc,
+	Yuv420,
+	NV12,
+	NV21
 };
 
 enum class AudioFormatEnum

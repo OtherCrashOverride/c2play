@@ -20,7 +20,7 @@ class AlsaAudioSinkElement : public Element
 	InPinSPTR audioPin;
 	OutPinSPTR clockOutPin;
 
-	const int AUDIO_FRAME_BUFFERCOUNT = 4;
+	const int AUDIO_FRAME_BUFFERCOUNT = 16;
 	//const double AUDIO_ADJUST_SECONDS = (0.0);
 	const char* device = "default"; //default   //plughw                     /* playback device */
 	const int alsa_channels = 2;
@@ -46,6 +46,9 @@ class AlsaAudioSinkElement : public Element
 	double audioAdjustSeconds = 0.0;
 	double clock = 0.0;
 
+	//snd_htimestamp_t lastTimestamp = { 0 };
+	int FRAME_SIZE = 0;
+
 
 	void SetupAlsa(int frameSize)
 	{
@@ -65,7 +68,7 @@ class AlsaAudioSinkElement : public Element
 		printf("SetupAlsa: frameSize=%d\n", frameSize);
 
 
-		int FRAME_SIZE = frameSize; // 1536;
+		FRAME_SIZE = frameSize; // 1536;
 		snd_pcm_hw_params_t *hw_params;
 		snd_pcm_sw_params_t *sw_params;
 		period_size = FRAME_SIZE * alsa_channels * sizeof(short);
@@ -238,6 +241,7 @@ class AlsaAudioSinkElement : public Element
 		}
 		else
 		{
+#if 0
 			// Calculate the time of the sample currently playing
 			int bufferLevel = buffer_size - frames_to_deliver;
 			int bufferLevelSamples = bufferLevel / alsa_channels / sizeof(short);
@@ -247,6 +251,26 @@ class AlsaAudioSinkElement : public Element
 			adjust = -(bufferLevelSamples / (double)sampleRate); 
 
 			//printf("AlsaAudioSink: buffer_size=%lu, frames_to_deliver=%lu, adjust=%f\n", buffer_size, frames_to_deliver,adjust);
+#else
+			/*
+			From ALSA docs:
+				For playback the delay is defined as the time that a frame that
+				is written to the PCM stream shortly after this call will take
+				to be actually audible. It is as such the overall latency from
+				the write call to the final DAC.
+			*/
+
+			snd_pcm_sframes_t delay;
+			if (snd_pcm_delay(handle, &delay) != 0)
+			{
+				printf("snd_pcm_delay failed.\n");
+			}
+
+			adjust = -(delay / (double)sampleRate);
+
+			//printf("ALSA: adjust=%f\n", adjust);
+#endif
+
 		}
 
 		if (pcmBuffer->TimeStamp() < 0)
@@ -407,14 +431,6 @@ public:
 						SetExecutionState(ExecutionStateEnum::Idle);
 						break;
 
-					//case MarkerEnum::Play:
-					//	SetState(MediaState::Play);
-					//	break;
-
-					//case MarkerEnum::Pause:
-					//	SetState(MediaState::Pause);
-					//	break;
-
 					default:
 						// ignore unknown 
 						break;
@@ -433,17 +449,6 @@ public:
 				}
 			}
 
-			//if (buffer->Type() == BufferTypeEnum::EndOfStream)
-			//{
-			//	SetExecutionState(ExecutionStateEnum::Idle);
-			//	break;
-			//}
-			//else
-			//{
-			//	PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
-
-			//	ProcessBuffer(pcmBuffer);
-			//}
 
 			audioPin->PushProcessedBuffer(buffer);
 			audioPin->ReturnProcessedBuffers();

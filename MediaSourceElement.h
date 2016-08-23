@@ -486,7 +486,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 32; ++i)
+		for (int i = 0; i < 64; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>(shared_from_this());
 			availableBuffers.Push(buffer);

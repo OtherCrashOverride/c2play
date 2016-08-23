@@ -391,6 +391,7 @@ int main(int argc, char** argv)
 	
 
 #if 1// Process Input
+
 	isRunning = true;
 	bool isPaused = false;
 
@@ -555,6 +556,8 @@ seek:
 				}
 			}
 		}
+
+		usleep(1);
 	}
 
 #else

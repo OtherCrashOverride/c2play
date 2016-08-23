@@ -21,8 +21,13 @@ extern "C"
 class AmlVideoSinkElement : public Element
 {
 	const unsigned long PTS_FREQ = 90000;
+	
 	const long EXTERNAL_PTS = (1);
 	const long SYNC_OUTSIDE = (2);
+	const long USE_IDR_FRAMERATE = 0x04;
+	const long UCODE_IP_ONLY_PARAM = 0x08;
+	const long MAX_REFER_BUF = 0x10;
+	const long ERROR_RECOVERY_MODE_IN = 0x20;
 
 	std::vector<unsigned char> videoExtraData;
 	//AVCodecID codec_id;
@@ -61,8 +66,13 @@ class AmlVideoSinkElement : public Element
 
 		codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
 		codecContext.has_video = 1;
-		codecContext.am_sysinfo.param = (void*)0; //(EXTERNAL_PTS | SYNC_OUTSIDE);
-		codecContext.am_sysinfo.rate = 96000.5 / frameRate;
+
+		// Note: Without EXTERNAL_PTS | SYNC_OUTSIDE, the codec auto adjusts
+		// frame-rate from PTS 
+		codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
+		
+		// Note: Testing has shown that the ALSA clock requires the +1
+		codecContext.am_sysinfo.rate = 96000.0 / frameRate + 1;
 		//codecContext.noblock = 1;
 
 		switch (videoFormat)
@@ -444,42 +454,39 @@ class AmlVideoSinkElement : public Element
 
 
 		int vpts = codec_get_vpts(&codecContext);
-		int drift = vpts - pts;
 
 		if (clock < vpts * (double)PTS_FREQ)
 		{
 			clock = vpts * (double)PTS_FREQ;
 		}
 
-		Log("Clock drift = %f\n", drift / (double)PTS_FREQ);
 
 
-#if 1
+		int drift = vpts - pts;
+		double driftTime = drift / (double)PTS_FREQ;
+		double driftFrames = driftTime * (double)videoPin->InfoAs()->FrameRate;
+		//printf("Clock drift = %f (frames=%f)\n", driftTime, driftFrames);
+
 		clockPts = pts;
-#else
-		// Exponential smoothing
-		// https://en.wikipedia.org/wiki/Exponential_smoothing
-		const float SMOOTH_FACTOR = 0.95f;
-
-		clockPts = (SMOOTH_FACTOR * pts) + ((1.0f - SMOOTH_FACTOR) * lastClockPts);
-#endif
-
 		lastClockPts = clockPts;
 		//printf("AmlVideoSinkElement: clock=%f, pts=%lu, clockPts=%lu\n", buffer->TimeStamp(), pts, clockPts);
 
-
-		if (clockPts > 0)
+		// To minimize clock jitter, only adjust the clock if it
+		// deviates more than +/- 2 frames
+		if (driftFrames >= 2.0 || driftFrames <= -2.0)
 		{
-			int codecCall = codec_set_pcrscr(&codecContext, (int)clockPts);
-			if (codecCall != 0)
+			if (clockPts > 0)
 			{
-				printf("codec_set_pcrscr failed.\n");
+				int codecCall = codec_set_pcrscr(&codecContext, (int)clockPts);
+				if (codecCall != 0)
+				{
+					printf("codec_set_pcrscr failed.\n");
+				}
+
+				long delta = (long)pts - (long)clockPts;
+				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu\n", pts);
 			}
-
-			long delta = (long)pts - (long)clockPts;
-			Log("codec_set_pcrscr - pts=%lu, clockPts=%lu (%ld=%f)\n", pts, clockPts, delta, delta / (double)PTS_FREQ);
 		}
-
 		
 	}
 
@@ -493,11 +500,14 @@ class AmlVideoSinkElement : public Element
 			{
 				ProcessClockBuffer(buffer);
 
+				// delay updates
+				//usleep(1000);
+
 				clockInPin->PushProcessedBuffer(buffer);
 				clockInPin->ReturnProcessedBuffers();
 			}
 
-			usleep(100);
+			usleep(1);
 		}
 	}
 

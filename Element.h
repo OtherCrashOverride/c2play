@@ -347,15 +347,6 @@ public:
 
 	void WaitForExecutionState(ExecutionStateEnum state)
 	{
-		//pthread_mutex_lock(&executionWaitMutex);
-		//
-		//while (status != state)
-		//{
-		//	pthread_cond_wait(&executionWaitCondition, &executionWaitMutex);
-		//}
-		//
-		//pthread_mutex_unlock(&executionWaitMutex);
-
 		while (executionState != state)
 		{
 			executionStateWaitCondition.WaitForSignal();
