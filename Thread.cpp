@@ -3,6 +3,8 @@
 #include "Exception.h"
 
 
+
+
 void* Thread::ThreadTrampoline(void* argument)
 {
 	Thread* ptr = (Thread*)argument;
@@ -15,15 +17,26 @@ Thread::Thread(std::function<void()> function)
 	: function(function)
 {
 }
+Thread::~Thread()
+{
+	if (isCreated)
+		pthread_detach(thread);
+}
+
 
 
 void Thread::Start()
 {
+	if (isCreated)
+		throw InvalidOperationException();
+
 	int result_code = pthread_create(&thread, NULL, ThreadTrampoline, (void*)this);
 	if (result_code != 0)
 	{
 		throw Exception("Sink pthread_create failed.\n");
 	}
+
+	isCreated = true;
 }
 
 void Thread::Cancel()

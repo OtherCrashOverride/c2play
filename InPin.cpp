@@ -103,6 +103,9 @@
 		sourceMutex.Unlock();
 
 
+		pinThread = std::make_shared<Thread>(std::function<void()>(std::bind(&InPin::WorkThread, this)));
+		pinThread->Start();
+
 		parent->Wake();
 
 		parent->Log("InPin::AcceptConnection completed\n");
@@ -128,7 +131,13 @@
 		//	throw InvalidOperationException("Can not disconnect while executing.");
 
 
+		pinThread->Cancel();
+		pinThread->Join();
+		pinThread = nullptr;
+
+
 		ReturnAllBuffers();
+
 
 		sourceMutex.Lock();
 		source = nullptr;
@@ -153,6 +162,11 @@
 		{
 			parent->Wake();
 		}
+
+
+		// Wake the work thread
+		waitCondition.Signal();
+
 
 		parent->Log("InPin::ReceiveBuffer completed\n");
 	}

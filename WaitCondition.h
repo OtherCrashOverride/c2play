@@ -27,7 +27,7 @@ public:
 		pthread_mutex_lock(&waitMutex);
 
 		flag = true;
-		pthread_cond_signal(&waitCondition);
+		pthread_cond_broadcast(&waitCondition);
 
 		pthread_mutex_unlock(&waitMutex);
 	}
@@ -36,10 +36,12 @@ public:
 	{
 		pthread_mutex_lock(&waitMutex);
 
-		while (!flag)
+		while (flag == false)
 		{
 			pthread_cond_wait(&waitCondition, &waitMutex);
 		}
+
+		flag = false;
 
 		pthread_mutex_unlock(&waitMutex);
 	}

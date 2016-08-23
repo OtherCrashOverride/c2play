@@ -89,7 +89,7 @@ protected:
 				break;
 
 			case ExecutionStateEnum::Initializing:
-				if (newState != ExecutionStateEnum::Executing)
+				if (newState != ExecutionStateEnum::Idle)
 				{
 					throw InvalidOperationException();
 				}
@@ -127,9 +127,13 @@ protected:
 			//pthread_cond_signal(&executionWaitCondition);
 
 			//pthread_mutex_unlock(&executionWaitMutex);
-
-			executionStateWaitCondition.Signal();
 		}
+
+		// Signal even if already set
+		executionStateWaitCondition.Signal();
+		Wake();
+
+		printf("Element: Set ExecutionState=%d\n", (int)newState);
 	}
 
 
@@ -158,20 +162,22 @@ protected:
 		SetExecutionState(ExecutionStateEnum::Initializing);
 		Initialize();
 
-		SetExecutionState(ExecutionStateEnum::Executing);
+		SetExecutionState(ExecutionStateEnum::Idle);
 		
 
-		while (executionState == ExecutionStateEnum::Executing)
-		{			
+		while (executionState == ExecutionStateEnum::Idle ||
+			   executionState == ExecutionStateEnum::Executing)
+		{
+
 			while (executionState == ExecutionStateEnum::Executing)
 			{
-				if (state == MediaState::Play)
+				while (state == MediaState::Play)
 				{
 					DoWork();
 
 					if (executionState == ExecutionStateEnum::Executing)
 					{
-						Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
+						//printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
 
 						pthread_mutex_lock(&waitMutex);
 
@@ -184,13 +190,13 @@ protected:
 
 						pthread_mutex_unlock(&waitMutex);
 
-						Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
+						//printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
 					}
+
+					//printf("Element %s InternalWorkThread looped.\n", name.c_str());
 				}
-				else
-				{
-					SetExecutionState(ExecutionStateEnum::Idle);
-				}
+				
+				//SetExecutionState(ExecutionStateEnum::Idle);				
 			}
 
 			// Idle State			
@@ -198,6 +204,10 @@ protected:
 			{
 				executionStateWaitCondition.WaitForSignal();
 			}
+
+			//SetExecutionState(ExecutionStateEnum::Executing);
+
+			//printf("Element %s resumed from Idle\n", name.c_str());
 		}
 
 
@@ -286,20 +296,19 @@ public:
 
 	virtual void Execute()
 	{
-		if (executionState != ExecutionStateEnum::WaitingForExecute &&
-			executionState != ExecutionStateEnum::Idle)
+		if (executionState != ExecutionStateEnum::WaitingForExecute)
 		{
 			throw InvalidOperationException();
 		}
 
-		if (executionState == ExecutionStateEnum::WaitingForExecute)
-		{
+		//if (executionState == ExecutionStateEnum::WaitingForExecute)
+		//{
 			thread.Start();
-		}
-		else
-		{
-			SetExecutionState(ExecutionStateEnum::Executing);
-		}
+		//}
+		//else
+		//{
+		//	SetExecutionState(ExecutionStateEnum::Executing);
+		//}
 
 		Log("Element (%s) Execute.\n", name.c_str());
 	}
@@ -376,6 +385,8 @@ public:
 	{
 		while (executionState != state)
 		{
+			printf("Element: WaitForExecutionState - executionState=%d, waitingFor=%d\n", (int)executionState, (int)state);
+
 			executionStateWaitCondition.WaitForSignal();
 		}
 	}

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Pin.h"
+#include "Thread.h"
+#include "WaitCondition.h"
+
 
 //class OutPin;
 //typedef std::shared_ptr<OutPin> OutPinSPTR;
@@ -13,12 +16,32 @@ class InPin : public Pin
 	Mutex sourceMutex;
 	ThreadSafeQueue<BufferSPTR> filledBuffers;
 	ThreadSafeQueue<BufferSPTR> processedBuffers;
+	ThreadSPTR pinThread;
+	WaitCondition waitCondition;
 
+
+
+	void WorkThread()
+	{
+		printf("InPin: WorkTread started.\n");
+
+		while (true)
+		{
+			DoWork();
+
+			waitCondition.WaitForSignal();
+		}
+
+		printf("InPin: WorkTread exited.\n");
+	}
 
 
 protected:
 	void ReturnAllBuffers();
 
+	virtual void DoWork()
+	{
+	}
 
 public:
 

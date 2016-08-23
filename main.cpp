@@ -328,12 +328,11 @@ int main(int argc, char** argv)
 		audioCodec = std::make_shared<AudioCodecElement>();
 		audioCodec->SetName(std::string("AudioCodec"));
 		audioCodec->Execute();
+		audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
 
 		audioSink = std::make_shared<AlsaAudioSinkElement>();
 		audioSink->SetName(std::string("AudioSink"));
 		audioSink->Execute();
-
-		audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
 		audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
 
 		sourceAudioPin->Connect(audioCodec->Inputs()->Item(0));
@@ -414,6 +413,7 @@ int main(int argc, char** argv)
 
 		double newTime;
 
+#if 1
 		for (InputDevicePtr dev : inputDevices)
 		{
 			while (dev->TryGetKeyPress(&keycode))
@@ -582,6 +582,8 @@ seek:
 			}
 		}
 
+#endif
+
 		bool audioIsIdle = true;
 		if (audioSink)
 		{
@@ -607,7 +609,7 @@ seek:
 		}
 		else
 		{
-			usleep(1);
+			usleep(1000);
 		}
 	}
 

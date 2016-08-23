@@ -18,6 +18,108 @@ extern "C"
 #include "Thread.h"
 
 
+//class AmlVideoSinkElement;
+//std::shared_ptr<AmlVideoSinkElement> AmlVideoSinkElementSPTR;
+
+
+class AmlVideoSinkClockInPin : public InPin
+{
+	const unsigned long PTS_FREQ = 90000;
+
+	codec_para_t* codecContextPtr;
+	double clock = 0;
+	double frameRate = 0;	// TODO just read info from Owner()
+
+
+	void ProcessClockBuffer(BufferSPTR buffer)
+	{
+		clock = buffer->TimeStamp();
+		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+
+
+		int vpts = codec_get_vpts(codecContextPtr);
+
+		if (clock < vpts * (double)PTS_FREQ)
+		{
+			clock = vpts * (double)PTS_FREQ;
+		}
+
+
+		//AmlVideoSinkClockSPTR
+
+		int drift = vpts - pts;
+		double driftTime = drift / (double)PTS_FREQ;
+		double driftFrames = driftTime * frameRate;
+		//printf("Clock drift = %f (frames=%f)\n", driftTime, driftFrames);
+
+		//clockPts = pts;
+		//lastClockPts = clockPts;
+		//printf("AmlVideoSinkElement: clock=%f, pts=%lu, clockPts=%lu\n", buffer->TimeStamp(), pts, clockPts);
+
+		// To minimize clock jitter, only adjust the clock if it
+		// deviates more than +/- 2 frames
+		if (driftFrames >= 2.0 || driftFrames <= -2.0)
+		{
+			if (pts > 0)
+			{
+				int codecCall = codec_set_pcrscr(codecContextPtr, (int)pts);
+				if (codecCall != 0)
+				{
+					printf("codec_set_pcrscr failed.\n");
+				}
+
+				//long delta = (long)pts - (long)clockPts;
+				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu\n", pts);
+			}
+		}
+	}
+
+protected:
+
+	virtual void DoWork() override
+	{
+		BufferSPTR buffer;
+		while (TryGetFilledBuffer(&buffer))
+		{
+			ProcessClockBuffer(buffer);
+
+			PushProcessedBuffer(buffer);
+			ReturnProcessedBuffers();
+		}
+	}
+
+
+public:
+
+	double Clock() const
+	{
+		return clock;
+	}
+
+	double FrameRate() const
+	{
+		return frameRate;
+	}
+	void SetFrameRate(double value)
+	{
+		frameRate = value;
+	}
+
+
+
+	AmlVideoSinkClockInPin(ElementWPTR owner, PinInfoSPTR info, codec_para_t* codecContextPtr)
+		: InPin(owner, info),
+		codecContextPtr(codecContextPtr)
+	{
+		if (codecContextPtr == nullptr)
+			throw ArgumentNullException();
+	}
+};
+
+typedef std::shared_ptr<AmlVideoSinkClockInPin> AmlVideoSinkClockInPinSPTR;
+
+
+
 class AmlVideoSinkElement : public Element
 {
 	const unsigned long PTS_FREQ = 90000;
@@ -48,11 +150,14 @@ class AmlVideoSinkElement : public Element
 	bool isFirstData = true;
 	std::vector<unsigned char> extraData;
 
-	InPinSPTR clockInPin;
-	Thread clockThread = Thread(std::function<void()>(std::bind(&AmlVideoSinkElement::ClockWorkThread, this)));
+	//InPinSPTR clockInPin;
+	//Thread clockThread = Thread(std::function<void()>(std::bind(&AmlVideoSinkElement::ClockWorkThread, this)));
 	unsigned long clockPts = 0;
 	unsigned long lastClockPts = 0;
 	double clock = 0;
+
+	AmlVideoSinkClockInPinSPTR clockInPin;
+
 
 
 	void SetupHardware()
@@ -524,7 +629,8 @@ public:
 
 	double Clock() const
 	{
-		return clock;
+		//return clock;
+		return clockInPin->Clock();
 	}
 
 
@@ -552,7 +658,7 @@ public:
 			PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Clock);
 
 			ElementWPTR weakPtr = shared_from_this();
-			clockInPin = std::make_shared<InPin>(weakPtr, info);
+			clockInPin = std::make_shared<AmlVideoSinkClockInPin>(weakPtr, info, &codecContext);
 			AddInputPin(clockInPin);			
 		}
 	}
@@ -598,12 +704,13 @@ public:
 						videoPin->InfoAs()->FrameRate = info->FrameRate;
 						videoPin->InfoAs()->ExtraData = info->ExtraData;
 
+						clockInPin->SetFrameRate(info->FrameRate);
 
 						printf("AmlVideoSink: ExtraData size=%ld\n", extraData.size());
 
 						SetupHardware();
 
-						clockThread.Start();
+						//clockThread.Start();
 
 						isFirstData = false;
 					}
