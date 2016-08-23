@@ -159,6 +159,8 @@ protected:
 		Initialize();
 
 		SetExecutionState(ExecutionStateEnum::Executing);
+		
+
 		while (executionState == ExecutionStateEnum::Executing)
 		{			
 			while (executionState == ExecutionStateEnum::Executing)
@@ -166,29 +168,32 @@ protected:
 				if (state == MediaState::Play)
 				{
 					DoWork();
-				}
 
-
-				if (executionState == ExecutionStateEnum::Executing)
-				{
-					Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
-
-					pthread_mutex_lock(&waitMutex);
-
-					while (canSleep)
+					if (executionState == ExecutionStateEnum::Executing)
 					{
-						pthread_cond_wait(&waitCondition, &waitMutex);
+						Log("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
+
+						pthread_mutex_lock(&waitMutex);
+
+						while (canSleep)
+						{
+							pthread_cond_wait(&waitCondition, &waitMutex);
+						}
+
+						canSleep = true;
+
+						pthread_mutex_unlock(&waitMutex);
+
+						Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
 					}
-
-					canSleep = true;
-
-					pthread_mutex_unlock(&waitMutex);
-
-					Log("Element (%s) InternalWorkThread woke.\n", name.c_str());
+				}
+				else
+				{
+					SetExecutionState(ExecutionStateEnum::Idle);
 				}
 			}
 
-			// Idle State
+			// Idle State			
 			while (executionState == ExecutionStateEnum::Idle)
 			{
 				executionStateWaitCondition.WaitForSignal();
@@ -274,6 +279,7 @@ public:
 
 	virtual ~Element()
 	{
+		printf("Element %s destructed.\n", name.c_str());
 	}
 
 
@@ -335,10 +341,31 @@ public:
 
 	virtual void ChangeState(MediaState oldState, MediaState newState)
 	{
-		// TODO: Allow to abort change?
 		state = newState;
 
-		Wake();
+		if (ExecutionState() == ExecutionStateEnum::Executing ||
+			ExecutionState() == ExecutionStateEnum::Idle)
+		{
+			switch (newState)
+			{
+				case MediaState::Pause:
+					SetExecutionState(ExecutionStateEnum::Idle);
+					break;
+
+				case MediaState::Play:
+					SetExecutionState(ExecutionStateEnum::Executing);
+					break;
+
+				default:
+					throw NotSupportedException();
+			}
+
+			Wake();
+		}
+		else
+		{
+			throw InvalidOperationException();
+		}
 
 		Log("Element (%s) ChangeState oldState=%d newState=%d.\n", name.c_str(), (int)oldState, (int)newState);
 	}

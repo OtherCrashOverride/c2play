@@ -159,6 +159,10 @@ class AmlVideoSinkElement : public Element
 		}
 
 
+		// This is needed because the codec remains paused
+		// even after closing
+		int ret = codec_resume(&codecContext);
+
 		//codec_reset(&codecContext);
 
 		//api = codec_set_syncenable(&codecContext, 1);
@@ -492,19 +496,24 @@ class AmlVideoSinkElement : public Element
 
 	void ClockWorkThread()
 	{
-		while (ExecutionState() == ExecutionStateEnum::Executing)
+		while (ExecutionState() != ExecutionStateEnum::Terminating)
 		{
-			// Clock
-			BufferSPTR buffer;
-			while (clockInPin->TryGetFilledBuffer(&buffer))
+			while (ExecutionState() == ExecutionStateEnum::Executing)
 			{
-				ProcessClockBuffer(buffer);
+				// Clock
+				BufferSPTR buffer;
+				while (clockInPin->TryGetFilledBuffer(&buffer))
+				{
+					ProcessClockBuffer(buffer);
 
-				// delay updates
-				//usleep(1000);
+					// delay updates
+					//usleep(1000);
 
-				clockInPin->PushProcessedBuffer(buffer);
-				clockInPin->ReturnProcessedBuffers();
+					clockInPin->PushProcessedBuffer(buffer);
+					clockInPin->ReturnProcessedBuffers();
+				}
+
+				usleep(1);
 			}
 
 			usleep(1);
@@ -564,22 +573,6 @@ public:
 		{
 			AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
-			//// Test if the codec has room for the buffer
-			//buf_status status;
-			//int api = codec_get_vbuf_state(&codecContext, &status);
-			//if (api != 0)
-			//{
-			//	printf("AmlVideoSinkElement: codec_get_vbuf_state failed.\n");
-			//}
-
-			//if (status.free_len < avPacketBuffer->GetAVPacket()->size)
-			//{
-			//	sleep(1);
-			//	Wake();
-			//	break;
-			//}
-
-
 			// Video
 			if (videoPin->TryGetFilledBuffer(&buffer))
 			{
@@ -617,7 +610,6 @@ public:
 				}
 
 
-
 				switch (buffer->Type())
 				{
 					case BufferTypeEnum::Marker:
@@ -630,9 +622,9 @@ public:
 							SetExecutionState(ExecutionStateEnum::Idle);
 							break;
 
-						//case MarkerEnum::Play:
-						//	SetState(MediaState::Play);
-						//	break;
+						case MarkerEnum::Discontinue:
+							//codec_reset(&codecContext);
+							break;
 
 						//case MarkerEnum::Pause:
 						//	SetState(MediaState::Pause);
@@ -653,17 +645,6 @@ public:
 					}
 				}
 
-
-				//if (buffer->Type() == BufferTypeEnum::EndOfStream)
-				//{
-				//	SetExecutionState(ExecutionStateEnum::Idle);
-				//	break;
-				//}
-				//else
-				//{
-				//	ProcessBuffer(avPacketBuffer);
-				//}
-
 				videoPin->PushProcessedBuffer(buffer);
 				videoPin->ReturnProcessedBuffers();
 			}
@@ -676,7 +657,7 @@ public:
 
 		Element::ChangeState(oldState, newState);
 
-		if (ExecutionState() == ExecutionStateEnum::Executing)
+		//if (ExecutionState() == ExecutionStateEnum::Executing)
 		{
 			switch (newState)
 			{

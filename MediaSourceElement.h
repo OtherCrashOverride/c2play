@@ -616,8 +616,7 @@ public:
 
 	void Seek(double timeStamp)
 	{
-		if (ExecutionState() != ExecutionStateEnum::Executing &&
-			ExecutionState() != ExecutionStateEnum::Idle)
+		if (ExecutionState() != ExecutionStateEnum::Idle)
 		{
 			throw InvalidOperationException();
 		}
@@ -625,7 +624,16 @@ public:
 		if (av_seek_frame(ctx, -1, (long)(timeStamp * AV_TIME_BASE), 0) < 0)
 		{
 			printf("av_seek_frame (%f) failed\n", timeStamp);
-		}		
+		}
+
+
+		// Send all Output Pins a Discontinue marker
+		for (int i = 0; i < Outputs()->Count(); ++i)
+		{
+			MarkerBufferSPTR marker = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::Discontinue);
+			Outputs()->Item(i)->SendBuffer(marker);
+		}
+		
 	}
 
 };

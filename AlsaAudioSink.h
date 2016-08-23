@@ -347,7 +347,15 @@ public:
 	}
 
 
+	virtual void Flush() override
+	{
+		Element::Flush();
 
+		snd_pcm_drop(handle);
+		snd_pcm_prepare(handle);
+	}
+
+protected:
 	virtual void Initialize() override
 	{
 		ClearOutputPins();
@@ -465,13 +473,13 @@ public:
 
 		if (handle)
 		{
-			if (ExecutionState() == ExecutionStateEnum::Executing)
+			//if (ExecutionState() == ExecutionStateEnum::Executing)
 			{
 				switch (newState)
 				{
 				case MediaState::Play:
 				{
-					int ret = snd_pcm_pause(handle, 0);
+					int ret = snd_pcm_pause(handle, 0);					
 					break;
 				}
 

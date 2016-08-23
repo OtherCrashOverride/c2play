@@ -77,6 +77,7 @@ enum class MarkerEnum
 {
 	Unknown = 0,
 	EndOfStream,
+	Discontinue
 	//Play,
 	//Pause
 };

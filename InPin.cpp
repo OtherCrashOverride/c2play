@@ -62,7 +62,15 @@
 			while (processedBuffers.TryPop(&buffer))
 			{
 				source->AcceptProcessedBuffer(buffer);
-				parent->Log("InPin::ReturnProcessedBuffers returned a buffer\n");
+
+				if (Owner().expired() || parent.get() == nullptr)
+				{
+					printf("InPin::ReturnProcessedBuffers: WARNING parent expired.\n");
+				}
+				else
+				{
+					parent->Log("InPin::ReturnProcessedBuffers returned a buffer\n");
+				}
 			}
 		}
 
