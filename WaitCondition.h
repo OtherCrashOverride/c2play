@@ -12,15 +12,15 @@ class WaitCondition
 
 public:
 
-	//void Lock()
-	//{
-	//	pthread_mutex_lock(&waitMutex);
-	//}
+	void Lock()
+	{
+		pthread_mutex_lock(&waitMutex);
+	}
 
-	//void Unlock()
-	//{
-	//	pthread_mutex_unlock(&waitMutex);
-	//}
+	void Unlock()
+	{
+		pthread_mutex_unlock(&waitMutex);
+	}
 
 	void Signal()
 	{

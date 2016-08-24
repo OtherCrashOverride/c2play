@@ -27,6 +27,7 @@ enum class VideoFormatEnum
 {
 	Unknown = 0,
 	Mpeg2,
+	Mpeg4V3,
 	Mpeg4,
 	Avc,
 	VC1,

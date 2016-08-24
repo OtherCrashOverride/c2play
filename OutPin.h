@@ -1,6 +1,11 @@
 #pragma once
 
+
 #include "Pin.h"
+#include "Thread.h"
+#include "WaitCondition.h"
+#include "Event.h"
+#include "EventArgs.h"
 
 
 //class InPin;
@@ -14,15 +19,39 @@ class OutPin : public Pin
 	Mutex sinkMutex;
 	//ThreadSafeQueue<BufferSPTR> filledBuffers;
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
+	ThreadSPTR pinThread;
+	WaitCondition waitCondition;
+
+
+	void WorkThread()
+	{
+		printf("InPin: WorkTread started.\n");
+
+		while (true)
+		{
+			DoWork();
+
+			waitCondition.WaitForSignal();
+		}
+
+		printf("InPin: WorkTread exited.\n");
+	}
 
 
 protected:
 
 	void AddAvailableBuffer(BufferSPTR buffer);
 
+	virtual void DoWork()
+	{
+		// Work should not block in the thread
+	}
 
 
 public:
+	Event<EventArgs> BufferReturned;
+
+
 	OutPin(ElementWPTR owner, PinInfoSPTR info);
 
 	virtual ~OutPin();
@@ -30,6 +59,10 @@ public:
 	
 
 	bool TryGetAvailableBuffer(BufferSPTR* outValue);
+	bool TryPeekAvailableBuffer(BufferSPTR* buffer)
+	{
+		return availableBuffers.TryPeek(buffer);
+	}
 	void SendBuffer(BufferSPTR buffer);
 	virtual void Flush() override;
 

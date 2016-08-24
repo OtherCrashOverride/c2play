@@ -3,6 +3,8 @@
 #include "Codec.h"
 #include "Element.h"
 #include "OutPin.h"
+#include "EventListener.h"
+
 
 #include <string>
 #include <map>
@@ -35,6 +37,8 @@ typedef std::shared_ptr<ChapterList> ChapterListSPTR;
 
 class MediaSourceElement : public Element
 {
+	const int BUFFER_COUNT = 64;  // enough for 4k video
+
 	std::string url;
 	AVFormatContext* ctx = nullptr;
 	
@@ -58,6 +62,14 @@ class MediaSourceElement : public Element
 	std::vector<OutPinSPTR> streamList;
 
 	ChapterListSPTR chapters = NewSPTR<ChapterList>();
+	
+	EventListenerSPTR<EventArgs> bufferReturnedListener;
+
+	void outPin_BufferReturned(void* sender, const EventArgs& args)
+	{
+		printf("MediaSourceElement: outPin_BufferReturned. \n");
+	}
+
 
 
 	static void PrintDictionary(AVDictionary* dictionary)
@@ -102,9 +114,6 @@ class MediaSourceElement : public Element
 
 		for (int i = 0; i < streamCount; ++i)
 		{
-			//streamMap[i] = nullptr;
-
-
 			AVStream* streamPtr = ctx->streams[i];
 			AVCodecContext* codecCtxPtr = streamPtr->codec;
 			AVMediaType mediaType = codecCtxPtr->codec_type;
@@ -146,7 +155,7 @@ class MediaSourceElement : public Element
 						ext->push_back(src[j]);
 					}
 					printf("MediaSourceElement: copied extra data (size=%d)\n", size);
-#if 1
+#if 0
 					printf("EXTRA DATA = ");
 
 					for (int j = 0; j < size; ++j)
@@ -176,6 +185,12 @@ class MediaSourceElement : public Element
 					printf("stream #%d - VIDEO/MPEG2\n", i);
 					if (info)
 						info->Format = VideoFormatEnum::Mpeg2;
+					break;
+
+				case AV_CODEC_ID_MSMPEG4V3:
+					printf("stream #%d - VIDEO/MPEG4V3\n", i);
+					if (info)
+						info->Format = VideoFormatEnum::Mpeg4V3;
 					break;
 
 				case CODEC_ID_MPEG4:
@@ -476,6 +491,11 @@ public:
 
 		SetupPins();
 
+		bufferReturnedListener = std::make_shared<EventListener<EventArgs>>(
+			std::bind(&MediaSourceElement::outPin_BufferReturned, this, std::placeholders::_1, std::placeholders::_2));
+		videoPin->BufferReturned.AddListener(bufferReturnedListener);
+
+
 		// Chapters
 		int index = 0;
 		for (auto& chapter : *chapters)
@@ -486,7 +506,7 @@ public:
 
 
 		// Create buffers
-		for (int i = 0; i < 64; ++i)
+		for (int i = 0; i < BUFFER_COUNT; ++i)
 		{
 			AVPacketBufferPtr buffer = std::make_shared<AVPacketBuffer>(shared_from_this());
 			availableBuffers.Push(buffer);
@@ -551,8 +571,7 @@ public:
 			if (av_read_frame(ctx, buffer->GetAVPacket()) < 0)
 			{
 				// End of file
-				// TODO: Terminate? (return false)
-				
+
 				// Free the memory allocated to the buffers by libav
 				buffer->Reset();
 				availableBuffers.Push(buffer);
@@ -567,9 +586,11 @@ public:
 					}
 				}
 
-				SetExecutionState(ExecutionStateEnum::Idle);
-				break;
+				//SetExecutionState(ExecutionStateEnum::Idle);
+				SetState(MediaState::Pause);
+
 				//printf("MediaElement (%s) DoWork av_read_frame failed.\n", Name().c_str());
+				break;
 			}
 			else
 			{
@@ -584,7 +605,12 @@ public:
 				{
 					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
 
-					//printf("MediaSourceElement: Set buffer timestamp=%f\n", buffer->TimeStamp());
+					//printf("MediaSourceElement: [stream %d] Set buffer timestamp=%f\n", pkt->stream_index, buffer->TimeStamp());
+				}
+				else
+				{
+					buffer->SetTimeStamp(-1);
+					//printf("MediaSourceElement: [stream %d] No timestamp.\n", pkt->stream_index);
 				}
 
 				//AddFilledBuffer(buffer);

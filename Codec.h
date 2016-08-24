@@ -16,6 +16,7 @@ extern "C"
 #include "PacketBuffer.h"
 
 
+
 enum class MediaState
 {
 	Pause = 0,
@@ -36,6 +37,24 @@ typedef std::shared_ptr<InPin> InPinSPTR;
 
 class OutPin;
 typedef std::shared_ptr<OutPin> OutPinSPTR;
+
+
+//template<typename T>
+//using EventFunction = std::function<void(void* sender, const T& args)>;
+//
+//
+//
+//
+//typedef std::shared_ptr<EventArgs> EventArgsSPTR;
+//
+//
+//class Event;
+//typedef std::shared_ptr<Event> EventSPTR;
+//typedef std::weak_ptr<Event> EventWPTR;
+//
+//
+
+
 
 
 

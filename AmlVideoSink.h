@@ -176,9 +176,20 @@ class AmlVideoSinkElement : public Element
 		// frame-rate from PTS 
 		codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
 		
-		// Note: Testing has shown that the ALSA clock requires the +1
-		codecContext.am_sysinfo.rate = 96000.0 / frameRate + 1;
-		//codecContext.noblock = 1;
+
+		if (frameRate == 25.0 || 
+			frameRate == (10000000.0 / 417083.0))
+		{
+			printf("AmlVideoSink: Using alternate time formula.\n");
+			codecContext.am_sysinfo.rate = 96000.0 / frameRate - 1;
+		}
+		else
+		{
+			printf("AmlVideoSink: Using standard time formula.\n");
+			// Note: Testing has shown that the ALSA clock requires the +1
+			codecContext.am_sysinfo.rate = 96000.0 / frameRate + 1;
+			//codecContext.noblock = 1;
+		}
 
 		switch (videoFormat)
 		{
@@ -187,6 +198,14 @@ class AmlVideoSinkElement : public Element
 
 			codecContext.video_type = VFORMAT_MPEG12;
 			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
+			break;
+
+		case VideoFormatEnum::Mpeg4V3:
+			printf("AmlVideoSink - VIDEO/MPEG4V3\n");
+
+			codecContext.video_type = VFORMAT_MPEG4;
+			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_3;
+			//VIDEO_DEC_FORMAT_MP4; //VIDEO_DEC_FORMAT_MPEG4_3; //VIDEO_DEC_FORMAT_MPEG4_4; //VIDEO_DEC_FORMAT_MPEG4_5;
 			break;
 
 		case VideoFormatEnum::Mpeg4:
@@ -625,6 +644,22 @@ class AmlVideoSinkElement : public Element
 		}
 	}
 
+
+protected:
+
+	virtual void Idling() override
+	{
+		int ret = codec_pause(&codecContext);
+		printf("AmlVideoSinkElement: Idling.\n");
+	}
+
+	virtual void Idled() override
+	{
+		int ret = codec_resume(&codecContext);
+		printf("AmlVideoSinkElement: Idled.\n");
+	}
+
+	
 public:
 
 	double Clock() const
@@ -726,7 +761,12 @@ public:
 						switch (markerBuffer->Marker())
 						{
 						case MarkerEnum::EndOfStream:
-							SetExecutionState(ExecutionStateEnum::Idle);
+							//SetExecutionState(ExecutionStateEnum::Idle);
+
+							// TODO: This causes the codec to pause
+							//  even though there are still buffers in
+							//  the kernel driver being processed
+							SetState(MediaState::Pause);
 							break;
 
 						case MarkerEnum::Discontinue:
@@ -755,6 +795,9 @@ public:
 				videoPin->PushProcessedBuffer(buffer);
 				videoPin->ReturnProcessedBuffers();
 			}
+
+			if (ExecutionState() != ExecutionStateEnum::Executing)
+				break;
 		}
 	}
 
@@ -770,13 +813,13 @@ public:
 			{
 			case MediaState::Play:
 			{
-				int ret = codec_resume(&codecContext);
+				//int ret = codec_resume(&codecContext);
 				break;
 			}
 
 			case MediaState::Pause:
 			{
-				int ret = codec_pause(&codecContext);
+				//int ret = codec_pause(&codecContext);
 				break;
 			}
 

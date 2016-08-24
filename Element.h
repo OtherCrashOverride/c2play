@@ -26,16 +26,17 @@
 
 
 // Execution Flow:
-//	-->	 Waiting
+//	-->WaitingForExecute
 //	|	    |
 //	|	    V
 //	|   Initializing
 //	|	    |
-//	|	    V
-//	|	Executing  <-->  Idle
-//	|	    |             |
-//	|	    V             |
-//	---	Terminated <-------
+//	|	    |<---------------------------------------------
+//	|	    V                                             |
+//	|	  Idle  --> [Play] -->  Executing --> [Pause] -----
+//	|	    |                       |
+//	|	    V                       |
+//	---	Terminating <----------------
 
 
 enum class ExecutionStateEnum
@@ -62,16 +63,27 @@ class Element : public std::enable_shared_from_this<Element>
 
 	std::string name = "Element";
 
-	//pthread_cond_t executionWaitCondition = PTHREAD_COND_INITIALIZER;
-	//pthread_mutex_t executionWaitMutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t executionWaitCondition = PTHREAD_COND_INITIALIZER;
+	pthread_mutex_t executionWaitMutex = PTHREAD_MUTEX_INITIALIZER;
 
 	bool logEnabled = false;
 
-	WaitCondition executionStateWaitCondition;
+	//WaitCondition executionStateWaitCondition;
 
 
+	//void SignalExecutionWait(ExecutionStateEnum newState)
+	//{
+	//	pthread_mutex_lock(&executionWaitMutex);
 
-protected:
+	//	canSleep = false;
+
+	//	if (pthread_cond_broadcast(&executionWaitCondition) != 0)
+	//	{
+	//		throw Exception("Element::SignalExecutionWait - pthread_cond_broadcast failed.");
+	//	}
+
+	//	pthread_mutex_unlock(&executionWaitMutex);
+	//}
 
 	void SetExecutionState(ExecutionStateEnum newState)
 	{
@@ -119,24 +131,30 @@ protected:
 				break;
 			}
 
-
-			//pthread_mutex_lock(&executionWaitMutex);
-
-			executionState = newState;
-
-			//pthread_cond_signal(&executionWaitCondition);
-
-			//pthread_mutex_unlock(&executionWaitMutex);
+			//executionState = newState;
 		}
 
 		// Signal even if already set
-		executionStateWaitCondition.Signal();
+		//executionStateWaitCondition.Signal();
+
+		pthread_mutex_lock(&executionWaitMutex);
+
+		executionState = newState;
+
+		if (pthread_cond_broadcast(&executionWaitCondition) != 0)
+		{
+			throw Exception("Element::SignalExecutionWait - pthread_cond_broadcast failed.");
+		}
+
+		pthread_mutex_unlock(&executionWaitMutex);
+
 		Wake();
 
-		printf("Element: Set ExecutionState=%d\n", (int)newState);
+		printf("Element: %s Set ExecutionState=%d\n", name.c_str(), (int)newState);
 	}
 
 
+protected:
 
 	Element()
 	{
@@ -153,6 +171,13 @@ protected:
 		Log("Element (%s) DoWork exited.\n", name.c_str());
 	}
 
+	virtual void Idling()
+	{
+	}
+
+	virtual void Idled()
+	{
+	}
 
 
 	void InternalWorkThread()
@@ -164,50 +189,58 @@ protected:
 
 		SetExecutionState(ExecutionStateEnum::Idle);
 		
-
 		while (executionState == ExecutionStateEnum::Idle ||
 			   executionState == ExecutionStateEnum::Executing)
 		{
-
+			// Executing state
 			while (executionState == ExecutionStateEnum::Executing)
-			{
-				while (state == MediaState::Play)
+			{				
+				DoWork();
+
+				pthread_mutex_lock(&waitMutex);
+				
+				if (executionState == ExecutionStateEnum::Executing)
 				{
-					DoWork();
+					//printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
 
-					if (executionState == ExecutionStateEnum::Executing)
+					while (canSleep)
 					{
-						//printf("Element (%s) InternalWorkThread sleeping.\n", name.c_str());
-
-						pthread_mutex_lock(&waitMutex);
-
-						while (canSleep)
-						{
-							pthread_cond_wait(&waitCondition, &waitMutex);
-						}
-
-						canSleep = true;
-
-						pthread_mutex_unlock(&waitMutex);
-
-						//printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
+						pthread_cond_wait(&waitCondition, &waitMutex);
 					}
 
-					//printf("Element %s InternalWorkThread looped.\n", name.c_str());
+					canSleep = true;
+
+					//printf("Element (%s) InternalWorkThread woke.\n", name.c_str());
 				}
-				
-				//SetExecutionState(ExecutionStateEnum::Idle);				
-			}
 
-			// Idle State			
-			while (executionState == ExecutionStateEnum::Idle)
+				pthread_mutex_unlock(&waitMutex);
+
+			}
+			
+			
+			// Idle State
+			pthread_mutex_lock(&executionWaitMutex);
+
+			if (executionState == ExecutionStateEnum::Idle)
 			{
-				executionStateWaitCondition.WaitForSignal();
+				printf("Element %s Idling\n", name.c_str());
+
+				Idling();
+				
+				while (executionState == ExecutionStateEnum::Idle)
+				{
+					//executionStateWaitCondition.WaitForSignal();
+					pthread_cond_wait(&executionWaitCondition, &executionWaitMutex);
+				}
+
+				Idled();
+
+				printf("Element %s resumed from Idle\n", name.c_str());
 			}
+			
+			pthread_mutex_unlock(&executionWaitMutex);
 
-			//SetExecutionState(ExecutionStateEnum::Executing);
-
-			//printf("Element %s resumed from Idle\n", name.c_str());
+			
 		}
 
 
@@ -252,7 +285,16 @@ public:
 
 	ExecutionStateEnum ExecutionState() const
 	{
-		return executionState;
+		ExecutionStateEnum result;
+
+		// Probably not necessary to lock since
+		// the read should be atomic at the hardware
+		// level.
+		//pthread_mutex_lock(&waitMutex);
+		result = executionState;
+		//pthread_mutex_unlock(&waitMutex);
+		
+		return result;
 	}
 
 	std::string Name() const
@@ -383,12 +425,25 @@ public:
 
 	void WaitForExecutionState(ExecutionStateEnum state)
 	{
+		//while (executionState != state)
+		//{
+			printf("Element %s: WaitForExecutionState - executionState=%d, waitingFor=%d\n",
+				name.c_str(), (int)executionState, (int)state);
+
+		//	executionStateWaitCondition.WaitForSignal();
+		//}
+
+		pthread_mutex_lock(&executionWaitMutex);
+
 		while (executionState != state)
 		{
-			printf("Element: WaitForExecutionState - executionState=%d, waitingFor=%d\n", (int)executionState, (int)state);
-
-			executionStateWaitCondition.WaitForSignal();
+			pthread_cond_wait(&executionWaitCondition, &executionWaitMutex);
 		}
+
+		pthread_mutex_unlock(&executionWaitMutex);
+
+		printf("Element %s: Finished WaitForExecutionState - executionState=%d\n",
+			name.c_str(), (int)state);
 	}
 
 	virtual void Flush()

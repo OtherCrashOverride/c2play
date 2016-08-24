@@ -41,7 +41,10 @@ protected:
 
 	virtual void DoWork()
 	{
+		// Work should not block in the thread
 	}
+
+
 
 public:
 
@@ -67,6 +70,14 @@ public:
 	{
 		return filledBuffers.TryPop(buffer);
 	}
+	
+	//void WaitForFilledBuffer(BufferSPTR* buffer)
+	//{
+	//	while (!TryGetFilledBuffer(buffer))
+	//	{
+	//		waitCondition.WaitForSignal();
+	//	}
+	//}
 
 	bool TryPeekFilledBuffer(BufferSPTR* buffer)
 	{

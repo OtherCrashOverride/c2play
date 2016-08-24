@@ -436,7 +436,8 @@ protected:
 					switch (markerBuffer->Marker())
 					{
 					case MarkerEnum::EndOfStream:
-						SetExecutionState(ExecutionStateEnum::Idle);
+						//SetExecutionState(ExecutionStateEnum::Idle);
+						SetState(MediaState::Pause);
 						break;
 
 					default:
@@ -460,6 +461,9 @@ protected:
 
 			audioPin->PushProcessedBuffer(buffer);
 			audioPin->ReturnProcessedBuffers();
+
+			if (ExecutionState() != ExecutionStateEnum::Executing)
+				break;
 		}
 
 		

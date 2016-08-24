@@ -11,41 +11,7 @@
 #include "InPin.h"
 
 
-class NullSink : public Element
-{
-	InPinSPTR pin;
 
-
-public:
-	virtual void Initialize() override
-	{
-		ClearOutputPins();
-		ClearInputPins();
-
-		// Create a pin
-		PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Unknown);
-
-		ElementWPTR weakPtr = shared_from_this();
-		pin = std::make_shared<InPin>(weakPtr, info);
-		AddInputPin(pin);
-	}
-
-	virtual void DoWork() override
-	{
-		BufferSPTR buffer;
-		while (pin->TryGetFilledBuffer(&buffer))
-		{
-			pin->PushProcessedBuffer(buffer);
-		}
-
-		pin->ReturnProcessedBuffers();
-	}
-
-	virtual void ChangeState(MediaState oldState, MediaState newState) override
-	{
-		Element::ChangeState(oldState, newState);
-	}
-};
 
 
 
@@ -134,7 +100,7 @@ class AudioCodecElement : public Element
 	}
 
 
-	void ProcessBuffer(AVPacketBufferSPTR buffer)
+	void ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSPTR frame)
 	{
 		AVPacket* pkt = buffer->GetAVPacket();
 		AVFrame* decoded_frame = frame->GetAVFrame();
@@ -217,6 +183,7 @@ class AudioCodecElement : public Element
 					throw NotSupportedException();
 				}
 
+#if 1
 				PcmDataBufferSPTR pcmDataBuffer = std::make_shared<PcmDataBuffer>(
 					shared_from_this(),
 					format,
@@ -269,6 +236,9 @@ class AudioCodecElement : public Element
 				}
 
 				audioOutPin->SendBuffer(pcmDataBuffer);
+#else
+				audioOutPin->SendBuffer(frame);
+#endif
 			}
 		}
 	}
@@ -298,7 +268,7 @@ public:
 		{
 			// Create an audio out pin
 			outInfo = std::make_shared<AudioPinInfo>();
-			outInfo->Format = AudioFormatEnum::Unknown;
+			outInfo->Format = AudioFormatEnum::Pcm;
 			outInfo->Channels = 0;
 			outInfo->SampleRate = 0;
 
@@ -309,12 +279,16 @@ public:
 
 
 		// Create buffer(s)
+		/*AVFrameBufferSPTR frame = std::make_shared<AVFrameBuffer>(shared_from_this());*/
+		//audioOutPin->AcceptProcessedBuffer(frame);
+		
 		frame = std::make_shared<AVFrameBuffer>(shared_from_this());
 	}
 
 	virtual void DoWork() override
 	{
 		BufferSPTR buffer;
+		BufferSPTR outBuffer;
 
 		// Reap output buffers
 		while (audioOutPin->TryGetAvailableBuffer(&buffer))
@@ -325,84 +299,109 @@ public:
 		}
 
 
-		// Process inputs buffers
-		while (audioInPin->TryGetFilledBuffer(&buffer))
+		//while (audioInPin->TryPeekFilledBuffer(&buffer) &&
+		//	   audioOutPin->TryPeekAvailableBuffer(&outBuffer))
+		while(audioInPin->TryGetFilledBuffer(&buffer))
 		{
-			if (isFirstData)
+			// Both an input and output buffer are avaialable
+
+			//// Get the inputs buffers
+			//if (!audioInPin->TryGetFilledBuffer(&buffer))
+			//{
+			//	throw Exception("Internal consistency error.");
+			//}
+
+			if (buffer->Type() != BufferTypeEnum::AVPacket)
 			{
-				OutPinSPTR otherPin = audioInPin->Source();
-				if (otherPin)
+				// The input buffer is not usuable for processing
+				switch (buffer->Type())
 				{
-					if (otherPin->Info()->Category() != MediaCategoryEnum::Audio)
+					case BufferTypeEnum::Marker:
 					{
-						throw InvalidOperationException("AlsaAudioSinkElement: Not connected to an audio pin.");
-					}
+						MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
 
-					AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(otherPin->Info());
-					audioFormat = info->Format;
-					sampleRate = info->SampleRate;
-					streamChannels = info->Channels;
-
-					outInfo->SampleRate = info->SampleRate;
-					outInfo->Channels = info->Channels;
-
-					printf("AudioCodecElement: outInfo->SampleRate=%d, outInfo->Channels=%d\n", outInfo->SampleRate, outInfo->Channels);
-
-					SetupCodec();
-
-					isFirstData = false;
-				}
-			}
-
-			switch (buffer->Type())
-			{
-				case BufferTypeEnum::Marker:
-				{
-					MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
-
-					switch (markerBuffer->Marker())
-					{
-					case MarkerEnum::EndOfStream:
-						// Send all Output Pins an EOS buffer					
-						for (int i = 0; i < Outputs()->Count(); ++i)
+						switch (markerBuffer->Marker())
 						{
-							MarkerBufferSPTR eosBuffer = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::EndOfStream);
-							Outputs()->Item(i)->SendBuffer(eosBuffer);
+							case MarkerEnum::EndOfStream:
+								// Send all Output Pins an EOS buffer					
+								for (int i = 0; i < Outputs()->Count(); ++i)
+								{
+									MarkerBufferSPTR eosBuffer = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::EndOfStream);
+									Outputs()->Item(i)->SendBuffer(eosBuffer);
+								}
+
+								//SetExecutionState(ExecutionStateEnum::Idle);
+								SetState(MediaState::Pause);
+								break;
+
+								//case MarkerEnum::Play:						
+								//	SetState(MediaState::Play);
+								//	break;
+
+								//case MarkerEnum::Pause:
+								//	SetState(MediaState::Pause);
+								//	break;
+
+							default:
+								// ignore unknown 
+								break;
 						}
-					
-						SetExecutionState(ExecutionStateEnum::Idle);
 						break;
-
-					//case MarkerEnum::Play:						
-					//	SetState(MediaState::Play);
-					//	break;
-
-					//case MarkerEnum::Pause:
-					//	SetState(MediaState::Pause);
-					//	break;
+					}
 
 					default:
-						// ignore unknown 
+						// Ignore
 						break;
-					}
-
-					break;
 				}
 
-				case BufferTypeEnum::AVPacket:
-				{
-					AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
-
-					ProcessBuffer(avPacketBuffer);
-
-					break;
-				}
+				audioInPin->PushProcessedBuffer(buffer);
+				audioInPin->ReturnProcessedBuffers();
 			}
+			else
+			{
+				//// Get the output buffer
+				//if (!audioOutPin->TryGetAvailableBuffer(&outBuffer))
+				//{
+				//	throw Exception("Internal consistency error.");
+				//}
 
-			audioInPin->PushProcessedBuffer(buffer);
-			audioInPin->ReturnProcessedBuffers();			
+				if (isFirstData)
+				{
+					OutPinSPTR otherPin = audioInPin->Source();
+					if (otherPin)
+					{
+						if (otherPin->Info()->Category() != MediaCategoryEnum::Audio)
+						{
+							throw InvalidOperationException("AlsaAudioSinkElement: Not connected to an audio pin.");
+						}
+
+						AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(otherPin->Info());
+						audioFormat = info->Format;
+						sampleRate = info->SampleRate;
+						streamChannels = info->Channels;
+
+						outInfo->SampleRate = info->SampleRate;
+						outInfo->Channels = info->Channels;
+
+						printf("AudioCodecElement: outInfo->SampleRate=%d, outInfo->Channels=%d\n", outInfo->SampleRate, outInfo->Channels);
+
+						SetupCodec();
+
+						isFirstData = false;
+					}
+				}
+
+				AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+				//AVFrameBufferSPTR avFrameBuffer = std::static_pointer_cast<AVFrameBuffer>(outBuffer);
+				
+				//ProcessBuffer(avPacketBuffer, avFrameBuffer);
+				ProcessBuffer(avPacketBuffer, frame);
+
+				audioInPin->PushProcessedBuffer(buffer);
+				audioInPin->ReturnProcessedBuffers();
+			}
+			
 		}
-
 		
 	}
 

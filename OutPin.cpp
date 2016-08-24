@@ -88,6 +88,11 @@
 		this->sink = sink;
 		this->sink->AcceptConnection(thisPin);
 
+		
+		pinThread = std::make_shared<Thread>(std::function<void()>(std::bind(&OutPin::WorkThread, this)));
+		pinThread->Start();
+
+
 		sinkMutex.Unlock();
 	}
 
@@ -103,5 +108,11 @@
 
 		//availableBuffers.Push(buffer);
 		AddAvailableBuffer(buffer);
+
+		// Wake the work thread
+		waitCondition.Signal();
+
+		// TODO: sent BufferSPTR as args
+		BufferReturned.Invoke(this, EventArgs::Empty());
 	}
 
