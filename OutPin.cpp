@@ -42,7 +42,10 @@
 		}
 		else
 		{
-			AddAvailableBuffer(buffer);
+			//AddAvailableBuffer(buffer);
+
+			// This is required to generate an event
+			AcceptProcessedBuffer(buffer);
 		}
 	}
 

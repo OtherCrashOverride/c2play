@@ -869,7 +869,7 @@ public:
 		//	}
 		//}
 
-		while (videoPin->TryPeekFilledBuffer(&buffer))
+		while (IsExecuting() && videoPin->TryPeekFilledBuffer(&buffer))
 		{
 			AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
@@ -947,6 +947,8 @@ public:
 
 					case BufferTypeEnum::AVPacket:
 					{
+						//printf("AmlVideoSink: Got a buffer.\n");
+
 						ProcessBuffer(avPacketBuffer);
 						break;
 					}
@@ -956,8 +958,8 @@ public:
 				videoPin->ReturnProcessedBuffers();
 			}
 
-			if (ExecutionState() != ExecutionStateEnum::Executing)
-				break;
+			//if (ExecutionState() != ExecutionStateEnum::Executing)
+			//	break;
 		}
 	}
 

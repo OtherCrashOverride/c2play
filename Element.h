@@ -153,7 +153,7 @@ class Element : public std::enable_shared_from_this<Element>
 
 		Wake();
 
-		//printf("Element: %s Set ExecutionState=%d\n", name.c_str(), (int)newState);
+		printf("Element: %s Set ExecutionState=%d\n", name.c_str(), (int)newState);
 	}
 
 

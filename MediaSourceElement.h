@@ -702,6 +702,8 @@ public:
 				}
 			}
 		}
+
+		//printf("MediaSourceElement: availableBuffers=%d\n", availableBuffers.Count());
 	}
 
 	//virtual void Flush() override
