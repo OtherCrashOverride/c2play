@@ -88,10 +88,11 @@ public:
 	}
 
 	VideoFormatEnum Format = VideoFormatEnum::Unknown;
-	int Width;
-	int Height;
+	int Width = 0;
+	int Height = 0;
 	double FrameRate = 0;
 	ExtraDataSPTR ExtraData;
+	bool HasEstimatedPts = false;
 };
 typedef std::shared_ptr<VideoPinInfo> VideoPinInfoSPTR;
 

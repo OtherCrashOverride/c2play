@@ -310,11 +310,10 @@ class AmlVideoSinkElement : public Element
 		codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
 		
 
-		//if (frameRate == 25.0 || 
-		//	frameRate == (10000000.0 / 417083.0))
+		//if (videoPin->InfoAs()->HasEstimatedPts)
 		//{
 		//	printf("AmlVideoSink: Using alternate time formula.\n");
-		//	codecContext.am_sysinfo.rate = 96000.0 / frameRate - 1;
+		//	codecContext.am_sysinfo.rate = 96000.0 / frameRate;
 		//}
 		//else
 		{
@@ -485,19 +484,24 @@ class AmlVideoSinkElement : public Element
 		{
 			//printf("WARNING: AV_NOPTS_VALUE for codec_checkin_pts (duration=%x).\n", pkt->duration);
 
-			// This happens for containers like AVI
-			if (pkt->duration > 0)
-			{
-				// Estimate PTS
-				double timeStamp = av_q2d(buffer->TimeBase()) * estimatedNextPts;
-				pts = (unsigned long)(timeStamp * PTS_FREQ);
+			//// This happens for containers like AVI
+			//if (pkt->duration > 0)
+			//{
+			//	// Estimate PTS
+			//	double timeStamp = av_q2d(buffer->TimeBase()) * estimatedNextPts;
+			//	pts = (unsigned long)(timeStamp * PTS_FREQ);
 
-				estimatedNextPts += pkt->duration;
-				lastTimeStamp = timeStamp;
+			//	estimatedNextPts += pkt->duration;
+			//	lastTimeStamp = timeStamp;
 
-				//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
-			}
+			//	//printf("WARNING: Estimated PTS for codec_checkin_pts (timeStamp=%f).\n", timeStamp);
+			//}
 		}
+
+#else
+
+		//pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+
 #endif
 
 		isExtraDataSent = false;
@@ -897,6 +901,7 @@ public:
 						videoPin->InfoAs()->Height = info->Height;
 						videoPin->InfoAs()->FrameRate = info->FrameRate;
 						videoPin->InfoAs()->ExtraData = info->ExtraData;
+						videoPin->InfoAs()->HasEstimatedPts = info->HasEstimatedPts;
 
 						clockInPin->SetFrameRate(info->FrameRate);
 

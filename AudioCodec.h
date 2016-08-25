@@ -194,6 +194,8 @@ class AudioCodecElement : public Element
 					av_frame_get_best_effort_timestamp(frame->GetAVFrame()) *
 					av_q2d(buffer->TimeBase()));
 				
+				//pcmDataBuffer->SetTimeStamp(buffer->TimeStamp());
+
 				//printf("decodec audio frame pts=%f\n", pcmDataBuffer->TimeStamp());
 
 				if (isInterleaved)

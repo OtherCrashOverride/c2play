@@ -46,7 +46,7 @@ class OutPin : public Pin
 
 	void WorkThread()
 	{
-		printf("InPin: WorkTread started.\n");
+		//printf("OutPin: WorkTread started.\n");
 
 		while (true)
 		{
@@ -55,7 +55,7 @@ class OutPin : public Pin
 			waitCondition.WaitForSignal();
 		}
 
-		printf("InPin: WorkTread exited.\n");
+		//printf("OutPin: WorkTread exited.\n");
 	}
 
 

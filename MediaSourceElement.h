@@ -60,6 +60,7 @@ class MediaSourceElement : public Element
 	//std::map<int, OutPinSPTR> streamMap;
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
 	std::vector<OutPinSPTR> streamList;
+	std::vector<unsigned long> streamNextPts;
 
 	ChapterListSPTR chapters = NewSPTR<ChapterList>();
 	
@@ -167,6 +168,12 @@ class MediaSourceElement : public Element
 				for (int j = 0; j < size; ++j)
 				{
 					ext->push_back(src[j]);
+				}
+
+				if (url.compare(url.size() - 4, 4, ".avi") == 0)
+				{
+					info->HasEstimatedPts = true;
+					//printf("MediaSourceElement: info->HasEstimatedPts = true\n");
 				}
 
 				ElementWPTR weakPtr = shared_from_this();
@@ -550,6 +557,11 @@ public:
 
 		SetupPins();
 
+		for (size_t i = 0; i < streamList.size(); ++i)
+		{
+			streamNextPts.push_back(0);
+		}
+
 
 		// Event handlers
 		bufferReturnedListener = std::make_shared<EventListener<EventArgs>>(
@@ -672,14 +684,18 @@ public:
 				if (pkt->pts != AV_NOPTS_VALUE)
 				{
 					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
-
+					streamNextPts[pkt->stream_index] = pkt->pts + pkt->duration;
 					//printf("MediaSourceElement: [stream %d] Set buffer timestamp=%f\n", pkt->stream_index, buffer->TimeStamp());
 				}
 				else
 				{
-					buffer->SetTimeStamp(-1);
+					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * streamNextPts[pkt->stream_index]);
+					streamNextPts[pkt->stream_index] += pkt->duration;
+
 					//printf("MediaSourceElement: [stream %d] No timestamp.\n", pkt->stream_index);
 				}
+
+				
 
 				//AddFilledBuffer(buffer);
 				OutPinSPTR pin = streamList[pkt->stream_index];

@@ -286,8 +286,8 @@ class AlsaAudioSinkElement : public Element
 			if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
 			{
 				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
-
 				clockDataBuffer->SetTimeStamp(time);
+
 				clockOutPin->SendBuffer(clockDataBuffer);
 
 				//printf("AmlAudioSinkElement: clock=%f\n", clockPinBuffer->TimeStamp());
