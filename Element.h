@@ -124,7 +124,10 @@ class Element : public std::enable_shared_from_this<Element>
 				break;
 
 			case ExecutionStateEnum::Terminating:
-				throw InvalidOperationException();
+				if (newState != ExecutionStateEnum::WaitingForExecute)
+				{
+					throw InvalidOperationException();
+				}
 				break;
 
 			default:
@@ -150,7 +153,7 @@ class Element : public std::enable_shared_from_this<Element>
 
 		Wake();
 
-		printf("Element: %s Set ExecutionState=%d\n", name.c_str(), (int)newState);
+		//printf("Element: %s Set ExecutionState=%d\n", name.c_str(), (int)newState);
 	}
 
 
@@ -223,7 +226,7 @@ protected:
 
 			if (executionState == ExecutionStateEnum::Idle)
 			{
-				printf("Element %s Idling\n", name.c_str());
+				//printf("Element %s Idling\n", name.c_str());
 
 				Idling();
 				
@@ -235,7 +238,7 @@ protected:
 
 				Idled();
 
-				printf("Element %s resumed from Idle\n", name.c_str());
+				//printf("Element %s resumed from Idle\n", name.c_str());
 			}
 			
 			pthread_mutex_unlock(&executionWaitMutex);
@@ -295,6 +298,11 @@ public:
 		//pthread_mutex_unlock(&waitMutex);
 		
 		return result;
+	}
+
+	bool IsExecuting() const
+	{
+		return executionState == ExecutionStateEnum::Executing;
 	}
 
 	std::string Name() const
@@ -427,8 +435,8 @@ public:
 	{
 		//while (executionState != state)
 		//{
-			printf("Element %s: WaitForExecutionState - executionState=%d, waitingFor=%d\n",
-				name.c_str(), (int)executionState, (int)state);
+			//printf("Element %s: WaitForExecutionState - executionState=%d, waitingFor=%d\n",
+			//	name.c_str(), (int)executionState, (int)state);
 
 		//	executionStateWaitCondition.WaitForSignal();
 		//}
@@ -442,8 +450,8 @@ public:
 
 		pthread_mutex_unlock(&executionWaitMutex);
 
-		printf("Element %s: Finished WaitForExecutionState - executionState=%d\n",
-			name.c_str(), (int)state);
+		//printf("Element %s: Finished WaitForExecutionState - executionState=%d\n",
+		//	name.c_str(), (int)state);
 	}
 
 	virtual void Flush()

@@ -42,20 +42,20 @@ class MediaSourceElement : public Element
 	std::string url;
 	AVFormatContext* ctx = nullptr;
 	
-	int video_stream_idx = -1;
-	void* video_extra_data;
-	int video_extra_data_size = 0;
-	AVCodecID video_codec_id;
-	double frameRate;
-	AVRational time_base;
-	OutPinSPTR videoPin;
+	//int video_stream_idx = -1;
+	//void* video_extra_data;
+	//int video_extra_data_size = 0;
+	//AVCodecID video_codec_id;
+	//double frameRate;
+	//AVRational time_base;
+	//OutPinSPTR videoPin;
 
 
-	int audio_stream_idx = -1;
-	AVCodecID audio_codec_id;
-	int audio_sample_rate = 0;
-	int audio_channels = 0;
-	OutPinSPTR audioPin;
+	//int audio_stream_idx = -1;
+	//AVCodecID audio_codec_id;
+	//int audio_sample_rate = 0;
+	//int audio_channels = 0;
+	//OutPinSPTR audioPin;
 
 	//std::map<int, OutPinSPTR> streamMap;
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
@@ -65,9 +65,38 @@ class MediaSourceElement : public Element
 	
 	EventListenerSPTR<EventArgs> bufferReturnedListener;
 
+
 	void outPin_BufferReturned(void* sender, const EventArgs& args)
 	{
-		printf("MediaSourceElement: outPin_BufferReturned. \n");
+		//printf("MediaSourceElement: outPin_BufferReturned entered.\n");
+
+		OutPin* outPin = (OutPin*)sender;
+		BufferSPTR buffer;
+		
+		if (outPin->TryGetAvailableBuffer(&buffer))
+		{
+			switch (buffer->Type())
+			{
+			case BufferTypeEnum::AVPacket:
+			{
+				// Free the memory allocated to the buffers by libav
+				AVPacketBufferPTR avbuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+				avbuffer->Reset();
+
+				// Reuse the buffer
+				availableBuffers.Push(buffer);
+				Wake();
+
+				break;
+			}
+
+			case BufferTypeEnum::Marker:
+			default:
+				break;
+			}
+		}
+
+		//printf("MediaSourceElement: outPin_BufferReturned finished.\n");
 	}
 
 
@@ -123,61 +152,83 @@ class MediaSourceElement : public Element
 			{
 			case AVMEDIA_TYPE_VIDEO:
 			{
-				VideoPinInfoSPTR info;
+				VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
+				info->FrameRate = av_q2d(streamPtr->avg_frame_rate);;
+				info->Width = codecCtxPtr->width;
+				info->Height = codecCtxPtr->height;
 
-				if (video_stream_idx < 0)
+				ExtraDataSPTR ext = std::make_shared<ExtraData>();
+				info->ExtraData = ext;
+
+				// Copy codec extra data
+				unsigned char* src = codecCtxPtr->extradata;
+				int size = codecCtxPtr->extradata_size;
+
+				for (int j = 0; j < size; ++j)
 				{
-					video_stream_idx = i;
-					video_extra_data = codecCtxPtr->extradata;
-					video_extra_data_size = codecCtxPtr->extradata_size;
-
-					video_codec_id = codec_id;
-
-
-					frameRate = av_q2d(streamPtr->avg_frame_rate);
-					time_base = streamPtr->time_base;
-
-					info = std::make_shared<VideoPinInfo>();
-					info->FrameRate = frameRate;
-					info->Width = codecCtxPtr->width;
-					info->Height = codecCtxPtr->height;
-
-					
-					ExtraDataSPTR ext = std::make_shared<ExtraData>();
-					info->ExtraData = ext;
-
-					// Copy codec extra data
-					unsigned char* src = codecCtxPtr->extradata;
-					int size = codecCtxPtr->extradata_size;
-
-					for (int j = 0; j < size; ++j)
-					{
-						ext->push_back(src[j]);
-					}
-					printf("MediaSourceElement: copied extra data (size=%d)\n", size);
-#if 0
-					printf("EXTRA DATA = ");
-
-					for (int j = 0; j < size; ++j)
-					{
-						printf("%02x ", src[j]);
-
-					}
-
-					printf("\n");
-#endif
-
-					ElementWPTR weakPtr = shared_from_this();
-					videoPin = std::make_shared<OutPin>(weakPtr, info);
-					videoPin->SetName("Video");
-
-					AddOutputPin(videoPin);
-
-					//streamMap[i] = videoPin;
-					streamList[i] = videoPin;
+					ext->push_back(src[j]);
 				}
 
+				ElementWPTR weakPtr = shared_from_this();
+				OutPinSPTR videoPin = std::make_shared<OutPin>(weakPtr, info);
+				videoPin->SetName("Video");
 
+				AddOutputPin(videoPin);
+
+				//streamMap[i] = videoPin;
+				streamList[i] = videoPin;
+
+//				if (video_stream_idx < 0)
+//				{
+//					video_stream_idx = i;
+//					video_extra_data = codecCtxPtr->extradata;
+//					video_extra_data_size = codecCtxPtr->extradata_size;
+//
+//					video_codec_id = codec_id;
+//
+//
+//					frameRate = av_q2d(streamPtr->avg_frame_rate);
+//					time_base = streamPtr->time_base;
+//
+//					info = std::make_shared<VideoPinInfo>();
+//					info->FrameRate = frameRate;
+//					info->Width = codecCtxPtr->width;
+//					info->Height = codecCtxPtr->height;
+//
+//					
+//					ExtraDataSPTR ext = std::make_shared<ExtraData>();
+//					info->ExtraData = ext;
+//
+//					// Copy codec extra data
+//					unsigned char* src = codecCtxPtr->extradata;
+//					int size = codecCtxPtr->extradata_size;
+//
+//					for (int j = 0; j < size; ++j)
+//					{
+//						ext->push_back(src[j]);
+//					}
+//					printf("MediaSourceElement: copied extra data (size=%d)\n", size);
+//#if 0
+//					printf("EXTRA DATA = ");
+//
+//					for (int j = 0; j < size; ++j)
+//					{
+//						printf("%02x ", src[j]);
+//
+//					}
+//
+//					printf("\n");
+//#endif
+//
+//					ElementWPTR weakPtr = shared_from_this();
+//					videoPin = std::make_shared<OutPin>(weakPtr, info);
+//					videoPin->SetName("Video");
+//
+//					AddOutputPin(videoPin);
+//
+//					//streamMap[i] = videoPin;
+//					streamList[i] = videoPin;
+//				}
 
 				switch (codec_id)
 				{
@@ -199,20 +250,18 @@ class MediaSourceElement : public Element
 						info->Format = VideoFormatEnum::Mpeg4;
 					break;
 
-				case CODEC_ID_H264:
-				{
+				case CODEC_ID_H264:				
 					printf("stream #%d - VIDEO/H264\n", i);
 					if (info)
 						info->Format = VideoFormatEnum::Avc;
-				}
-				break;
+				
+					break;
 
 				case AV_CODEC_ID_HEVC:
 					printf("stream #%d - VIDEO/HEVC\n", i);
 					if (info)
 						info->Format = VideoFormatEnum::Hevc;
 					break;
-
 
 				case CODEC_ID_VC1:
 					printf("stream #%d - VIDEO/VC1\n", i);
@@ -228,12 +277,12 @@ class MediaSourceElement : public Element
 				}
 
 
-				int width = codecCtxPtr->width;
-				int height = codecCtxPtr->height;
+				//int width = codecCtxPtr->width;
+				//int height = codecCtxPtr->height;
 
-				printf("\tw=%d h=%d ", width, height);
+				printf("\tw=%d h=%d ", info->Width, info->Height);
 
-				printf("fps=%f(%d/%d) ", frameRate,
+				printf("fps=%f(%d/%d) ", info->FrameRate,
 					streamPtr->avg_frame_rate.num,
 					streamPtr->avg_frame_rate.den);
 
@@ -250,28 +299,40 @@ class MediaSourceElement : public Element
 
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				AudioPinInfoSPTR info;
+				AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
+				info->Channels = codecCtxPtr->channels;
+				info->SampleRate = codecCtxPtr->sample_rate;
+				info->Format = AudioFormatEnum::Unknown;
 
-				// Use the first audio stream
-				if (audio_stream_idx == -1)
-				{
-					audio_stream_idx = i;
-					audio_codec_id = codec_id;
+				//printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
 
-					info = std::make_shared<AudioPinInfo>();
-					info->Channels = codecCtxPtr->channels;
-					info->SampleRate = codecCtxPtr->sample_rate;
-					info->Format = AudioFormatEnum::Unknown;
+				OutPinSPTR audioPin = std::make_shared<OutPin>(shared_from_this(), info);
+				audioPin->SetName("Audio");
 
-					printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
+				AddOutputPin(audioPin);
 
-					audioPin = std::make_shared<OutPin>(shared_from_this(), info);
-					audioPin->SetName("Audio");
+				streamList[i] = audioPin;
 
-					AddOutputPin(audioPin);
+				//// Use the first audio stream
+				//if (audio_stream_idx == -1)
+				//{
+				//	audio_stream_idx = i;
+				//	audio_codec_id = codec_id;
 
-					streamList[i] = audioPin;
-				}
+				//	info = std::make_shared<AudioPinInfo>();
+				//	info->Channels = codecCtxPtr->channels;
+				//	info->SampleRate = codecCtxPtr->sample_rate;
+				//	info->Format = AudioFormatEnum::Unknown;
+
+				//	printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
+
+				//	audioPin = std::make_shared<OutPin>(shared_from_this(), info);
+				//	audioPin->SetName("Audio");
+
+				//	AddOutputPin(audioPin);
+
+				//	streamList[i] = audioPin;
+				//}
 
 
 				switch (codec_id)
@@ -327,9 +388,8 @@ class MediaSourceElement : public Element
 					break;
 				}
 
-				audio_channels = codecCtxPtr->channels;
-				audio_sample_rate = codecCtxPtr->sample_rate;
-
+				//audio_channels = codecCtxPtr->channels;
+				//audio_sample_rate = codecCtxPtr->sample_rate;
 			}
 			break;
 
@@ -371,7 +431,6 @@ class MediaSourceElement : public Element
 				case  CODEC_ID_SRT:
 					printf("stream #%d - SUBTITLE/SRT\n", i);
 					break;
-
 
 				default:
 					printf("stream #%d - SUBTITLE/UNKNOWN (0x%x)\n", i, codec_id);
@@ -491,9 +550,18 @@ public:
 
 		SetupPins();
 
+
+		// Event handlers
 		bufferReturnedListener = std::make_shared<EventListener<EventArgs>>(
 			std::bind(&MediaSourceElement::outPin_BufferReturned, this, std::placeholders::_1, std::placeholders::_2));
-		videoPin->BufferReturned.AddListener(bufferReturnedListener);
+		
+		for (auto item : streamList)
+		{
+			if (item)
+			{
+				item->BufferReturned.AddListener(bufferReturnedListener);
+			}
+		}
 
 
 		// Chapters
@@ -518,51 +586,51 @@ public:
 	{
 		BufferSPTR freeBuffer;
 
-		// Reap freed buffers
-		for (auto& entry : streamList)
-		{
-			//printf("MediaElement (%s) DoWork checking pin for reaping.\n", Name().c_str());
+		//// Reap freed buffers
+		//for (auto& entry : streamList)
+		//{
+		//	//printf("MediaElement (%s) DoWork checking pin for reaping.\n", Name().c_str());
 
-			OutPinSPTR pin = entry;
-			if (pin)
-			{
-				//printf("MediaElement (%s) DoWork reaping buffers for pin.\n", Name().c_str());
+		//	OutPinSPTR pin = entry;
+		//	if (pin)
+		//	{
+		//		//printf("MediaElement (%s) DoWork reaping buffers for pin.\n", Name().c_str());
 
-				while (pin->TryGetAvailableBuffer(&freeBuffer))
-				{
-					// Drop marker buffers
-					switch (freeBuffer->Type())
-					{
-						case BufferTypeEnum::AVPacket:
-						{
-							//// Free the memory allocated to the buffers by libav
-							AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
-							buffer->Reset();
+		//		while (pin->TryGetAvailableBuffer(&freeBuffer))
+		//		{
+		//			// Drop marker buffers
+		//			switch (freeBuffer->Type())
+		//			{
+		//				case BufferTypeEnum::AVPacket:
+		//				{
+		//					//// Free the memory allocated to the buffers by libav
+		//					AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(freeBuffer);
+		//					buffer->Reset();
 
-							// Reuse the buffer
-							availableBuffers.Push(freeBuffer);
-							Wake();
+		//					// Reuse the buffer
+		//					availableBuffers.Push(freeBuffer);
+		//					Wake();
 
-							break;
-						}
+		//					break;
+		//				}
 
-						case BufferTypeEnum::Marker:
-						default:
-							break;
-					}
+		//				case BufferTypeEnum::Marker:
+		//				default:
+		//					break;
+		//			}
 
-					////printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
+		//			////printf("MediaElement (%s) DoWork buffer reaped.\n", Name().c_str());
 
-					//RetireBuffer(buffer);
-				}
-			}
-		}
+		//			//RetireBuffer(buffer);
+		//		}
+		//	}
+		//}
 
 
 		//printf("MediaElement (%s) DoWork availableBuffers count=%d.\n", Name().c_str(), availableBuffers.Count());
 
 		// Process
-		while (availableBuffers.TryPop(&freeBuffer))
+		while (IsExecuting() && availableBuffers.TryPop(&freeBuffer))
 		{
 			//printf("MediaElement (%s) DoWork availableBuffers.TryPop=true.\n", Name().c_str());
 

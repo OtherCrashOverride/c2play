@@ -98,21 +98,22 @@
 
 	void OutPin::AcceptProcessedBuffer(BufferSPTR buffer)
 	{
-		//if (!buffer)
-		//	throw ArgumentNullException();
+		if (!buffer)
+			throw ArgumentNullException();
 
 		//if (buffer->Owner() != (void*)this)
 		//{
 		//	throw InvalidOperationException("The buffer being returned does not belong to this object.");
 		//}
 
+		
 		//availableBuffers.Push(buffer);
 		AddAvailableBuffer(buffer);
 
 		// Wake the work thread
 		waitCondition.Signal();
 
-		// TODO: sent BufferSPTR as args
+		//BufferEventArgs args(buffer);
 		BufferReturned.Invoke(this, EventArgs::Empty());
 	}
 

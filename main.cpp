@@ -430,7 +430,10 @@ int main(int argc, char** argv)
 
 				case KEY_POWER:	// odroid remote
 				case KEY_ESC:
+				{
+
 					isRunning = false;
+				}
 					break;
 
 				case KEY_FASTFORWARD:
@@ -488,7 +491,7 @@ int main(int argc, char** argv)
 					// Backward
 					if (!isPaused)
 					{
-						newTime = currentTime - 60.0; // 1 minute
+						newTime = currentTime - 30.0; 
 						//source->Seek(newTime);
 						goto seek;
 					}
@@ -498,7 +501,7 @@ int main(int argc, char** argv)
 					// Forward
 					if (!isPaused)
 					{
-						newTime = currentTime + 60.0; // 1 minute			
+						newTime = currentTime + 30.0; 		
 						//source->Seek(newTime);
 						goto seek;
 					}
@@ -507,14 +510,14 @@ int main(int argc, char** argv)
 				case KEY_UP:
 					if (!isPaused)
 					{
-						newTime = currentTime - 10.0 * 60; // 10 minutes
+						newTime = currentTime - 5.0 * 60; 
 						//source->Seek(newTime);
 						goto seek;
 					}
 					break;
 
 				case KEY_DOWN:
-					newTime = currentTime + 10.0 * 60; // 10 minutes
+					newTime = currentTime + 5.0 * 60; 
 
 seek:
 					if (!isPaused)
@@ -557,22 +560,25 @@ seek:
 
 						source->Seek(newTime);
 
-						source->SetState(MediaState::Play);
 
-						if (audioCodec)
-						{
-							audioCodec->SetState(MediaState::Play);
-						}
 
 						if (audioSink)
 						{
 							audioSink->SetState(MediaState::Play);
 						}
 
+						if (audioCodec)
+						{
+							audioCodec->SetState(MediaState::Play);
+						}
+
 						if (videoSink)
 						{
 							videoSink->SetState(MediaState::Play);
 						}
+
+						source->SetState(MediaState::Play);
+
 					}
 					break;
 
@@ -629,6 +635,34 @@ seek:
 	}
 
 #endif
+
+
+	// Tear down
+	if (audioSink)
+	{
+		printf("MAIN: terminating audioSink.\n");
+		audioSink->Terminate();
+		audioSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	}
+
+	if (audioCodec)
+	{
+		printf("MAIN: terminating audioCodec.\n");
+		audioCodec->Terminate();
+		audioCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	}
+
+	if (videoSink)
+	{
+		printf("MAIN: terminating videoSink.\n");
+		videoSink->Terminate();
+		videoSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	}
+
+	printf("MAIN: terminating source.\n");
+	source->Terminate();
+	source->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+
 
 	printf("MAIN: Playback finished.\n");
 

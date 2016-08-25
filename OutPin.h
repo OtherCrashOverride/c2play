@@ -11,6 +11,27 @@
 //class InPin;
 //typedef std::shared_ptr<InPin> InPinSPTR;
 
+class BufferEventArgs : public EventArgs
+{
+	BufferSPTR buffer;
+
+
+public:
+	BufferSPTR Buffer() const
+	{
+		return buffer;
+	}
+
+
+	BufferEventArgs(BufferSPTR buffer)
+		: buffer(buffer)
+	{
+	}
+
+};
+
+
+
 class OutPin : public Pin
 {
 	friend class Element;

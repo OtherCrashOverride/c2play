@@ -168,6 +168,8 @@
 		waitCondition.Signal();
 
 
+		BufferReceived.Invoke(this, EventArgs::Empty());
+
 		parent->Log("InPin::ReceiveBuffer completed\n");
 	}
 

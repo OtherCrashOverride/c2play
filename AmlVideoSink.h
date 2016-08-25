@@ -22,6 +22,109 @@ extern "C"
 //std::shared_ptr<AmlVideoSinkElement> AmlVideoSinkElementSPTR;
 
 
+#include <signal.h>
+#include <time.h>
+#include <math.h>
+
+class Timer
+{
+	timer_t timer_id;
+
+
+	double interval = 0;
+	bool isRunning = false;
+
+
+	static void timer_thread(sigval arg)
+	{
+		Timer* timerPtr = (Timer*)arg.sival_ptr;
+		timerPtr->Expired.Invoke(timerPtr, EventArgs::Empty());
+
+		//printf("Timer: expired arg=%p.\n", arg.sival_ptr);
+	}
+
+public:
+	Event<EventArgs> Expired;
+
+
+	double Interval() const
+	{
+		return interval;
+	}
+	void SetInterval(double value)
+	{
+		interval = value;
+	}
+
+
+
+	Timer()
+	{
+		sigevent se = { 0 };
+		
+		se.sigev_notify = SIGEV_THREAD;
+		se.sigev_value.sival_ptr = &timer_id;
+		se.sigev_notify_function = &Timer::timer_thread;
+		se.sigev_notify_attributes = NULL;
+		se.sigev_value.sival_ptr = this;
+
+		int ret = timer_create(CLOCK_REALTIME, &se, &timer_id);
+		if (ret != 0)
+		{
+			throw Exception("Timer creation failed.");
+		}
+	}
+
+	~Timer()
+	{
+		timer_delete(timer_id);
+	}
+
+
+	void Start()
+	{
+		if (isRunning)
+			throw InvalidOperationException();
+
+
+		itimerspec ts = { 0 };
+
+		// arm value
+		ts.it_value.tv_sec = floor(interval);
+		ts.it_value.tv_nsec = floor((interval - floor(interval)) * 1e9);
+		
+		// re-arm value
+		ts.it_interval.tv_sec = ts.it_value.tv_sec;
+		ts.it_interval.tv_nsec = ts.it_value.tv_nsec;
+
+		int ret = timer_settime(timer_id, 0, &ts, 0);
+		if (ret != 0)
+		{
+			throw Exception("timer_settime failed.");
+		}
+
+		isRunning = true;
+	}
+
+	void Stop()
+	{
+		if (!isRunning)
+			throw InvalidOperationException();
+
+
+		itimerspec ts = { 0 };
+
+		int ret = timer_settime(timer_id, 0, &ts, 0);
+		if (ret != 0)
+		{
+			throw Exception("timer_settime failed.");
+		}
+
+		isRunning = false;
+	}
+};
+
+
 class AmlVideoSinkClockInPin : public InPin
 {
 	const unsigned long PTS_FREQ = 90000;
@@ -157,8 +260,38 @@ class AmlVideoSinkElement : public Element
 	double clock = 0;
 
 	AmlVideoSinkClockInPinSPTR clockInPin;
+	bool isEndOfStream = false;
 
+	Timer timer;
+	EventListenerSPTR<EventArgs> timerExpiredListener;
+	Mutex timerMutex;
 
+	void timer_Expired(void* sender, const EventArgs& args)
+	{
+		timerMutex.Lock();
+
+		if (isEndOfStream && IsExecuting())
+		{
+			buf_status bufferStatus;
+			int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
+			if (api == 0)
+			{
+				//printf("AmlVideoSinkElement: codec_get_vbuf_state free_len=%d, size=%d, data_len=%d, read_pointer=%x, write_pointer=%x\n",
+				//	bufferStatus.free_len, bufferStatus.size, bufferStatus.data_len, bufferStatus.read_pointer, bufferStatus.write_pointer);
+
+				// Testing has shown this value does not reach zero
+				if (bufferStatus.data_len < 512)
+				{
+					SetState(MediaState::Pause);
+					//isEndOfStream = false;
+				}
+			}
+		}
+
+		timerMutex.Unlock();
+		
+		//printf("AmlVideoSinkElement: timer expired.\n");
+	}
 
 	void SetupHardware()
 	{
@@ -177,13 +310,13 @@ class AmlVideoSinkElement : public Element
 		codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
 		
 
-		if (frameRate == 25.0 || 
-			frameRate == (10000000.0 / 417083.0))
-		{
-			printf("AmlVideoSink: Using alternate time formula.\n");
-			codecContext.am_sysinfo.rate = 96000.0 / frameRate - 1;
-		}
-		else
+		//if (frameRate == 25.0 || 
+		//	frameRate == (10000000.0 / 417083.0))
+		//{
+		//	printf("AmlVideoSink: Using alternate time formula.\n");
+		//	codecContext.am_sysinfo.rate = 96000.0 / frameRate - 1;
+		//}
+		//else
 		{
 			printf("AmlVideoSink: Using standard time formula.\n");
 			// Note: Testing has shown that the ALSA clock requires the +1
@@ -649,13 +782,13 @@ protected:
 
 	virtual void Idling() override
 	{
-		int ret = codec_pause(&codecContext);
+		//int ret = codec_pause(&codecContext);
 		printf("AmlVideoSinkElement: Idling.\n");
 	}
 
 	virtual void Idled() override
 	{
-		int ret = codec_resume(&codecContext);
+		//int ret = codec_resume(&codecContext);
 		printf("AmlVideoSinkElement: Idled.\n");
 	}
 
@@ -696,6 +829,15 @@ public:
 			clockInPin = std::make_shared<AmlVideoSinkClockInPin>(weakPtr, info, &codecContext);
 			AddInputPin(clockInPin);			
 		}
+
+
+		// Event handlers
+		timerExpiredListener = std::make_shared<EventListener<EventArgs>>(
+			std::bind(&AmlVideoSinkElement::timer_Expired, this, std::placeholders::_1, std::placeholders::_2));
+
+		timer.Expired.AddListener(timerExpiredListener);
+		timer.SetInterval(0.25f);
+		//timer.Start();
 	}
 
 	virtual void DoWork() override
@@ -709,6 +851,23 @@ public:
 
 		BufferSPTR buffer;
 		
+		//if (isEndOfStream)
+		//{
+		//	buf_status bufferStatus;
+		//	int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
+		//	if (api == 0)
+		//	{
+		//		printf("AmlVideoSinkElement: codec_get_vbuf_state free_len=%d, size=%d, data_len=%d, read_pointer=%x, write_pointer=%x\n",
+		//			bufferStatus.free_len, bufferStatus.size, bufferStatus.data_len, bufferStatus.read_pointer, bufferStatus.write_pointer);
+
+		//		//if (bufferStatus.free_len == bufferStatus.size)
+		//		if (bufferStatus.data_len <= 512)
+		//		{
+		//			SetState(MediaState::Pause);
+		//			//isEndOfStream = false;
+		//		}
+		//	}
+		//}
 
 		while (videoPin->TryPeekFilledBuffer(&buffer))
 		{
@@ -766,7 +925,8 @@ public:
 							// TODO: This causes the codec to pause
 							//  even though there are still buffers in
 							//  the kernel driver being processed
-							SetState(MediaState::Pause);
+							//SetState(MediaState::Pause);
+							isEndOfStream = true;
 							break;
 
 						case MarkerEnum::Discontinue:
@@ -813,13 +973,16 @@ public:
 			{
 			case MediaState::Play:
 			{
-				//int ret = codec_resume(&codecContext);
+				int ret = codec_resume(&codecContext);
+				isEndOfStream = false;
+				timer.Start();
 				break;
 			}
 
 			case MediaState::Pause:
 			{
-				//int ret = codec_pause(&codecContext);
+				int ret = codec_pause(&codecContext);
+				timer.Stop();
 				break;
 			}
 
@@ -834,6 +997,8 @@ public:
 	{
 		Element::Flush();
 
+		
+		codec_set_dec_reset(&codecContext);
 		codec_reset(&codecContext);
 	}
 

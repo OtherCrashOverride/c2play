@@ -3,6 +3,8 @@
 #include "Pin.h"
 #include "Thread.h"
 #include "WaitCondition.h"
+#include "Event.h"
+#include "EventArgs.h"
 
 
 //class OutPin;
@@ -23,7 +25,7 @@ class InPin : public Pin
 
 	void WorkThread()
 	{
-		printf("InPin: WorkTread started.\n");
+		//printf("InPin: WorkTread started.\n");
 
 		while (true)
 		{
@@ -32,7 +34,7 @@ class InPin : public Pin
 			waitCondition.WaitForSignal();
 		}
 
-		printf("InPin: WorkTread exited.\n");
+		//printf("InPin: WorkTread exited.\n");
 	}
 
 
@@ -47,6 +49,10 @@ protected:
 
 
 public:
+
+	Event<EventArgs> BufferReceived;
+
+
 
 	OutPinSPTR Source()
 	{

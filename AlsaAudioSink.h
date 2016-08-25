@@ -397,7 +397,7 @@ protected:
 	virtual void DoWork() override
 	{
 		BufferSPTR buffer;
-		while (audioPin->TryGetFilledBuffer(&buffer))
+		while (IsExecuting() && audioPin->TryGetFilledBuffer(&buffer))
 		{
 			if (isFirstData)
 			{
@@ -462,8 +462,8 @@ protected:
 			audioPin->PushProcessedBuffer(buffer);
 			audioPin->ReturnProcessedBuffers();
 
-			if (ExecutionState() != ExecutionStateEnum::Executing)
-				break;
+			//if (ExecutionState() != ExecutionStateEnum::Executing)
+			//	break;
 		}
 
 		
