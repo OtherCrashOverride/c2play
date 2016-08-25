@@ -503,16 +503,18 @@ public:
 		if (ExecutionState() == ExecutionStateEnum::Executing ||
 			ExecutionState() == ExecutionStateEnum::Idle)
 		{
+			// Note: Can not WaitForExecutionState since its
+			// called inside the thread making it block forever.
 			switch (newState)
 			{
 				case MediaState::Pause:
 					ChangeExecutionState(ExecutionStateEnum::Idle);
-					WaitForExecutionState(ExecutionStateEnum::Idle);
+					//WaitForExecutionState(ExecutionStateEnum::Idle);
 					break;
 
 				case MediaState::Play:
 					ChangeExecutionState(ExecutionStateEnum::Executing);
-					WaitForExecutionState(ExecutionStateEnum::Executing);
+					//WaitForExecutionState(ExecutionStateEnum::Executing);
 					break;
 
 				default:
