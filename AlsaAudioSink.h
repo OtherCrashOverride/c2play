@@ -20,7 +20,7 @@ class AlsaAudioSinkElement : public Element
 	InPinSPTR audioPin;
 	OutPinSPTR clockOutPin;
 
-	const int AUDIO_FRAME_BUFFERCOUNT = 16;
+	const int AUDIO_FRAME_BUFFERCOUNT = 32;
 	//const double AUDIO_ADJUST_SECONDS = (0.0);
 	const char* device = "default"; //default   //plughw                     /* playback device */
 	const int alsa_channels = 2;
@@ -225,7 +225,7 @@ class AlsaAudioSinkElement : public Element
 
 
 		// Block until the device is ready for data
-		snd_pcm_wait(handle, 500);
+		//snd_pcm_wait(handle, 500);
 
 
 		// Update the reference clock
@@ -273,11 +273,12 @@ class AlsaAudioSinkElement : public Element
 
 		}
 
-		if (pcmBuffer->TimeStamp() < 0)
-		{
-			printf("WARNING: frameTimeStamp not set.\n");
-		}
-		else
+		//if (pcmBuffer->TimeStamp() < 0)
+		//{
+		//	printf("WARNING: frameTimeStamp not set.\n");
+		//}
+		//else
+		if (pcmBuffer->TimeStamp() > 0)
 		{
 			double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
 			clock = time;

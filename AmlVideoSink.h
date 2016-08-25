@@ -172,7 +172,7 @@ class AmlVideoSinkClockInPin : public InPin
 				}
 
 				//long delta = (long)pts - (long)clockPts;
-				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu\n", pts);
+				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu drift=%f (%f frames)\n", pts, driftTime, driftFrames);
 			}
 		}
 	}

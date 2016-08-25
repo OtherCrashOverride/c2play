@@ -190,9 +190,19 @@ class AudioCodecElement : public Element
 					decoded_frame->channels,
 					decoded_frame->nb_samples);
 				
-				pcmDataBuffer->SetTimeStamp(
-					av_frame_get_best_effort_timestamp(frame->GetAVFrame()) *
-					av_q2d(buffer->TimeBase()));
+				if (buffer->GetAVPacket()->pts != AV_NOPTS_VALUE)
+				{
+					//pcmDataBuffer->SetTimeStamp(av_q2d(buffer->TimeBase()) * buffer->GetAVPacket()->pts);
+					
+					pcmDataBuffer->SetTimeStamp(
+						av_frame_get_best_effort_timestamp(frame->GetAVFrame()) *
+						av_q2d(buffer->TimeBase()));
+				}
+				else
+				{
+					pcmDataBuffer->SetTimeStamp(-1);
+				}
+
 				
 				//pcmDataBuffer->SetTimeStamp(buffer->TimeStamp());
 
@@ -303,7 +313,7 @@ public:
 
 		//while (audioInPin->TryPeekFilledBuffer(&buffer) &&
 		//	   audioOutPin->TryPeekAvailableBuffer(&outBuffer))
-		while(audioInPin->TryGetFilledBuffer(&buffer))
+		while(IsExecuting() && audioInPin->TryGetFilledBuffer(&buffer))
 		{
 			// Both an input and output buffer are avaialable
 
