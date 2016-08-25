@@ -323,7 +323,7 @@ class AmlVideoSinkElement : public Element
 			//codecContext.noblock = 1;
 		}
 
-		switch (videoFormat)
+		switch (videoPin->InfoAs()->Format)
 		{
 		case VideoFormatEnum::Mpeg2:
 			printf("AmlVideoSink - VIDEO/MPEG2\n");
@@ -467,6 +467,12 @@ class AmlVideoSinkElement : public Element
 			isFirstVideoPacket = false;
 
 			printf("isAnnexB=%u\n", isAnnexB);
+
+			//if (videoPin->InfoAs()->Format == VideoFormatEnum::Mpeg4V3)
+			//{
+			//	//Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height);
+			//	//SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+			//}
 		}
 
 
@@ -596,6 +602,14 @@ class AmlVideoSinkElement : public Element
 			SendCodecData(pts, pkt->data, pkt->size);
 			
 			//isExtraDataSent = false;
+		}
+		else if (videoPin->InfoAs()->Format == VideoFormatEnum::Mpeg4V3)
+		{
+			//printf("Sending Divx3\n");
+			Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height, pkt->size);
+			SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+
+			SendCodecData(0, pkt->data, pkt->size);
 		}
 		else
 		{
@@ -897,6 +911,7 @@ public:
 
 						// TODO: This information should be copied
 						//       as part of pin negotiation
+						videoPin->InfoAs()->Format = info->Format;
 						videoPin->InfoAs()->Width = info->Width;
 						videoPin->InfoAs()->Height = info->Height;
 						videoPin->InfoAs()->FrameRate = info->FrameRate;
@@ -1026,6 +1041,42 @@ private:
 		}
 
 		close(fd);
+	}
+
+	void Divx3Header(int width, int height, int packetSize)
+	{
+		// Bitstream info from Kodi
+
+		videoExtraData.clear();
+
+		videoExtraData.push_back(0x00);
+		videoExtraData.push_back(0x00);
+		videoExtraData.push_back(0x00);
+		videoExtraData.push_back(0x01);
+
+		unsigned i = (width << 12) | (height & 0xfff);
+		videoExtraData.push_back(0x20);
+		videoExtraData.push_back((i >> 16) & 0xff);
+		videoExtraData.push_back((i >> 8) & 0xff);
+		videoExtraData.push_back(i & 0xff);
+		videoExtraData.push_back(0x00);
+		videoExtraData.push_back(0x00);
+
+		const unsigned char divx311_chunk_prefix[] =
+		{
+			0x00, 0x00, 0x00, 0x01,
+			0xb6, 'D', 'I', 'V', 'X', '3', '.', '1', '1'
+		};
+
+		for (size_t i = 0; i < sizeof(divx311_chunk_prefix); ++i)
+		{
+			videoExtraData.push_back(divx311_chunk_prefix[i]);
+		}
+
+		videoExtraData.push_back((packetSize >> 24) & 0xff);
+		videoExtraData.push_back((packetSize >> 16) & 0xff);
+		videoExtraData.push_back((packetSize >> 8) & 0xff);
+		videoExtraData.push_back(packetSize & 0xff);
 	}
 
 	void ConvertH264ExtraDataToAnnexB()

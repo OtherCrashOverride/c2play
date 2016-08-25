@@ -174,6 +174,18 @@ class MediaSourceElement : public Element
 					ext->push_back(src[j]);
 				}
 
+#if 1
+				printf("EXTRA DATA = ");
+				
+				for (int j = 0; j < size; ++j)
+				{
+					printf("%02x ", src[j]);
+				
+				}
+				
+				printf("\n");
+#endif
+
 				if (url.compare(url.size() - 4, 4, ".avi") == 0)
 				{
 					info->HasEstimatedPts = true;
