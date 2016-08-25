@@ -355,6 +355,7 @@ int main(int argc, char** argv)
 	// Start feeding data
 	if (audioSink)
 	{
+		printf("MAIN:  audioSink Play.\n");
 		audioSink->SetState(MediaState::Play);
 	}
 
@@ -362,11 +363,13 @@ int main(int argc, char** argv)
 	
 	if (audioCodec)
 	{
+		printf("MAIN:  audioCodec Play.\n");
 		audioCodec->SetState(MediaState::Play);
 	}
 
 	if (videoSink)
 	{
+		printf("MAIN:  videoSink Play.\n");
 		videoSink->SetState(MediaState::Play);
 	}
 
@@ -392,6 +395,8 @@ int main(int argc, char** argv)
 	
 	//source->WaitForExecutionState(ExecutionStateEnum::Idle);
 	source->Seek(optionStartPosition);
+
+	printf("MAIN:  source Play.\n");
 	source->SetState(MediaState::Play);
 	
 
@@ -427,12 +432,13 @@ int main(int argc, char** argv)
 				case KEY_HOME:	// odroid remote
 				case KEY_MUTE:
 				case KEY_MENU:
-				case KEY_BACK:
+
 				case KEY_VOLUMEDOWN:
 				case KEY_VOLUMEUP:
 					break;
 
 				case KEY_POWER:	// odroid remote
+				case KEY_BACK:
 				case KEY_ESC:
 				{
 

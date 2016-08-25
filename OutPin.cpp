@@ -38,7 +38,17 @@
 
 		if (pin)
 		{
-			pin->ReceiveBuffer(buffer);
+			auto owner = pin->Owner().lock();
+			if (owner && (owner->ExecutionState() == ExecutionStateEnum::Executing ||
+				owner->ExecutionState() == ExecutionStateEnum::Idle))
+			{
+
+				pin->ReceiveBuffer(buffer);
+			}
+			else
+			{
+				AcceptProcessedBuffer(buffer);
+			}
 		}
 		else
 		{

@@ -96,6 +96,10 @@ class MediaSourceElement : public Element
 				break;
 			}
 		}
+		else
+		{
+			throw Exception("Unexpected state: buffer returned but not available.");
+		}
 
 		//printf("MediaSourceElement: outPin_BufferReturned finished.\n");
 	}

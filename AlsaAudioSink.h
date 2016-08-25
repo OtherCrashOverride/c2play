@@ -470,6 +470,14 @@ protected:
 		
 	}
 
+	virtual void Terminating() override
+	{
+		snd_pcm_drop(handle);
+		snd_pcm_close(handle);
+
+		handle = nullptr;
+	}
+
 	virtual void ChangeState(MediaState oldState, MediaState newState) override
 	{
 		// TODO: pause audio

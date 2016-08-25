@@ -111,7 +111,7 @@ class AudioCodecElement : public Element
 		//	buffer->GetAVPacket(), buffer->GetAVPacket()->size);
 
 		int bytesDecoded = 0;
-		while (bytesDecoded < pkt->size)
+		while (IsExecuting() && bytesDecoded < pkt->size)
 		{
 			int got_frame = 0;
 			int len = avcodec_decode_audio4(soundCodecContext,
