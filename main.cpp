@@ -463,14 +463,19 @@ int main(int argc, char** argv)
 					{
 						if (isPaused)
 						{
+							printf("MAIN: audioSink Playing.\n");
+							
 							audioSink->SetState(MediaState::Play);
+							//audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+
+							printf("MAIN: audioSink Played.\n");
 						}
 						else
 						{
 							printf("MAIN: audioSink Pausing.\n");
 
 							audioSink->SetState(MediaState::Pause);
-							audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+							//audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
 
 							printf("MAIN: audioSink Paused.\n");
 						}
@@ -480,14 +485,19 @@ int main(int argc, char** argv)
 					{
 						if (isPaused)
 						{
+							printf("MAIN: audioSink Playing.\n");
+
 							videoSink->SetState(MediaState::Play);
+							//videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+
+							printf("MAIN: audioSink Played.\n");
 						}
 						else
 						{
 							printf("MAIN: videoSink Pausing.\n");
 
 							videoSink->SetState(MediaState::Pause);
-							videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+							//videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
 							
 							printf("MAIN: videoSink Paused.\n");
 						}
@@ -531,64 +541,75 @@ int main(int argc, char** argv)
 
 seek:
 					if (!isPaused)
-					{
-						//newTime = currentTime + 10.0 * 60; // 10 minutes
+					{												
 						printf("MAIN: seeking to %f.\n", newTime);
+
+						source->SetState(MediaState::Pause);
 
 						if (audioCodec)
 						{
 							audioCodec->SetState(MediaState::Pause);
-							audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
-							printf("MAIN: audioCodec Idle.\n");
+						}
 
+						if (audioSink)
+						{
+							audioSink->SetState(MediaState::Pause);							
+						}
+						
+						if (videoSink)
+						{
+							videoSink->SetState(MediaState::Pause);						
+						}
+
+
+						source->Flush();
+
+						if (audioCodec)
+						{
 							audioCodec->Flush();
 						}
 
 						if (audioSink)
 						{
-							audioSink->SetState(MediaState::Pause);
-							audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-							printf("MAIN: audioSink Idle.\n");
-
 							audioSink->Flush();
-							
 						}
-						
+
 						if (videoSink)
 						{
-							videoSink->SetState(MediaState::Pause);
-							videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-							printf("MAIN: videoSink Idle.\n");
-
-							videoSink->Flush();							
+							videoSink->Flush();
 						}
 
-						source->SetState(MediaState::Pause);
-						source->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-						source->Flush();
 
 						source->Seek(newTime);
 
 
-
-						if (audioSink)
+						if (videoSink)
 						{
-							audioSink->SetState(MediaState::Play);
+							videoSink->SetState(MediaState::Play);
+							//videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
 						}
 
 						if (audioCodec)
 						{
 							audioCodec->SetState(MediaState::Play);
+							//audioCodec->WaitForExecutionState(ExecutionStateEnum::Executing);
 						}
 
-						if (videoSink)
+						if (audioSink)
 						{
-							videoSink->SetState(MediaState::Play);
+							audioSink->SetState(MediaState::Play);
+							//audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
 						}
 
 						source->SetState(MediaState::Play);
+						//source->WaitForExecutionState(ExecutionStateEnum::Executing);
 
+						//if (audioSink)
+						//	audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+
+						//if (videoSink)
+						//	videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
+						
 					}
 					break;
 
@@ -603,7 +624,7 @@ seek:
 		bool audioIsIdle = true;
 		if (audioSink)
 		{
-			if (audioSink->ExecutionState() != ExecutionStateEnum::Idle)
+			if (audioSink->State() != MediaState::Pause)
 			{
 				audioIsIdle = false;
 			}
@@ -613,7 +634,7 @@ seek:
 		bool videoIsIdle = true;
 		if (videoSink)
 		{
-			if (videoSink->ExecutionState() != ExecutionStateEnum::Idle)
+			if (videoSink->State() != MediaState::Pause)
 			{
 				videoIsIdle = false;
 			}

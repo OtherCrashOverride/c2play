@@ -313,7 +313,7 @@ public:
 
 		//while (audioInPin->TryPeekFilledBuffer(&buffer) &&
 		//	   audioOutPin->TryPeekAvailableBuffer(&outBuffer))
-		while(IsExecuting() && audioInPin->TryGetFilledBuffer(&buffer))
+		if(audioInPin->TryGetFilledBuffer(&buffer))
 		{
 			// Both an input and output buffer are avaialable
 
@@ -422,6 +422,13 @@ public:
 		Element::ChangeState(oldState, newState);
 	}
 
+	virtual void Flush() override
+	{
+		Element::Flush();
+		//WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		avcodec_flush_buffers(soundCodecContext);
+	}
 };
 
 

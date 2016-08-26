@@ -265,12 +265,16 @@ class AmlVideoSinkElement : public Element
 	Timer timer;
 	EventListenerSPTR<EventArgs> timerExpiredListener;
 	Mutex timerMutex;
+	bool doPauseFlag = false;
+	bool doResumeFlag = false;
+	Mutex playPauseMutex;
+
 
 	void timer_Expired(void* sender, const EventArgs& args)
 	{
 		timerMutex.Lock();
 
-		if (isEndOfStream && IsExecuting())
+		if (isEndOfStream)
 		{
 			buf_status bufferStatus;
 			int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
@@ -282,8 +286,9 @@ class AmlVideoSinkElement : public Element
 				// Testing has shown this value does not reach zero
 				if (bufferStatus.data_len < 512)
 				{
+					printf("AmlVideoSinkElement: timer_Expired - isEndOfStream=true (Pausing).\n");
 					SetState(MediaState::Pause);
-					//isEndOfStream = false;
+					isEndOfStream = false;
 				}
 			}
 		}
@@ -434,6 +439,15 @@ class AmlVideoSinkElement : public Element
 
 	void ProcessBuffer(AVPacketBufferSPTR buffer)
 	{
+		playPauseMutex.Lock();
+
+		if (doResumeFlag)
+		{
+			codec_resume(&codecContext);
+			doResumeFlag = false;
+		}
+
+
 		//AVPacketBufferPTR buffer = std::static_pointer_cast<AVPacketBuffer>(buf);
 		AVPacket* pkt = buffer->GetAVPacket();
 
@@ -630,51 +644,13 @@ class AmlVideoSinkElement : public Element
 		}
 #endif
 
+		if (doPauseFlag)
+		{
+			codec_pause(&codecContext);
+			doPauseFlag = false;
+		}
 
-
-		//printf("AmlVideoSinkElement: timeStamp=%f\n", lastTimeStamp);
-
-
-		//// Send the data to the codec
-		//int api = 0;
-		//int offset = 0;
-		//
-		//// Check buffer level
-		//buf_status status = { 0 };
-		//while (true)
-		//{
-		//	api = codec_get_vbuf_state(&codecContext, &status);
-		//	if (api != 0)
-		//	{
-		//		printf("AmlVideoSinkElement: codec_get_vbuf_state failed.\n");
-		//	}
-
-		//	if (status.free_len > (pkt->size))
-		//	{
-		//		break;
-		//	}
-
-		//	//printf("AmlVideoSinkElement: buffer status free=%d\n", status.free_len);
-		//	usleep(1);
-		//}
-
-
-		//while (api == -EAGAIN || offset < pkt->size)
-		//{
-		//	api = codec_write(&codecContext, pkt->data + offset, pkt->size - offset);
-		//	if (api < 0)
-		//	{				
-		//		printf("codec_write error: %x\n", api);
-		//		//codec_reset(&codecContext);
-		//	}
-		//	else
-		//	{
-		//		offset += api;
-		//		//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
-		//	}
-
-		//	//usleep(1);
-		//}
+		playPauseMutex.Unlock();
 	}
 	
 	void SendCodecData(unsigned long pts, unsigned char* data, int length)
@@ -693,6 +669,8 @@ class AmlVideoSinkElement : public Element
 
 
 		int offset = 0;
+		//bool rePauseFlag = false;
+		//int remainingAttempts = 10;
 		while (api == -EAGAIN || offset < length)
 		{
 			api = codec_write(&codecContext, data + offset, length - offset);
@@ -700,6 +678,23 @@ class AmlVideoSinkElement : public Element
 			{
 				//printf("codec_write error: %x\n", api);
 				//codec_reset(&codecContext);
+
+				//// Handle the case where the codec buffer is full but
+				//// pause is requested and this routine needs to exit
+				//if (State() == MediaState::Pause)
+				//{
+				//	rePauseFlag = true;
+				//	codec_resume(&codecContext);
+
+				//	if (remainingAttempts <= 0)
+				//	{
+				//		// This likely a seek condition and the buffer
+				//		// will be flushed.
+				//		break;
+				//	}
+
+				//	--remainingAttempts;
+				//}
 			}
 			else
 			{
@@ -712,6 +707,10 @@ class AmlVideoSinkElement : public Element
 			//usleep(1);
 		}
 
+		//if (rePauseFlag)
+		//{
+		//	codec_pause(&codecContext);
+		//}
 
 		//if (clockPts > 0)
 		//{
@@ -726,89 +725,89 @@ class AmlVideoSinkElement : public Element
 		//}
 	}
 
-	void ProcessClockBuffer(BufferSPTR buffer)
-	{
-		clock = buffer->TimeStamp();
-		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+	//void ProcessClockBuffer(BufferSPTR buffer)
+	//{
+	//	clock = buffer->TimeStamp();
+	//	unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
 
 
-		int vpts = codec_get_vpts(&codecContext);
+	//	int vpts = codec_get_vpts(&codecContext);
 
-		if (clock < vpts * (double)PTS_FREQ)
-		{
-			clock = vpts * (double)PTS_FREQ;
-		}
+	//	if (clock < vpts * (double)PTS_FREQ)
+	//	{
+	//		clock = vpts * (double)PTS_FREQ;
+	//	}
 
 
 
-		int drift = vpts - pts;
-		double driftTime = drift / (double)PTS_FREQ;
-		double driftFrames = driftTime * (double)videoPin->InfoAs()->FrameRate;
-		//printf("Clock drift = %f (frames=%f)\n", driftTime, driftFrames);
+	//	int drift = vpts - pts;
+	//	double driftTime = drift / (double)PTS_FREQ;
+	//	double driftFrames = driftTime * (double)videoPin->InfoAs()->FrameRate;
+	//	//printf("Clock drift = %f (frames=%f)\n", driftTime, driftFrames);
 
-		clockPts = pts;
-		lastClockPts = clockPts;
-		//printf("AmlVideoSinkElement: clock=%f, pts=%lu, clockPts=%lu\n", buffer->TimeStamp(), pts, clockPts);
+	//	clockPts = pts;
+	//	lastClockPts = clockPts;
+	//	//printf("AmlVideoSinkElement: clock=%f, pts=%lu, clockPts=%lu\n", buffer->TimeStamp(), pts, clockPts);
 
-		// To minimize clock jitter, only adjust the clock if it
-		// deviates more than +/- 2 frames
-		if (driftFrames >= 2.0 || driftFrames <= -2.0)
-		{
-			if (clockPts > 0)
-			{
-				int codecCall = codec_set_pcrscr(&codecContext, (int)clockPts);
-				if (codecCall != 0)
-				{
-					printf("codec_set_pcrscr failed.\n");
-				}
+	//	// To minimize clock jitter, only adjust the clock if it
+	//	// deviates more than +/- 2 frames
+	//	if (driftFrames >= 2.0 || driftFrames <= -2.0)
+	//	{
+	//		if (clockPts > 0)
+	//		{
+	//			int codecCall = codec_set_pcrscr(&codecContext, (int)clockPts);
+	//			if (codecCall != 0)
+	//			{
+	//				printf("codec_set_pcrscr failed.\n");
+	//			}
 
-				long delta = (long)pts - (long)clockPts;
-				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu\n", pts);
-			}
-		}
-		
-	}
+	//			long delta = (long)pts - (long)clockPts;
+	//			printf("AmlVideoSink: codec_set_pcrscr - pts=%lu\n", pts);
+	//		}
+	//	}
+	//	
+	//}
 
-	void ClockWorkThread()
-	{
-		while (ExecutionState() != ExecutionStateEnum::Terminating)
-		{
-			while (ExecutionState() == ExecutionStateEnum::Executing)
-			{
-				// Clock
-				BufferSPTR buffer;
-				while (clockInPin->TryGetFilledBuffer(&buffer))
-				{
-					ProcessClockBuffer(buffer);
+	//void ClockWorkThread()
+	//{
+	//	while (ExecutionState() != ExecutionStateEnum::Terminating)
+	//	{
+	//		while (ExecutionState() == ExecutionStateEnum::Executing)
+	//		{
+	//			// Clock
+	//			BufferSPTR buffer;
+	//			while (clockInPin->TryGetFilledBuffer(&buffer))
+	//			{
+	//				ProcessClockBuffer(buffer);
 
-					// delay updates
-					//usleep(1000);
+	//				// delay updates
+	//				//usleep(1000);
 
-					clockInPin->PushProcessedBuffer(buffer);
-					clockInPin->ReturnProcessedBuffers();
-				}
+	//				clockInPin->PushProcessedBuffer(buffer);
+	//				clockInPin->ReturnProcessedBuffers();
+	//			}
 
-				usleep(1);
-			}
+	//			usleep(1);
+	//		}
 
-			usleep(1);
-		}
-	}
+	//		usleep(1);
+	//	}
+	//}
 
 
 protected:
 
-	virtual void Idling() override
-	{
-		//int ret = codec_pause(&codecContext);
-		printf("AmlVideoSinkElement: Idling.\n");
-	}
+	//virtual void Idling() override
+	//{
+	//	//int ret = codec_pause(&codecContext);
+	//	printf("AmlVideoSinkElement: Idling.\n");
+	//}
 
-	virtual void Idled() override
-	{
-		//int ret = codec_resume(&codecContext);
-		printf("AmlVideoSinkElement: Idled.\n");
-	}
+	//virtual void Idled() override
+	//{
+	//	//int ret = codec_resume(&codecContext);
+	//	printf("AmlVideoSinkElement: Idled.\n");
+	//}
 
 	
 public:
@@ -855,7 +854,7 @@ public:
 
 		timer.Expired.AddListener(timerExpiredListener);
 		timer.SetInterval(0.25f);
-		//timer.Start();
+		timer.Start();
 	}
 
 	virtual void DoWork() override
@@ -887,7 +886,7 @@ public:
 		//	}
 		//}
 
-		while (IsExecuting() && videoPin->TryPeekFilledBuffer(&buffer))
+		if (videoPin->TryPeekFilledBuffer(&buffer))
 		{
 			AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
@@ -936,6 +935,7 @@ public:
 					case BufferTypeEnum::Marker:
 					{
 						MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+						printf("AmlVideoSinkElement: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
 
 						switch (markerBuffer->Marker())
 						{
@@ -995,16 +995,28 @@ public:
 			{
 			case MediaState::Play:
 			{
+				playPauseMutex.Lock();
+
 				int ret = codec_resume(&codecContext);
+				//doPauseFlag = false;
+				//doResumeFlag = true;
 				isEndOfStream = false;
-				timer.Start();
+				//timer.Start();
+
+				playPauseMutex.Unlock();
 				break;
 			}
 
 			case MediaState::Pause:
 			{
+				playPauseMutex.Lock();
+
+				//doResumeFlag = false;
+				//doPauseFlag = true;
 				int ret = codec_pause(&codecContext);
-				timer.Stop();
+				//timer.Stop();
+
+				playPauseMutex.Unlock();
 				break;
 			}
 
@@ -1020,7 +1032,7 @@ public:
 		Element::Flush();
 
 		
-		codec_set_dec_reset(&codecContext);
+		//codec_set_dec_reset(&codecContext);
 		codec_reset(&codecContext);
 	}
 

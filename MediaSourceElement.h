@@ -66,6 +66,8 @@ class MediaSourceElement : public Element
 	
 	EventListenerSPTR<EventArgs> bufferReturnedListener;
 
+	unsigned long lastPts = 0;
+
 
 	void outPin_BufferReturned(void* sender, const EventArgs& args)
 	{
@@ -658,7 +660,7 @@ public:
 		//printf("MediaElement (%s) DoWork availableBuffers count=%d.\n", Name().c_str(), availableBuffers.Count());
 
 		// Process
-		while (IsExecuting() && availableBuffers.TryPop(&freeBuffer))
+		if (availableBuffers.TryPop(&freeBuffer))
 		{
 			//printf("MediaElement (%s) DoWork availableBuffers.TryPop=true.\n", Name().c_str());
 
@@ -686,7 +688,7 @@ public:
 				SetState(MediaState::Pause);
 
 				//printf("MediaElement (%s) DoWork av_read_frame failed.\n", Name().c_str());
-				break;
+				//break;
 			}
 			else
 			{
@@ -702,6 +704,9 @@ public:
 					buffer->SetTimeStamp(av_q2d(streamPtr->time_base) * pkt->pts);
 					streamNextPts[pkt->stream_index] = pkt->pts + pkt->duration;
 					//printf("MediaSourceElement: [stream %d] Set buffer timestamp=%f\n", pkt->stream_index, buffer->TimeStamp());
+
+					// keep the pts for seek flags
+					lastPts = pkt->pts;
 				}
 				else
 				{
@@ -749,7 +754,15 @@ public:
 			throw InvalidOperationException();
 		}
 
-		if (av_seek_frame(ctx, -1, (long)(timeStamp * AV_TIME_BASE), 0) < 0)
+		int flags = AVFMT_SEEK_TO_PTS;
+		unsigned long seekPts = (long)(timeStamp * AV_TIME_BASE);
+	
+		if (seekPts < lastPts)
+		{
+			flags |= AVSEEK_FLAG_BACKWARD;
+		}
+
+		if (av_seek_frame(ctx, -1, (long)(timeStamp * AV_TIME_BASE), flags) < 0)
 		{
 			printf("av_seek_frame (%f) failed\n", timeStamp);
 		}
