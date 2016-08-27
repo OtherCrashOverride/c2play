@@ -420,6 +420,12 @@ class MediaSourceElement : public Element
 						info->Format = AudioFormatEnum::EAc3;
 					break;
 
+				case AV_CODEC_ID_OPUS:
+					printf("stream #%d - AUDIO/OPUS\n", i);
+					if (info)
+						info->Format = AudioFormatEnum::Opus;
+					break;
+
 					//case AVCodecID.CODEC_ID_WMAV2:
 					//    break;
 

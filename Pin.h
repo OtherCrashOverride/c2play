@@ -63,7 +63,8 @@ enum class AudioFormatEnum
 	Dts,
 	WmaPro,
 	DolbyTrueHD,
-	EAc3
+	EAc3,
+	Opus
 };
 
 enum class SubtitleFormatEnum

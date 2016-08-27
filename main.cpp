@@ -35,13 +35,7 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
-#include "Exception.h"
-#include "PacketBuffer.h"
-#include "AlsaAudioSink.h"
-#include "AmlVideoSink.h"
 #include "InputDevice.h"
-#include "MediaSourceElement.h"
-#include "AudioCodec.h"
 #include "MediaPlayer.h"
 
 #include <dirent.h>
@@ -303,8 +297,6 @@ int main(int argc, char** argv)
 	mediaPlayer->SetState(MediaState::Play);
 
 
-#if 1// Process Input
-
 	isRunning = true;
 	bool isPaused = false;
 
@@ -312,11 +304,8 @@ int main(int argc, char** argv)
 	{
 		// Process Input
 		int keycode;
-
-
 		double newTime;
 
-#if 1
 		for (InputDevicePtr dev : inputDevices)
 		{
 			while (dev->TryGetKeyPress(&keycode))
@@ -371,7 +360,6 @@ int main(int argc, char** argv)
 					if (!isPaused)
 					{
 						newTime = currentTime - 30.0; 
-						//source->Seek(newTime);
 						goto seek;
 					}
 					break;
@@ -381,7 +369,6 @@ int main(int argc, char** argv)
 					if (!isPaused)
 					{
 						newTime = currentTime + 30.0; 		
-						//source->Seek(newTime);
 						goto seek;
 					}
 					break;
@@ -390,7 +377,6 @@ int main(int argc, char** argv)
 					if (!isPaused)
 					{
 						newTime = currentTime - 5.0 * 60; 
-						//source->Seek(newTime);
 						goto seek;
 					}
 					break;
@@ -413,7 +399,6 @@ seek:
 			}
 		}
 
-#endif
 
 		if (mediaPlayer->IsEndOfStream())
 		{
@@ -425,58 +410,8 @@ seek:
 		}
 	}
 
-#else
-
-	// Wait for playback to finish	
-	if (audioSink)
-	{
-		audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-		printf("MAIN: audioSink idle.\n");
-	}
-
-	if (videoSink)
-	{
-		videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-		printf("MAIN: videoSink idle.\n");
-	}
-
-#endif
-
-
-	//// Tear down
-	//if (audioSink)
-	//{
-	//	printf("MAIN: terminating audioSink.\n");
-	//	audioSink->Terminate();
-	//	audioSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	//}
-
-	//if (audioCodec)
-	//{
-	//	printf("MAIN: terminating audioCodec.\n");
-	//	audioCodec->Terminate();
-	//	audioCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	//}
-
-	//if (videoSink)
-	//{
-	//	printf("MAIN: terminating videoSink.\n");
-	//	videoSink->Terminate();
-	//	videoSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	//}
-
-	//printf("MAIN: terminating source.\n");
-	//source->Terminate();
-	//source->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-
 
 	printf("MAIN: Playback finished.\n");
-
-
-	//while (true)
-	//{
-	//	usleep(1000);
-	//}
 
 	return 0;
 }

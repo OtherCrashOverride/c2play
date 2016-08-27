@@ -82,6 +82,9 @@ class AudioCodecElement : public Element
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_EAC3);
 			break;
 
+		case AudioFormatEnum::Opus:
+			soundCodec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
+			break; 
 		//case AudioStreamType::Pcm:
 
 		default:
