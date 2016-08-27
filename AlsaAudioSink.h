@@ -391,8 +391,11 @@ public:
 	{
 		Element::Flush();
 
-		snd_pcm_drop(handle);
-		snd_pcm_prepare(handle);
+		if (handle)
+		{
+			snd_pcm_drop(handle);
+			snd_pcm_prepare(handle);
+		}
 	}
 
 protected:

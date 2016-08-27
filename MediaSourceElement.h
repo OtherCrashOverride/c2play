@@ -794,3 +794,5 @@ public:
 	}
 
 };
+
+typedef std::shared_ptr<MediaSourceElement> MediaSourceElementSPTR;

@@ -42,6 +42,7 @@ extern "C"
 #include "InputDevice.h"
 #include "MediaSourceElement.h"
 #include "AudioCodec.h"
+#include "MediaPlayer.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -285,120 +286,22 @@ int main(int argc, char** argv)
 	avformat_network_init();
 
 
-	auto source = std::make_shared<MediaSourceElement>(std::string(url));
-	source->SetName(std::string("Source"));
-	source->Execute();
-
-
-	AmlVideoSinkElementSPTR videoSink;
-	AudioCodecElementSPTR audioCodec;
-	AlsaAudioSinkElementSPTR audioSink;
-
-
-	//auto nullSink = std::make_shared<NullSink>();
-	//nullSink->SetName(std::string("NullSink"));
-	//nullSink->Execute();
-
-	
-
-
-	// Wait for the source to create the pins
-	source->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-
-	// Connections
-	OutPinSPTR sourceVideoPin = std::static_pointer_cast<OutPin>(
-		source->Outputs()->FindFirst(MediaCategoryEnum::Video));
-	if (sourceVideoPin)
-	{
-		videoSink = std::make_shared<AmlVideoSinkElement>();
-		videoSink->SetName(std::string("VideoSink"));
-		//videoSink->SetLogEnabled(true);
-		videoSink->Execute();
-
-		videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-		sourceVideoPin->Connect(videoSink->Inputs()->Item(0));
-	}
-
-	OutPinSPTR sourceAudioPin = std::static_pointer_cast<OutPin>(
-		source->Outputs()->FindFirst(MediaCategoryEnum::Audio));
-	if (sourceAudioPin)
-	{
-		audioCodec = std::make_shared<AudioCodecElement>();
-		audioCodec->SetName(std::string("AudioCodec"));
-		audioCodec->Execute();
-		audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-		audioSink = std::make_shared<AlsaAudioSinkElement>();
-		audioSink->SetName(std::string("AudioSink"));
-		audioSink->Execute();
-		audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-		sourceAudioPin->Connect(audioCodec->Inputs()->Item(0));
-
-		audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
-	}
-
-		
-	if (audioSink && videoSink)
-	{
-		// Clock
-		audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1)); 
-	}
-
-
-	
-
-
-
-	// Start feeding data
-	if (audioSink)
-	{
-		printf("MAIN:  audioSink Play.\n");
-		audioSink->SetState(MediaState::Play);
-	}
-
-	//nullSink->SetState(MediaState::Play);
-	
-	if (audioCodec)
-	{
-		printf("MAIN:  audioCodec Play.\n");
-		audioCodec->SetState(MediaState::Play);
-	}
-
-	if (videoSink)
-	{
-		printf("MAIN:  videoSink Play.\n");
-		videoSink->SetState(MediaState::Play);
-	}
+	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url);
 
 
 	if (optionChapter > -1)
 	{
-		//for (auto& chapter : source->Chapters())
-		//{
-		//	if (optionChapter <= chapter->size())
-		//	{
-		//		optionStartPosition = chapter->at(;
-
-		//	}
-		//}
-
-		if (optionChapter <= source->Chapters()->size())
+		if (optionChapter <= mediaPlayer->Chapters()->size())
 		{
-			optionStartPosition = source->Chapters()->at(optionChapter - 1).Start;
+			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).Start;
 			printf("MAIN: Chapter found (%f).\n", optionStartPosition);
 		}
 	}
 
 	
-	//source->WaitForExecutionState(ExecutionStateEnum::Idle);
-	source->Seek(optionStartPosition);
+	mediaPlayer->Seek(optionStartPosition);
+	mediaPlayer->SetState(MediaState::Play);
 
-	printf("MAIN:  source Play.\n");
-	source->SetState(MediaState::Play);
-	
 
 #if 1// Process Input
 
@@ -410,15 +313,6 @@ int main(int argc, char** argv)
 		// Process Input
 		int keycode;
 
-		double currentTime = -1;
-		if (audioSink)
-		{
-			currentTime = audioSink->Clock();
-		}
-		else if (videoSink)
-		{
-			currentTime = videoSink->Clock();
-		}
 
 		double newTime;
 
@@ -427,6 +321,8 @@ int main(int argc, char** argv)
 		{
 			while (dev->TryGetKeyPress(&keycode))
 			{
+				double currentTime = mediaPlayer->Position();
+
 				switch (keycode)
 				{
 				case KEY_HOME:	// odroid remote
@@ -441,7 +337,6 @@ int main(int argc, char** argv)
 				case KEY_BACK:
 				case KEY_ESC:
 				{
-
 					isRunning = false;
 				}
 					break;
@@ -458,51 +353,15 @@ int main(int argc, char** argv)
 				case KEY_SPACE:
 				case KEY_PLAYPAUSE:
 				{
-					// Pause
-					if (audioSink)
+					if (isPaused)
 					{
-						if (isPaused)
-						{
-							printf("MAIN: audioSink Playing.\n");
-							
-							audioSink->SetState(MediaState::Play);
-							//audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-
-							printf("MAIN: audioSink Played.\n");
-						}
-						else
-						{
-							printf("MAIN: audioSink Pausing.\n");
-
-							audioSink->SetState(MediaState::Pause);
-							//audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-
-							printf("MAIN: audioSink Paused.\n");
-						}
+						mediaPlayer->SetState(MediaState::Play);
 					}
-
-					if (videoSink)
+					else
 					{
-						if (isPaused)
-						{
-							printf("MAIN: audioSink Playing.\n");
-
-							videoSink->SetState(MediaState::Play);
-							//videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-
-							printf("MAIN: audioSink Played.\n");
-						}
-						else
-						{
-							printf("MAIN: videoSink Pausing.\n");
-
-							videoSink->SetState(MediaState::Pause);
-							//videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
-							
-							printf("MAIN: videoSink Paused.\n");
-						}
+						mediaPlayer->SetState(MediaState::Pause);
 					}
-
+					
 					isPaused = !isPaused;
 				}
 				break;
@@ -541,75 +400,10 @@ int main(int argc, char** argv)
 
 seek:
 					if (!isPaused)
-					{												
-						printf("MAIN: seeking to %f.\n", newTime);
+					{			
+						printf("Seeking from %f to %f.\n", currentTime, newTime);
 
-						source->SetState(MediaState::Pause);
-
-						if (audioCodec)
-						{
-							audioCodec->SetState(MediaState::Pause);
-						}
-
-						if (audioSink)
-						{
-							audioSink->SetState(MediaState::Pause);							
-						}
-						
-						if (videoSink)
-						{
-							videoSink->SetState(MediaState::Pause);						
-						}
-
-
-						source->Flush();
-
-						if (audioCodec)
-						{
-							audioCodec->Flush();
-						}
-
-						if (audioSink)
-						{
-							audioSink->Flush();
-						}
-
-						if (videoSink)
-						{
-							videoSink->Flush();
-						}
-
-
-						source->Seek(newTime);
-
-
-						if (videoSink)
-						{
-							videoSink->SetState(MediaState::Play);
-							//videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-						}
-
-						if (audioCodec)
-						{
-							audioCodec->SetState(MediaState::Play);
-							//audioCodec->WaitForExecutionState(ExecutionStateEnum::Executing);
-						}
-
-						if (audioSink)
-						{
-							audioSink->SetState(MediaState::Play);
-							//audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-						}
-
-						source->SetState(MediaState::Play);
-						//source->WaitForExecutionState(ExecutionStateEnum::Executing);
-
-						//if (audioSink)
-						//	audioSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-
-						//if (videoSink)
-						//	videoSink->WaitForExecutionState(ExecutionStateEnum::Executing);
-						
+						mediaPlayer->Seek(newTime);
 					}
 					break;
 
@@ -621,26 +415,7 @@ seek:
 
 #endif
 
-		bool audioIsIdle = true;
-		if (audioSink)
-		{
-			if (audioSink->State() != MediaState::Pause)
-			{
-				audioIsIdle = false;
-			}
-
-		}
-
-		bool videoIsIdle = true;
-		if (videoSink)
-		{
-			if (videoSink->State() != MediaState::Pause)
-			{
-				videoIsIdle = false;
-			}
-		}
-
-		if (!isPaused && audioIsIdle && videoIsIdle)
+		if (mediaPlayer->IsEndOfStream())
 		{
 			isRunning = false;
 		}
@@ -668,31 +443,31 @@ seek:
 #endif
 
 
-	// Tear down
-	if (audioSink)
-	{
-		printf("MAIN: terminating audioSink.\n");
-		audioSink->Terminate();
-		audioSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	}
+	//// Tear down
+	//if (audioSink)
+	//{
+	//	printf("MAIN: terminating audioSink.\n");
+	//	audioSink->Terminate();
+	//	audioSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	//}
 
-	if (audioCodec)
-	{
-		printf("MAIN: terminating audioCodec.\n");
-		audioCodec->Terminate();
-		audioCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	}
+	//if (audioCodec)
+	//{
+	//	printf("MAIN: terminating audioCodec.\n");
+	//	audioCodec->Terminate();
+	//	audioCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	//}
 
-	if (videoSink)
-	{
-		printf("MAIN: terminating videoSink.\n");
-		videoSink->Terminate();
-		videoSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
-	}
+	//if (videoSink)
+	//{
+	//	printf("MAIN: terminating videoSink.\n");
+	//	videoSink->Terminate();
+	//	videoSink->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	//}
 
-	printf("MAIN: terminating source.\n");
-	source->Terminate();
-	source->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	//printf("MAIN: terminating source.\n");
+	//source->Terminate();
+	//source->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
 
 
 	printf("MAIN: Playback finished.\n");

@@ -212,7 +212,10 @@ public:
 
 	double Clock() const
 	{
-		return clock;
+		//return clock;
+		int vpts = codec_get_vpts(codecContextPtr);
+		
+		return vpts * (double)PTS_FREQ;
 	}
 
 	double FrameRate() const
@@ -828,10 +831,14 @@ protected:
 	
 public:
 
-	double Clock() const
+	double Clock() 
 	{
 		//return clock;
-		return clockInPin->Clock();
+		//return clockInPin->Clock();
+
+		int vpts = codec_get_vpts(&codecContext);
+
+		return vpts / (double)PTS_FREQ;
 	}
 
 

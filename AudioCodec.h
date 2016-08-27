@@ -443,7 +443,10 @@ public:
 		Element::Flush();
 		//WaitForExecutionState(ExecutionStateEnum::Idle);
 
-		avcodec_flush_buffers(soundCodecContext);
+		if (soundCodecContext)
+		{
+			avcodec_flush_buffers(soundCodecContext);
+		}
 	}
 };
 
