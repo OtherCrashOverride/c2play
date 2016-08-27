@@ -39,8 +39,7 @@ extern "C"
 struct Chapter
 {
 	std::string Title;
-	double Start;
-	double End;
+	double TimeStamp;
 };
 
 typedef std::vector<Chapter> ChapterList;
@@ -572,15 +571,14 @@ public:
 
 			int index = i + 1;
 			double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
-			double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
+			//double end = avChapter->end * avChapter->time_base.num / (double)avChapter->time_base.den;
 			AVDictionary* metadata = avChapter->metadata;
 
 			//printf("Chapter #%02d: %f -> %f\n", index, start, end);
 			//PrintDictionary(metadata);
 
 			Chapter chapter;
-			chapter.Start = start;
-			chapter.End = end;
+			chapter.TimeStamp = start;
 
 			AVDictionaryEntry* titleEntry = av_dict_get(
 				metadata,
@@ -639,7 +637,7 @@ public:
 		int index = 0;
 		for (auto& chapter : *chapters)
 		{
-			printf("Chapter[%02d] = '%s' : %f - %f\n", index, chapter.Title.c_str(), chapter.Start, chapter.End);
+			printf("Chapter[%02d] = '%s' : %f\n", index, chapter.Title.c_str(), chapter.TimeStamp);
 			++index;
 		}
 

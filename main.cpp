@@ -287,7 +287,7 @@ int main(int argc, char** argv)
 	{
 		if (optionChapter <= mediaPlayer->Chapters()->size())
 		{
-			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).Start;
+			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).TimeStamp;
 			printf("MAIN: Chapter found (%f).\n", optionStartPosition);
 		}
 	}
