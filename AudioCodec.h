@@ -84,7 +84,12 @@ class AudioCodecElement : public Element
 
 		case AudioFormatEnum::Opus:
 			soundCodec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
-			break; 
+			break;
+
+		case AudioFormatEnum::Vorbis:
+			soundCodec = avcodec_find_decoder(AV_CODEC_ID_VORBIS);
+			break;
+
 		//case AudioStreamType::Pcm:
 
 		default:
@@ -105,11 +110,19 @@ class AudioCodecElement : public Element
 		}
 
 
+		AudioPinInfoSPTR info = std::static_pointer_cast<AudioPinInfo>(audioInPin->Source()->Info());
+
 		soundCodecContext->channels = alsa_channels;
 		soundCodecContext->sample_rate = sampleRate;
 		//soundCodecContext->sample_fmt = AV_SAMPLE_FMT_S16P; //AV_SAMPLE_FMT_FLTP; //AV_SAMPLE_FMT_S16P
 		soundCodecContext->request_sample_fmt = AV_SAMPLE_FMT_FLTP; // AV_SAMPLE_FMT_S16P; //AV_SAMPLE_FMT_FLTP;
 		soundCodecContext->request_channel_layout = AV_CH_LAYOUT_STEREO;
+		
+		if (info->ExtraData)
+		{
+			soundCodecContext->extradata_size = info->ExtraData->size();
+			soundCodecContext->extradata = &info->ExtraData->operator[](0);
+		}
 
 		/* open it */
 		if (avcodec_open2(soundCodecContext, soundCodec, NULL) < 0)
@@ -410,6 +423,9 @@ public:
 						audioFormat = info->Format;
 						sampleRate = info->SampleRate;
 						streamChannels = info->Channels;
+
+						// TODO: Copy in pin info
+						
 
 						outInfo->SampleRate = info->SampleRate;
 						outInfo->Channels = info->Channels;

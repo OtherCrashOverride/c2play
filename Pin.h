@@ -64,7 +64,8 @@ enum class AudioFormatEnum
 	WmaPro,
 	DolbyTrueHD,
 	EAc3,
-	Opus
+	Opus,
+	Vorbis
 };
 
 enum class SubtitleFormatEnum
@@ -127,8 +128,7 @@ public:
 	AudioFormatEnum Format = AudioFormatEnum::Unknown;
 	int Channels = 0;
 	int SampleRate = 0;
-
-
+	ExtraDataSPTR ExtraData;
 };
 typedef std::shared_ptr<AudioPinInfo> AudioPinInfoSPTR;
 

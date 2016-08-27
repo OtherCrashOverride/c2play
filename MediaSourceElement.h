@@ -171,6 +171,19 @@ class MediaSourceElement : public Element
 			AVMediaType mediaType = codecCtxPtr->codec_type;
 			AVCodecID codec_id = codecCtxPtr->codec_id;
 
+
+			ExtraDataSPTR ext = std::make_shared<ExtraData>();
+
+			// Copy codec extra data
+			unsigned char* src = codecCtxPtr->extradata;
+			int size = codecCtxPtr->extradata_size;
+
+			for (int j = 0; j < size; ++j)
+			{
+				ext->push_back(src[j]);
+			}
+
+
 			switch (mediaType)
 			{
 			case AVMEDIA_TYPE_VIDEO:
@@ -180,17 +193,17 @@ class MediaSourceElement : public Element
 				info->Width = codecCtxPtr->width;
 				info->Height = codecCtxPtr->height;
 
-				ExtraDataSPTR ext = std::make_shared<ExtraData>();
+				//ExtraDataSPTR ext = std::make_shared<ExtraData>();
 				info->ExtraData = ext;
 
-				// Copy codec extra data
-				unsigned char* src = codecCtxPtr->extradata;
-				int size = codecCtxPtr->extradata_size;
+				//// Copy codec extra data
+				//unsigned char* src = codecCtxPtr->extradata;
+				//int size = codecCtxPtr->extradata_size;
 
-				for (int j = 0; j < size; ++j)
-				{
-					ext->push_back(src[j]);
-				}
+				//for (int j = 0; j < size; ++j)
+				//{
+				//	ext->push_back(src[j]);
+				//}
 
 #if 1
 				printf("EXTRA DATA = ");
@@ -344,6 +357,7 @@ class MediaSourceElement : public Element
 				info->Channels = codecCtxPtr->channels;
 				info->SampleRate = codecCtxPtr->sample_rate;
 				info->Format = AudioFormatEnum::Unknown;
+				info->ExtraData = ext;
 
 				//printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
 
@@ -426,6 +440,11 @@ class MediaSourceElement : public Element
 						info->Format = AudioFormatEnum::Opus;
 					break;
 
+				case AV_CODEC_ID_VORBIS:
+					printf("stream #%d - AUDIO/VORBIS\n", i);
+					if (info)
+						info->Format = AudioFormatEnum::Vorbis;
+					break;	
 					//case AVCodecID.CODEC_ID_WMAV2:
 					//    break;
 
