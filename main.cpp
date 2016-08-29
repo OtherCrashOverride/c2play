@@ -37,6 +37,8 @@ extern "C"
 
 #include "InputDevice.h"
 #include "MediaPlayer.h"
+#include "X11Window.h"
+#include "FbdevAmlWindow.h"
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -45,7 +47,7 @@ extern "C"
 #include <linux/uinput.h>
 
 #include <linux/kd.h>
-
+#include <linux/fb.h>
 
 
 bool isRunning = true;
@@ -179,12 +181,16 @@ void GetDevices()
 struct option longopts[] = {
 	{ "time",         required_argument,  NULL,          't' },
 	{ "chapter",      required_argument,  NULL,          'c' },
+	{ "x11",          no_argument,        NULL,          'x' },
 	{ 0, 0, 0, 0 }
 };
 
 
 int main(int argc, char** argv)
 {
+	bool isX11 = false;
+
+
 	if (argc < 2)
 	{
 		// TODO: Usage
@@ -193,51 +199,59 @@ int main(int argc, char** argv)
 	}
 
 
+	// Trap signal to clean up
+	signal(SIGINT, SignalHandler);
+
+
 	// options
 	int c;
 	double optionStartPosition = 0;
 	int optionChapter = -1;
 
-	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "t:c:x", longopts, NULL)) != -1)
 	{
 		switch (c)
 		{
-		case 't':
-		{
-			if (strchr(optarg, ':'))
+			case 't':
 			{
-				unsigned int h;
-				unsigned int m;
-				double s;
-				if (sscanf(optarg, "%u:%u:%lf", &h, &m, &s) == 3)
+				if (strchr(optarg, ':'))
 				{
-					optionStartPosition = h * 3600 + m * 60 + s;
+					unsigned int h;
+					unsigned int m;
+					double s;
+					if (sscanf(optarg, "%u:%u:%lf", &h, &m, &s) == 3)
+					{
+						optionStartPosition = h * 3600 + m * 60 + s;
+					}
+					else
+					{
+						printf("invalid time specification.\n");
+						throw Exception();
+					}
 				}
 				else
 				{
-					printf("invalid time specification.\n");
-					throw Exception();
+					optionStartPosition = atof(optarg);
 				}
-			}
-			else
-			{
-				optionStartPosition = atof(optarg);
-			}
 
-			printf("startPosition=%f\n", optionStartPosition);
-		}
-		break;
-
-		case 'c':
-			optionChapter = atoi(optarg);
-			printf("optionChapter=%d\n", optionChapter);
+				printf("startPosition=%f\n", optionStartPosition);
+			}
 			break;
 
-		default:
-			throw NotSupportedException();
+			case 'c':
+				optionChapter = atoi(optarg);
+				printf("optionChapter=%d\n", optionChapter);
+				break;
 
-			//printf("?? getopt returned character code 0%o ??\n", c);
-			//break;
+			case 'x':
+				isX11 = true;
+				break;
+
+			default:
+				throw NotSupportedException();
+
+				//printf("?? getopt returned character code 0%o ??\n", c);
+				//break;
 		}
 	}
 
@@ -293,15 +307,34 @@ int main(int argc, char** argv)
 	}
 
 	
+	WindowSPTR window;
+
+	if (isX11)
+	{
+		window = std::make_shared<X11AmlWindow>();
+	}
+	else
+	{
+		window = std::make_shared<FbdevAmlWindow>();
+	}
+
+	window->ProcessMessages();
+
+
 	mediaPlayer->Seek(optionStartPosition);
 	mediaPlayer->SetState(MediaState::Play);
 
-
+	
 	isRunning = true;
 	bool isPaused = false;
 
 	while (isRunning)
 	{
+
+		isRunning = window->ProcessMessages();
+
+
+
 		// Process Input
 		int keycode;
 		double newTime;

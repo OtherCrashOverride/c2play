@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <cstring>
 
 extern "C"
 {
@@ -279,19 +280,24 @@ class AmlVideoSinkElement : public Element
 	void SendCodecData(unsigned long pts, unsigned char* data, int length);
 
 
-public:
+protected:
 
-	double Clock();
 
 	virtual void Initialize() override;
 	virtual void DoWork() override;
 	virtual void ChangeState(MediaState oldState, MediaState newState) override;
-	virtual void Flush() override;
 
+	virtual void Terminating() override;
+
+public:
+
+	double Clock();
+
+	virtual void Flush() override;
 
 private:
 
-	static void WriteToFile(const char* path, const char* value);
+	//static void WriteToFile(const char* path, const char* value);
 
 	void Divx3Header(int width, int height, int packetSize);
 	void ConvertH264ExtraDataToAnnexB();

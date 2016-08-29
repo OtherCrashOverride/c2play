@@ -16,7 +16,7 @@ INCLUDES =
 # define library paths in addition to /usr/lib
 #   if I wanted to include libraries not in /usr/lib I'd specify
 #   their path using -Lpath, something like:
-LFLAGS = -lrt -L/usr/lib/aml_libs
+LFLAGS = -lX11 -lrt -L/usr/lib/aml_libs
 
 # define any libraries to link into executable:
 #   if I want to link in libraries (libx.so or libx.a) I use the -llibname 
@@ -44,7 +44,7 @@ OBJS = $(SRCS:.cpp=.o)
 
 # define the executable file 
 MAIN = c2play
-
+#MAINX11 = c2play-x11
 #
 # The following part of the makefile is generic; it can be used to 
 # build any executable just by changing the definitions above and by
@@ -53,11 +53,15 @@ MAIN = c2play
 
 .PHONY: depend clean
 
-all:    $(MAIN)
+all:    $(MAIN) $(MAINX11)
 	@echo compiled
 
 $(MAIN): $(OBJS) 
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+
+#$(MAINX11): CFLAGS += -D X11=1
+#$(MAINX11): $(OBJS) 
+#	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAINX11) $(OBJS) -lX11 $(LFLAGS) $(LIBS)
 
 
 # dependencies

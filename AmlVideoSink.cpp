@@ -148,6 +148,7 @@ void AmlVideoSinkElement::SetupHardware()
 
 	// Intialize the hardware codec
 	int api = codec_init(&codecContext);
+	//int api = codec_init_no_modeset(&codecContext);
 	if (api != 0)
 	{
 		printf("codec_init failed (%x).\n", api);
@@ -160,8 +161,8 @@ void AmlVideoSinkElement::SetupHardware()
 	int ret = codec_resume(&codecContext);
 
 
-	WriteToFile("/sys/class/graphics/fb0/blank", "1");
-	WriteToFile("/sys/module/amvdec_h265/parameters/dynamic_buf_num_margin", "16");
+	//WriteToFile("/sys/class/graphics/fb0/blank", "1");
+	//WriteToFile("/sys/module/amvdec_h265/parameters/dynamic_buf_num_margin", "16");
 }
 
 void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
@@ -541,25 +542,30 @@ void AmlVideoSinkElement::Flush()
 	codec_reset(&codecContext);
 }
 
-
-
-void AmlVideoSinkElement::WriteToFile(const char* path, const char* value)
+void AmlVideoSinkElement::Terminating()
 {
-	int fd = open(path, O_RDWR | O_TRUNC, 0644);
-	if (fd < 0)
-	{
-		printf("WriteToFile open failed: %s = %s\n", path, value);
-		throw Exception();
-	}
-
-	if (write(fd, value, strlen(value)) < 0)
-	{
-		printf("WriteToFile write failed: %s = %s\n", path, value);
-		throw Exception();
-	}
-
-	close(fd);
+	codec_close(&codecContext);
+	//codec_close_no_modeset(&codecContext);
 }
+
+
+//void AmlVideoSinkElement::WriteToFile(const char* path, const char* value)
+//{
+//	int fd = open(path, O_RDWR | O_TRUNC, 0644);
+//	if (fd < 0)
+//	{
+//		printf("WriteToFile open failed: %s = %s\n", path, value);
+//		throw Exception();
+//	}
+//
+//	if (write(fd, value, strlen(value)) < 0)
+//	{
+//		printf("WriteToFile write failed: %s = %s\n", path, value);
+//		throw Exception();
+//	}
+//
+//	close(fd);
+//}
 
 void AmlVideoSinkElement::Divx3Header(int width, int height, int packetSize)
 {
