@@ -19,10 +19,38 @@
 #include <sys/mman.h>	//mmap
 #include <linux/kd.h>
 
+#include "AmlWindow.h"
+
+
+#if 1
+typedef struct fbdev_window
+{
+	unsigned short width;
+	unsigned short height;
+} fbdev_window;
+#endif
+
+
+
 class FbdevAmlWindow : public AmlWindow
 {
+	EGLDisplay eglDisplay;
+	EGLSurface surface;
+	EGLContext context;
+	fbdev_window window;
 
 public:
+
+	virtual EGLDisplay EglDisplay() const override
+	{
+		return eglDisplay;
+	}
+
+	virtual EGLSurface Surface() const override
+	{
+		return surface;
+	}
+
 
 	FbdevAmlWindow()
 		: AmlWindow()
@@ -88,6 +116,52 @@ public:
 
 
 		close(fd);
+
+
+		// Egl
+		eglDisplay = Egl::Intialize(EGL_DEFAULT_DISPLAY);
+
+		EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 8, 24, 8);
+		if (eglConfig == 0)
+			throw Exception("Compatible EGL config not found.");
+
+
+		EGLint windowAttr[] = {
+			EGL_RENDER_BUFFER, EGL_BACK_BUFFER,
+			EGL_NONE };
+
+
+		// Set the EGL window size
+		window.width = var_info.xres;
+		window.height = var_info.yres;
+
+		surface = eglCreateWindowSurface(eglDisplay, eglConfig, (NativeWindowType)&window, windowAttr);
+
+		if (surface == EGL_NO_SURFACE)
+		{
+			Egl::CheckError();
+		}
+
+
+		// Create a context
+		eglBindAPI(EGL_OPENGL_ES_API);
+
+		EGLint contextAttributes[] = {
+			EGL_CONTEXT_CLIENT_VERSION, 2,
+			EGL_NONE };
+
+		context = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttributes);
+		if (context == EGL_NO_CONTEXT)
+		{
+			Egl::CheckError();
+		}
+
+		EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
+		if (success != EGL_TRUE)
+		{
+			Egl::CheckError();
+		}
+
 	}
 
 	~FbdevAmlWindow()

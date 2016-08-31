@@ -38,6 +38,8 @@ class MediaPlayer
 public:
 
 	double Position() const;
+	
+	double Duration() const;
 
 	MediaState State() const;
 	void SetState(MediaState value);

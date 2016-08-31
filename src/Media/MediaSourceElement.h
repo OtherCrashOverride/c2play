@@ -66,6 +66,7 @@ class MediaSourceElement : public Element
 	EventListenerSPTR<EventArgs> bufferReturnedListener;
 
 	unsigned long lastPts = 0;
+	double duration = -1;
 
 
 	void outPin_BufferReturned(void* sender, const EventArgs& args);
@@ -78,6 +79,11 @@ class MediaSourceElement : public Element
 public:
 
 	const ChapterListSPTR Chapters() const;
+
+	double Duration() const
+	{
+		return duration;
+	}
 
 
 	MediaSourceElement(std::string url);

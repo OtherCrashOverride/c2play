@@ -29,7 +29,7 @@ extern "C"
 #include "Exception.h"
 #include "Thread.h"
 #include "LockedQueue.h"
-#include "PacketBuffer.h"
+#include "Buffer.h"
 
 
 

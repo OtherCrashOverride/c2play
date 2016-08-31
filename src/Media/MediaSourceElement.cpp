@@ -83,6 +83,10 @@ void MediaSourceElement::SetupPins()
 		throw Exception();
 	}
 
+
+	duration = ctx->duration / (double)AV_TIME_BASE;
+
+
 	int streamCount = ctx->nb_streams;
 	if (streamCount < 1)
 	{

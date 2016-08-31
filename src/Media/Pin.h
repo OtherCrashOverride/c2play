@@ -17,7 +17,7 @@
 #pragma once
 
 #include "Codec.h"
-#include "PacketBuffer.h"
+#include "Buffer.h"
 
 
 #include <memory>

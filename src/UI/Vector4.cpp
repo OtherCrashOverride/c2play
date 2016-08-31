@@ -14,27 +14,4 @@
 *
 */
 
-#pragma once
-
-#include <memory>
-
-
-class WindowBase	// Prevent name collisions with X11
-{
-
-protected:
-
-	WindowBase() {}
-
-
-public:
-
-	virtual ~WindowBase() {}
-
-
-	virtual void WaitForMessage() = 0;
-	virtual bool ProcessMessages() = 0;
-
-};
-
-typedef std::shared_ptr<WindowBase> WindowSPTR;
+#include "Vector4.h"

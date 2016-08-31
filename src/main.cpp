@@ -37,8 +37,12 @@ extern "C"
 
 #include "InputDevice.h"
 #include "MediaPlayer.h"
+
+#ifdef X11
 #include "X11Window.h"
+#else
 #include "FbdevAmlWindow.h"
+#endif
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -48,6 +52,8 @@ extern "C"
 
 #include <linux/kd.h>
 #include <linux/fb.h>
+
+#include "Osd.h"
 
 
 bool isRunning = true;
@@ -181,16 +187,12 @@ void GetDevices()
 struct option longopts[] = {
 	{ "time",         required_argument,  NULL,          't' },
 	{ "chapter",      required_argument,  NULL,          'c' },
-	{ "x11",          no_argument,        NULL,          'x' },
 	{ 0, 0, 0, 0 }
 };
 
 
 int main(int argc, char** argv)
 {
-	bool isX11 = false;
-
-
 	if (argc < 2)
 	{
 		// TODO: Usage
@@ -208,7 +210,7 @@ int main(int argc, char** argv)
 	double optionStartPosition = 0;
 	int optionChapter = -1;
 
-	while ((c = getopt_long(argc, argv, "t:c:x", longopts, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
 		switch (c)
 		{
@@ -241,10 +243,6 @@ int main(int argc, char** argv)
 			case 'c':
 				optionChapter = atoi(optarg);
 				printf("optionChapter=%d\n", optionChapter);
-				break;
-
-			case 'x':
-				isX11 = true;
 				break;
 
 			default:
@@ -308,16 +306,21 @@ int main(int argc, char** argv)
 
 	
 	WindowSPTR window;
+	OsdSPTR osd;
+	bool isFbdev = false;
 
-	if (isX11)
-	{
-		window = std::make_shared<X11AmlWindow>();
-	}
-	else
-	{
-		window = std::make_shared<FbdevAmlWindow>();
-	}
+#ifdef X11
 
+	window = std::make_shared<X11AmlWindow>();
+
+#else
+
+	window = std::make_shared<FbdevAmlWindow>();
+	isFbdev = true;
+
+#endif
+	 
+	osd = std::make_shared<Osd>(window->EglDisplay(), window->Surface());
 	window->ProcessMessages();
 
 
@@ -432,6 +435,27 @@ seek:
 			}
 		}
 
+		if (osd)
+		{
+			osd->SetDuration(mediaPlayer->Duration());
+
+			double currentTime = mediaPlayer->Position();
+			osd->SetCurrentTimeStamp(currentTime);
+
+			if (isFbdev)
+			{
+				// The mode setting in aml_libs causes the fb
+				// device to be reset making it display the
+				// the wrong buffer.  As a workaround, force
+				// updating the display.
+				osd->SetShowProgress(!isPaused);
+			}
+
+			osd->SetShowProgress(isPaused);
+
+			osd->Draw();
+			osd->SwapBuffers();
+		}
 
 		if (mediaPlayer->IsEndOfStream())
 		{

@@ -38,6 +38,18 @@ double MediaPlayer::Position() const
 	return result;
 }
 
+double MediaPlayer::Duration() const
+{
+	if (source)
+	{
+		return source->Duration();
+	}
+	else
+	{
+		return -1;
+	}
+}
+
 MediaState MediaPlayer::State() const
 {
 	return state;
