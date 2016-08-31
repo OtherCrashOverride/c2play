@@ -22,7 +22,7 @@
 #include "AmlWindow.h"
 
 
-#if 1
+#ifndef _FBDEV_WINDOW_H_
 typedef struct fbdev_window
 {
 	unsigned short width;
