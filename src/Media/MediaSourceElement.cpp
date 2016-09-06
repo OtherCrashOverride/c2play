@@ -395,7 +395,10 @@ MediaSourceElement::MediaSourceElement(std::string url)
 	int ret = avformat_open_input(&ctx, url.c_str(), NULL, &options_dict);
 	if (ret < 0)
 	{
-		printf("avformat_open_input failed.\n");
+		char buf[AV_ERROR_MAX_STRING_SIZE+1];
+		char *errstr = av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, ret);
+
+		printf("avformat_open_input failed: %s (%d).\n", errstr, ret);
 	}
 
 
