@@ -36,7 +36,8 @@ enum class MediaCategoryEnum
 	Audio,
 	Video,
 	Subtitle,
-	Clock
+	Clock,
+	Picture
 };
 
 enum class VideoFormatEnum
@@ -71,7 +72,15 @@ enum class AudioFormatEnum
 enum class SubtitleFormatEnum
 {
 	Unknown = 0,
-	Text
+	Text,
+	SubRip,
+	Pgs, //Presentation Graphic Stream
+};
+
+enum class PictureFormatEnum
+{
+	Unknown = 0,
+	Image
 };
 
 
@@ -142,9 +151,24 @@ public:
 	}
 
 
-	MediaCategoryEnum Format = MediaCategoryEnum::Unknown;
+	SubtitleFormatEnum Format = SubtitleFormatEnum::Unknown;
 };
 typedef std::shared_ptr<SubtitlePinInfo> SubtitlePinInfoSPTR;
+
+
+class PicturePinInfo : public PinInfo
+{
+public:
+
+	PicturePinInfo()
+		: PinInfo(MediaCategoryEnum::Picture)
+	{
+	}
+
+
+	PictureFormatEnum Format = PictureFormatEnum::Unknown;
+};
+typedef std::shared_ptr<PicturePinInfo> PicturePinInfoSPTR;
 
 
 

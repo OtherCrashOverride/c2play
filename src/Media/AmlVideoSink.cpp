@@ -18,15 +18,16 @@
 
 
 
+
 void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 {
 	timerMutex.Lock();
 
 	if (isEndOfStream)
 	{
-		buf_status bufferStatus;
-		int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
-		if (api == 0)
+		buf_status bufferStatus = amlCodec.GetBufferStatus();
+		//int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
+		//if (api == 0)
 		{
 			//printf("AmlVideoSinkElement: codec_get_vbuf_state free_len=%d, size=%d, data_len=%d, read_pointer=%x, write_pointer=%x\n",
 			//	bufferStatus.free_len, bufferStatus.size, bufferStatus.data_len, bufferStatus.read_pointer, bufferStatus.write_pointer);
@@ -52,113 +53,115 @@ void AmlVideoSinkElement::SetupHardware()
 	int height = videoPin->InfoAs()->Height;
 	double frameRate = videoPin->InfoAs()->FrameRate;
 
+	amlCodec.Open(videoPin->InfoAs()->Format, width, height, frameRate);
 
-	memset(&codecContext, 0, sizeof(codecContext));
+	//memset(&codecContext, 0, sizeof(codecContext));
 
-	codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
-	codecContext.has_video = 1;
+	//codecContext.stream_type = STREAM_TYPE_ES_VIDEO;
+	//codecContext.has_video = 1;
+	//codecContext.noblock = 1;
 
-	// Note: Without EXTERNAL_PTS | SYNC_OUTSIDE, the codec auto adjusts
-	// frame-rate from PTS 
-	codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
+	//// Note: Without EXTERNAL_PTS | SYNC_OUTSIDE, the codec auto adjusts
+	//// frame-rate from PTS 
+	//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
 
-																			// Note: Testing has shown that the ALSA clock requires the +1
-	codecContext.am_sysinfo.rate = 96000.0 / frameRate + 1;
-
-
-	switch (videoPin->InfoAs()->Format)
-	{
-	case VideoFormatEnum::Mpeg2:
-		printf("AmlVideoSink - VIDEO/MPEG2\n");
-
-		codecContext.video_type = VFORMAT_MPEG12;
-		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
-		break;
-
-	case VideoFormatEnum::Mpeg4V3:
-		printf("AmlVideoSink - VIDEO/MPEG4V3\n");
-
-		codecContext.video_type = VFORMAT_MPEG4;
-		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_3;
-		break;
-
-	case VideoFormatEnum::Mpeg4:
-		printf("AmlVideoSink - VIDEO/MPEG4\n");
-
-		codecContext.video_type = VFORMAT_MPEG4;
-		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_5;
-		break;
-
-	case VideoFormatEnum::Avc:
-	{
-		if (width > 1920 || height > 1080)
-		{
-			printf("AmlVideoSink - VIDEO/H264_4K2K\n");
-
-			codecContext.video_type = VFORMAT_H264_4K2K;
-			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
-		}
-		else
-		{
-			printf("AmlVideoSink - VIDEO/H264\n");
-
-			codecContext.video_type = VFORMAT_H264;
-			codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;
-		}
-	}
-	break;
-
-	case VideoFormatEnum::Hevc:
-		printf("AmlVideoSink - VIDEO/HEVC\n");
-
-		codecContext.video_type = VFORMAT_HEVC;
-		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
-		//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
-		break;
+	//// Note: Testing has shown that the ALSA clock requires the +1
+	//codecContext.am_sysinfo.rate = 96000.0 / frameRate + 1;
 
 
-	case VideoFormatEnum::VC1:
-		printf("AmlVideoSink - VIDEO/VC1\n");
-		codecContext.video_type = VFORMAT_VC1;
-		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_WVC1;
-		break;
+	//switch (videoPin->InfoAs()->Format)
+	//{
+	//case VideoFormatEnum::Mpeg2:
+	//	printf("AmlVideoSink - VIDEO/MPEG2\n");
 
-	default:
-		printf("AmlVideoSink - VIDEO/UNKNOWN(%d)\n", (int)videoFormat);
-		throw NotSupportedException();
-	}
+	//	codecContext.video_type = VFORMAT_MPEG12;
+	//	codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_UNKNOW;
+	//	break;
+
+	//case VideoFormatEnum::Mpeg4V3:
+	//	printf("AmlVideoSink - VIDEO/MPEG4V3\n");
+
+	//	codecContext.video_type = VFORMAT_MPEG4;
+	//	codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_3;
+	//	break;
+
+	//case VideoFormatEnum::Mpeg4:
+	//	printf("AmlVideoSink - VIDEO/MPEG4\n");
+
+	//	codecContext.video_type = VFORMAT_MPEG4;
+	//	codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_MPEG4_5;
+	//	break;
+
+	//case VideoFormatEnum::Avc:
+	//{
+	//	if (width > 1920 || height > 1080)
+	//	{
+	//		printf("AmlVideoSink - VIDEO/H264_4K2K\n");
+
+	//		codecContext.video_type = VFORMAT_H264_4K2K;
+	//		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
+	//	}
+	//	else
+	//	{
+	//		printf("AmlVideoSink - VIDEO/H264\n");
+
+	//		codecContext.video_type = VFORMAT_H264;
+	//		codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_H264;
+	//	}
+	//}
+	//break;
+
+	//case VideoFormatEnum::Hevc:
+	//	printf("AmlVideoSink - VIDEO/HEVC\n");
+
+	//	codecContext.video_type = VFORMAT_HEVC;
+	//	codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_HEVC;
+	//	//codecContext.am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
+	//	break;
 
 
-	// Rotation
-	//codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x10000); //90
-	//codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x20000); //180
-	//codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x30000); //270
+	//case VideoFormatEnum::VC1:
+	//	printf("AmlVideoSink - VIDEO/VC1\n");
+	//	codecContext.video_type = VFORMAT_VC1;
+	//	codecContext.am_sysinfo.format = VIDEO_DEC_FORMAT_WVC1;
+	//	break;
+
+	//default:
+	//	printf("AmlVideoSink - VIDEO/UNKNOWN(%d)\n", (int)videoFormat);
+	//	throw NotSupportedException();
+	//}
 
 
-	// Debug info
-	printf("\tw=%d h=%d ", width, height);
-
-	printf("fps=%f ", frameRate);
-
-	printf("am_sysinfo.rate=%d ",
-		codecContext.am_sysinfo.rate);
-
-	printf("\n");
+	//// Rotation
+	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x10000); //90
+	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x20000); //180
+	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x30000); //270
 
 
-	// Intialize the hardware codec
-	int api = codec_init(&codecContext);
-	//int api = codec_init_no_modeset(&codecContext);
-	if (api != 0)
-	{
-		printf("codec_init failed (%x).\n", api);
-		throw Exception();
-	}
+	//// Debug info
+	//printf("\tw=%d h=%d ", width, height);
+
+	//printf("fps=%f ", frameRate);
+
+	//printf("am_sysinfo.rate=%d ",
+	//	codecContext.am_sysinfo.rate);
+
+	//printf("\n");
 
 
-	// This is needed because the codec remains paused
-	// even after closing
-	int ret = codec_resume(&codecContext);
+	//// Intialize the hardware codec
+	//int api = codec_init(&codecContext);
+	////int api = codec_init_no_modeset(&codecContext);
+	//if (api != 0)
+	//{
+	//	printf("codec_init failed (%x).\n", api);
+	//	throw Exception();
+	//}
+
+
+	//// This is needed because the codec remains paused
+	//// even after closing
+	//int ret = codec_resume(&codecContext);
 
 
 	//WriteToFile("/sys/class/graphics/fb0/blank", "1");
@@ -171,7 +174,9 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 	if (doResumeFlag)
 	{
-		codec_resume(&codecContext);
+		//codec_resume(&codecContext);
+		amlCodec.Resume();
+
 		doResumeFlag = false;
 	}
 
@@ -228,7 +233,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 	if (isAnnexB)
 	{
-		SendCodecData(pts, pkt->data, pkt->size);
+		//SendCodecData(pts, pkt->data, pkt->size);
+		amlCodec.SendData(pts, pkt->data, pkt->size);
 	}
 	else if (!isAnnexB &&
 		(videoFormat == VideoFormatEnum::Avc ||
@@ -254,7 +260,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 				{
 					ConvertH264ExtraDataToAnnexB();
 
-					SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+					//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+					amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
 				}
 
 				isExtraDataSent = true;
@@ -271,7 +278,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 				{
 					HevcExtraDataToAnnexB();
 
-					SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+					//SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+					amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
 				}
 
 				isExtraDataSent = true;
@@ -301,7 +309,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			nalHeader += nalLength + 4;
 		}
 
-		SendCodecData(pts, pkt->data, pkt->size);
+		//SendCodecData(pts, pkt->data, pkt->size);
+		amlCodec.SendData(pts, pkt->data, pkt->size);
 
 		//isExtraDataSent = false;
 	}
@@ -309,58 +318,82 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 	{
 		//printf("Sending Divx3\n");
 		Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height, pkt->size);
-		SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+		//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+		amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
 
-		SendCodecData(0, pkt->data, pkt->size);
+		//SendCodecData(0, pkt->data, pkt->size);
+		amlCodec.SendData(0, pkt->data, pkt->size);
 	}
 	else
 	{
-		SendCodecData(pts, pkt->data, pkt->size);
+		//SendCodecData(pts, pkt->data, pkt->size);
+		amlCodec.SendData(pts, pkt->data, pkt->size);
 	}
 
 
 	if (doPauseFlag)
 	{
-		codec_pause(&codecContext);
+		//codec_pause(&codecContext);
+		amlCodec.Pause();
 		doPauseFlag = false;
 	}
 
 	playPauseMutex.Unlock();
 }
 
-void AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, int length)
-{
-	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
-
-	int api;
-
-	if (pts > 0)
-	{
-		if (codec_checkin_pts(&codecContext, pts))
-		{
-			printf("codec_checkin_pts failed\n");
-		}
-	}
-
-
-	int offset = 0;
-	while (api == -EAGAIN || offset < length)
-	{
-		api = codec_write(&codecContext, data + offset, length - offset);
-		if (api > 0)
-		{
-			offset += api;
-			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
-		}
-	}
-}
+//void AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, int length)
+//{
+//	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
+//
+//	int api;
+//
+//	if (pts > 0)
+//	{
+//		if (codec_checkin_pts(&codecContext, pts))
+//		{
+//			printf("codec_checkin_pts failed\n");
+//		}
+//	}
+//
+//
+//	int offset = 0;
+//	while (api == -EAGAIN || offset < length)
+//	{
+//		api = codec_write(&codecContext, data + offset, length - offset);
+//		if (api > 0)
+//		{
+//			offset += api;
+//			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
+//		}
+//		else
+//		{
+//			//printf("codec_write failed (%x).\n", api);
+//		}
+//
+//		//if (ExecutionState() == ExecutionStateEnum::Terminating)
+//		//	break;
+//	}
+//}
 
 
 
 double AmlVideoSinkElement::Clock()
 {
-	int vpts = codec_get_vpts(&codecContext);
-	return vpts / (double)PTS_FREQ;
+	//int vpts = codec_get_vpts(&codecContext);
+	//double result = vpts / (double)PTS_FREQ;
+
+	//printf("AmlVideoSinkElement::Clock() = %f\n", result);
+
+	//return result;
+
+	if (amlCodec.IsOpen())
+	{
+		return amlCodec.GetCurrentPts();
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 
@@ -388,9 +421,20 @@ void AmlVideoSinkElement::Initialize()
 		PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Clock);
 
 		ElementWPTR weakPtr = shared_from_this();
-		clockInPin = std::make_shared<AmlVideoSinkClockInPin>(weakPtr, info, &codecContext);
+		//clockInPin = std::make_shared<AmlVideoSinkClockInPin>(weakPtr, info, &codecContext);
+		clockInPin = std::make_shared<AmlVideoSinkClockInPin>(weakPtr, info, &amlCodec);
 		AddInputPin(clockInPin);
 	}
+
+	//{
+	//	// Create a clock out pin
+	//	//
+	//	PinInfoSPTR info = std::make_shared<PinInfo>(MediaCategoryEnum::Clock);
+
+	//	ElementWPTR weakPtr = shared_from_this();
+	//	clockOutPin = std::make_shared<AmlVideoSinkClockOutPin>(weakPtr, info, &codecContext);
+	//	AddOutputPin(clockOutPin);
+	//}
 
 
 	// Event handlers
@@ -412,9 +456,10 @@ void AmlVideoSinkElement::DoWork()
 
 	BufferSPTR buffer;
 
-	if (videoPin->TryPeekFilledBuffer(&buffer))
+	//if (videoPin->TryPeekFilledBuffer(&buffer))
+	if (State() == MediaState::Play)
 	{
-		AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+		//AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
 		// Video
 		if (videoPin->TryGetFilledBuffer(&buffer))
@@ -458,35 +503,36 @@ void AmlVideoSinkElement::DoWork()
 
 			switch (buffer->Type())
 			{
-			case BufferTypeEnum::Marker:
-			{
-				MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
-				printf("AmlVideoSinkElement: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
-
-				switch (markerBuffer->Marker())
+				case BufferTypeEnum::Marker:
 				{
-				case MarkerEnum::EndOfStream:
-					isEndOfStream = true;
-					break;
+					MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+					printf("AmlVideoSinkElement: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
 
-				case MarkerEnum::Discontinue:
-					//codec_reset(&codecContext);
-					break;
+					switch (markerBuffer->Marker())
+					{
+						case MarkerEnum::EndOfStream:
+							isEndOfStream = true;
+							break;
 
-				default:
-					// ignore unknown 
+						case MarkerEnum::Discontinue:
+							//codec_reset(&codecContext);
+							break;
+
+						default:
+							// ignore unknown 
+							break;
+					}
+
 					break;
 				}
 
-				break;
-			}
-
-			case BufferTypeEnum::AVPacket:
-			{
-				//printf("AmlVideoSink: Got a buffer.\n");
-				ProcessBuffer(avPacketBuffer);
-				break;
-			}
+				case BufferTypeEnum::AVPacket:
+				{
+					//printf("AmlVideoSink: Got a buffer.\n");
+					AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
+					ProcessBuffer(avPacketBuffer);
+					break;
+				}
 			}
 
 			videoPin->PushProcessedBuffer(buffer);
@@ -506,7 +552,12 @@ void AmlVideoSinkElement::ChangeState(MediaState oldState, MediaState newState)
 	{
 		playPauseMutex.Lock();
 
-		int ret = codec_resume(&codecContext);
+		//int ret = codec_resume(&codecContext);
+		if (amlCodec.IsOpen())
+		{
+			amlCodec.Resume();
+		}
+
 		//doPauseFlag = false;
 		//doResumeFlag = true;
 		isEndOfStream = false;
@@ -522,7 +573,13 @@ void AmlVideoSinkElement::ChangeState(MediaState oldState, MediaState newState)
 
 		//doResumeFlag = false;
 		//doPauseFlag = true;
-		int ret = codec_pause(&codecContext);
+		//int ret = codec_pause(&codecContext);
+
+		if (amlCodec.IsOpen())
+		{
+			amlCodec.Pause();
+		}
+
 		//timer.Stop();
 
 		playPauseMutex.Unlock();
@@ -537,15 +594,86 @@ void AmlVideoSinkElement::ChangeState(MediaState oldState, MediaState newState)
 
 void AmlVideoSinkElement::Flush()
 {
+	timerMutex.Lock();
+	playPauseMutex.Lock();
+
+	timer.Stop();
+
+	
+	////int codec_flush_video(codec_para_t *pcodec)
+	//if (codec_flush_video(&codecContext) < 0)
+	//{
+	//	printf("codec_flush_video failed.\n");
+	//}
+
+	// Set the time to max
+	//codec_set_pcrscr(&codecContext, 0);
+
+
+
+	////
+	//printf("AmlVideoSinkElement: codec_set_dec_reset.\n");
+	//codec_set_dec_reset(&codecContext);
+
+	//printf("AmlVideoSinkElement: codec_reset.\n");
+	//codec_reset(&codecContext);
+
+
+
+	printf("AmlVideoSinkElement: calling base.\n");
+
 	Element::Flush();
 
-	codec_reset(&codecContext);
+
+	if (amlCodec.IsOpen())
+	{
+		//codec_set_syncenable(&codecContext, 0);
+
+		printf("AmlVideoSinkElement: codec_resume.\n");
+		//codec_resume(&codecContext);
+		amlCodec.Resume();
+
+		printf("AmlVideoSinkElement: reset.\n");
+		//codec_close(&codecContext);
+		amlCodec.Reset();
+
+		//printf("AmlVideoSinkElement: codec_init.\n");
+		//codec_init(&codecContext);
+
+		printf("AmlVideoSinkElement: codec_pause.\n");
+		//codec_pause(&codecContext);
+		amlCodec.Pause();
+
+		//codec_set_syncenable(&codecContext, 1);
+	}
+
+
+	timer.Start();
+
+	playPauseMutex.Unlock();
+	timerMutex.Unlock();
+
+	printf("AmlVideoSinkElement: Flush exited.\n");
+
 }
 
 void AmlVideoSinkElement::Terminating()
 {
-	codec_close(&codecContext);
+	timerMutex.Lock();
+	playPauseMutex.Lock();
+
+	timer.Stop();
+
+	//codec_resume(&codecContext);
+	amlCodec.Resume();
+
+	//codec_close(&codecContext);
+	amlCodec.Close();
+
 	//codec_close_no_modeset(&codecContext);
+
+	playPauseMutex.Unlock();
+	timerMutex.Unlock();
 }
 
 

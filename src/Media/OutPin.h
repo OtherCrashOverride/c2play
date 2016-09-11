@@ -60,19 +60,7 @@ class OutPin : public Pin
 	WaitCondition waitCondition;
 
 
-	void WorkThread()
-	{
-		//printf("OutPin: WorkTread started.\n");
-
-		while (true)
-		{
-			DoWork();
-
-			waitCondition.WaitForSignal();
-		}
-
-		//printf("OutPin: WorkTread exited.\n");
-	}
+	void WorkThread();
 
 
 protected:
@@ -94,6 +82,10 @@ public:
 	virtual ~OutPin();
 
 	
+	void Wake()
+	{
+		waitCondition.Signal();
+	}
 
 	bool TryGetAvailableBuffer(BufferSPTR* outValue);
 	bool TryPeekAvailableBuffer(BufferSPTR* buffer)

@@ -23,20 +23,25 @@
 #include "Egl.h"
 #include "QuadBatch.h"
 #include "Texture2D.h"
+#include "Compositor.h"
 
 
 class Osd
 {
-	EGLDisplay eglDisplay;
-	EGLSurface surface;
-	Texture2DSPTR texture;
-	QuadBatchSPTR quadBatch;
-	Texture2DSPTR backgroundTexture;
+	//EGLDisplay eglDisplay;
+	//EGLSurface surface;
+	//Texture2DSPTR texture;
+	//QuadBatchSPTR quadBatch;
+	//Texture2DSPTR backgroundTexture;
+	CompositorSPTR compositor;
 	double duration = 0;
 	double currentTimeStamp = 0;
-	bool showProgress = false;
-	bool needsRedraw = true;
-
+	//bool showProgress = false;
+	//bool needsRedraw = true;
+	SpriteSPTR backgroundSprite;
+	SpriteSPTR barSprite;
+	SpriteSPTR progressSprite;
+	bool isShown = false;
 
 public:
 
@@ -69,28 +74,31 @@ public:
 		}
 	}
 
-	bool ShowProgress() const
-	{
-		return showProgress;
-	}
-	void SetShowProgress(bool value)
-	{
-		if (value != showProgress)
-		{
-			showProgress = value;
-			needsRedraw = true;
-		}
-	}
+	//bool ShowProgress() const
+	//{
+	//	return showProgress;
+	//}
+	//void SetShowProgress(bool value)
+	//{
+	//	if (value != showProgress)
+	//	{
+	//		showProgress = value;
+	//		//needsRedraw = true;
+	//	}
+	//}
 
 
 
-	Osd(EGLDisplay eglDisplay, EGLSurface surface);
+	//Osd(EGLDisplay eglDisplay, EGLSurface surface);
+	Osd(CompositorSPTR compositor);
 
 
-	void Update(float elapsedTime);
-	void Draw();
-	void SwapBuffers();
+	//void Update(float elapsedTime);
+	//void Draw();
+	//void SwapBuffers();
 
+	void Show();
+	void Hide();
 };
 
 typedef std::shared_ptr<Osd> OsdSPTR;

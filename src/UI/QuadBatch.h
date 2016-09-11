@@ -126,7 +126,7 @@ public:
 			Matrix4::CreateOrthographicOffCenter(0.0f, 0.0f,
 			width, height, 0.0f, -1.0f));
 
-		program->WorldViewProjection().Debug_Print();
+		//program->WorldViewProjection().Debug_Print();
 	}
 
 
@@ -158,28 +158,28 @@ public:
 
 		// Left, Top
 		Vector3 position0(destination.Left(), destination.Top(), zDepth);
-		Vector2 uv0(0, 1);
+		Vector2 uv0(0, 0);
 		//batch->push_back(PositionColorTexture(position, color, uv));
 		PositionColorTexture vert0(position0, color, uv0);
 		//printf("position0: x=%f, y=%f, z=%f\n", position0.X, position0.Y, position0.Z);
 
 		// Right, Top
 		Vector3 position1(destination.Right(), destination.Top(), zDepth);
-		Vector2 uv1(1, 1);
+		Vector2 uv1(1, 0);
 		//batch.Add(new PositionPackedColorTexture(position, packedColor, uv));
 		PositionColorTexture vert1(position1, color, uv1);
 		//printf("position1: x=%f, y=%f, z=%f\n", position1.X, position1.Y, position1.Z);
 
 		// Right, Bottom
 		Vector3 position2(destination.Right(), destination.Bottom(), zDepth);
-		Vector2 uv2(1, 0);
+		Vector2 uv2(1, 1);
 		//batch.Add(new PositionPackedColorTexture(position, packedColor, uv));
 		PositionColorTexture vert2(position2, color, uv2);
 		//printf("position2: x=%f, y=%f, z=%f\n", position2.X, position2.Y, position2.Z);
 
 		// Left, Bottom
 		Vector3 position3(destination.Left(), destination.Bottom(), zDepth);
-		Vector2 uv3(0, 0);
+		Vector2 uv3(0, 1);
 		//batch.Add(new PositionPackedColorTexture(position, packedColor, uv));
 		PositionColorTexture vert3(position3, color, uv3);
 		//printf("position3: x=%f, y=%f, z=%f\n", position3.X, position3.Y, position3.Z);

@@ -524,6 +524,8 @@ public:
 		}
 
 		SetState(MediaState::Pause);
+		WaitForExecutionState(ExecutionStateEnum::Idle);
+
 		Flush();
 
 		isRunning = false;
@@ -533,9 +535,11 @@ public:
 		
 
 		//thread.Cancel();
+
+		printf("Element (%s) thread.Join().\n", name.c_str());
 		thread.Join();
 
-		Log("Element (%s) Terminate.\n", name.c_str());
+		printf("Element (%s) Terminate.\n", name.c_str());
 	}
 
 
@@ -610,10 +614,11 @@ public:
 		if (State() != MediaState::Pause)
 			throw InvalidOperationException();
 
+		WaitForExecutionState(ExecutionStateEnum::Idle);
+
 		inputs.Flush();
 		outputs.Flush();
-
-		WaitForExecutionState(ExecutionStateEnum::Idle);
+		
 
 		printf("Element (%s) Flush exited.\n", name.c_str());
 	}

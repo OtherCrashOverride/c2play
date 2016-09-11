@@ -25,6 +25,7 @@ extern "C"
 }
 
 #include <memory>
+#include <vector>
 
 
 enum class BufferTypeEnum
@@ -34,7 +35,9 @@ enum class BufferTypeEnum
 	ClockData,
 	PcmData,
 	AVPacket,
-	AVFrame
+	AVFrame,
+	Image,
+	ImageList
 };
 
 
@@ -160,14 +163,14 @@ protected:
 	{
 	}
 
+
+
+public:
+
 	virtual T Payload()
 	{
 		return payload;
 	}
-
-public:
-
-
 };
 
 
@@ -557,60 +560,132 @@ typedef std::shared_ptr<AVFrameBuffer> AVFrameBufferPtr;
 typedef std::shared_ptr<AVFrameBuffer> AVFrameBufferSPTR;
 
 
-//class PacketBuffer
-//{
-//private:
-//	AVPacket* avpkt;
-//	double timeStamp = -1.0;
-//
-//protected:
-//
-//
-//
-//public:
-//
-//
-//	void* GetDataPtr() const
-//	{
-//		return avpkt->data;
-//	}
-//
-//	int GetDataLength() const
-//	{
-//		return avpkt->size;
-//	}
-//
-//	AVPacket* GetAVPacket() const
-//	{
-//		return avpkt;
-//	}
-//
-//	double GetTimeStamp()
-//	{
-//		return timeStamp;
-//	}
-//	void SetTimeStamp(double value)
-//	{
-//		timeStamp = value;
-//	}
-//
-//
-//	PacketBuffer()
-//	{
-//		avpkt = (AVPacket*)calloc(1, sizeof(*avpkt));
-//		av_init_packet(avpkt);
-//		
-//		//pkt.data = NULL;
-//		//pkt.size = 0;
-//	}
-//
-//	~PacketBuffer()
-//	{
-//		av_free_packet(avpkt);
-//		free(avpkt);
-//	}
-//};
-//
-//
-//typedef std::shared_ptr<PacketBuffer> PacketBufferPtr;
-//
+
+class Image;
+typedef std::shared_ptr<Image> ImageSPTR;
+	
+class ImageBuffer : public GenericBuffer<ImageSPTR>
+{
+	double timeStamp = -1;
+	int x = 0;
+	int y = 0;
+	double duration = 0;
+	
+
+public:
+
+	int X() const
+	{
+		return x;
+	}
+	void SetX(int value)
+	{
+		x = value;
+	}
+
+	int Y() const
+	{
+		return y;
+	}
+	void SetY(int value)
+	{
+		y = value;
+	}
+
+	int Duration() const
+	{
+		return duration;
+	}
+	void SetDuration(int value)
+	{
+		duration = value;
+	}
+
+
+
+
+	ImageBuffer(ElementSPTR owner, ImageSPTR image)
+		: GenericBuffer(BufferTypeEnum::Image, owner, image),
+		timeStamp(timeStamp)
+	{
+		if (!image)
+			throw ArgumentNullException();
+	}
+	virtual ~ImageBuffer()
+	{
+	}
+
+
+	virtual void* DataPtr() override
+	{
+		// TODO: Remote this API point
+		return nullptr;
+	}
+
+	virtual int DataLength() override
+	{
+		// TODO: Remote this API point
+		return 0;
+	}
+
+	virtual double TimeStamp() override
+	{
+		return timeStamp;
+	}
+	void SetTimeStamp(double value)
+	{
+		timeStamp = value;
+	}
+};
+
+typedef std::shared_ptr<ImageBuffer> ImageBufferSPTR;
+
+
+//----------
+
+typedef std::vector<ImageBufferSPTR> ImageList;
+typedef std::shared_ptr<ImageList> ImageListSPTR;
+
+class ImageListBuffer : public GenericBuffer<ImageListSPTR>
+{
+	double timeStamp = -1;
+
+
+public:
+
+
+	ImageListBuffer(ElementSPTR owner, ImageListSPTR imageList)
+		: GenericBuffer(BufferTypeEnum::ImageList, owner, imageList),
+		timeStamp(timeStamp)
+	{
+		if (!imageList)
+			throw ArgumentNullException();
+	}
+	virtual ~ImageListBuffer()
+	{
+	}
+
+
+	virtual void* DataPtr() override
+	{
+		// TODO: Remote this API point
+		return nullptr;
+	}
+
+	virtual int DataLength() override
+	{
+		// TODO: Remote this API point
+		return 0;
+	}
+
+	virtual double TimeStamp() override
+	{
+		return timeStamp;
+	}
+	void SetTimeStamp(double value)
+	{
+		timeStamp = value;
+	}
+};
+
+typedef std::shared_ptr<ImageListBuffer> ImageListBufferSPTR;

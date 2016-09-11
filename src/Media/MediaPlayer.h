@@ -20,6 +20,9 @@
 #include "AlsaAudioSink.h"
 #include "AmlVideoSink.h"
 #include "AudioCodec.h"
+#include "SubtitleCodecElement.h"
+//#include "Egl.h"
+#include "Compositor.h"
 
 #include <string>
 
@@ -32,8 +35,14 @@ class MediaPlayer
 	AmlVideoSinkElementSPTR videoSink;
 	AudioCodecElementSPTR audioCodec;
 	AlsaAudioSinkElementSPTR audioSink;
-	MediaState state = MediaState::Pause;
+	SubtitleDecoderElementSPTR subtitleCodec;
+	SubtitleRenderElementSPTR subtitleRender;
 
+	MediaState state = MediaState::Pause;
+	//EGLDisplay eglDisplay = nullptr;
+	//EGLSurface surface = nullptr;
+	//EGLContext context = nullptr;
+	CompositorSPTR compositor;
 
 public:
 
@@ -48,9 +57,17 @@ public:
 
 	const ChapterListSPTR Chapters() const;
 
+	//void SetEgl(EGLDisplay eglDisplay, EGLSurface surface)
+	//{
+	//	this->eglDisplay = eglDisplay;
+	//	this->surface = surface;
+
+	//	subtitleRender = std::make_shared<SubtitleRenderElement>(eglDispaly, surface);
+	//}
 
 
-	MediaPlayer(std::string url);
+
+	MediaPlayer(std::string url, CompositorSPTR compositor);
 	~MediaPlayer();
 
 

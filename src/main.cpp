@@ -54,6 +54,7 @@ extern "C"
 #include <linux/fb.h>
 
 #include "Osd.h"
+#include "Compositor.h"
 
 
 bool isRunning = true;
@@ -292,17 +293,8 @@ int main(int argc, char** argv)
 	avformat_network_init();
 
 
-	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url);
 
 
-	if (optionChapter > -1)
-	{
-		if (optionChapter <= mediaPlayer->Chapters()->size())
-		{
-			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).TimeStamp;
-			printf("MAIN: Chapter found (%f).\n", optionStartPosition);
-		}
-	}
 
 	
 	WindowSPTR window;
@@ -320,8 +312,24 @@ int main(int argc, char** argv)
 
 #endif
 	 
-	osd = std::make_shared<Osd>(window->EglDisplay(), window->Surface());
 	window->ProcessMessages();
+
+	RenderContextSPTR renderContext = std::make_shared<RenderContext>(window->EglDisplay(), window->Surface(), window->Context());
+	CompositorSPTR compositor = std::make_shared<Compositor>(renderContext, 1920, 1080);
+	osd = std::make_shared<Osd>(compositor);
+
+
+	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url, compositor);
+
+
+	if (optionChapter > -1)
+	{
+		if (optionChapter <= mediaPlayer->Chapters()->size())
+		{
+			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).TimeStamp;
+			printf("MAIN: Chapter found (%f).\n", optionStartPosition);
+		}
+	}
 
 
 	mediaPlayer->Seek(optionStartPosition);
@@ -380,11 +388,13 @@ int main(int argc, char** argv)
 				{
 					if (isPaused)
 					{
+						osd->Hide();
 						mediaPlayer->SetState(MediaState::Play);
 					}
 					else
 					{
 						mediaPlayer->SetState(MediaState::Pause);
+						osd->Show();
 					}
 					
 					isPaused = !isPaused;
@@ -448,13 +458,13 @@ seek:
 				// device to be reset making it display the
 				// the wrong buffer.  As a workaround, force
 				// updating the display.
-				osd->SetShowProgress(!isPaused);
+				//osd->SetShowProgress(!isPaused);
 			}
 
-			osd->SetShowProgress(isPaused);
+			//osd->SetShowProgress(isPaused);
 
-			osd->Draw();
-			osd->SwapBuffers();
+			//osd->Draw();
+			//osd->SwapBuffers();
 		}
 
 		if (mediaPlayer->IsEndOfStream())

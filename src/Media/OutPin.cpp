@@ -19,130 +19,153 @@
 #include "InPin.h"
 #include "Element.h"
 
-	OutPin::OutPin(ElementWPTR owner, PinInfoSPTR info)
-		: Pin(PinDirectionEnum::Out, owner, info)
+
+void OutPin::WorkThread()
+{
+	//printf("OutPin: WorkTread started.\n");
+
+	while (true)
 	{
-	}
-
-
-	void OutPin::AddAvailableBuffer(BufferSPTR buffer)
-	{
-		if (!buffer)
-			throw ArgumentNullException();
-
-		ElementSPTR element = Owner().lock();
-		if (buffer->Owner() != element)
+		// Scope the shared pointer
 		{
-			throw InvalidOperationException("The buffer being added does not belong to this object.");
+			ElementSPTR owner = Owner().lock();
+			if (owner && owner->State() == MediaState::Play)
+			{
+				DoWork();
+			}
 		}
 
-		availableBuffers.Push(buffer);
-
-		element->Wake();
-
-		//printf("OutPin::AddAvailableBuffer (%s).\n", element->Name().c_str());
+		waitCondition.WaitForSignal();
 	}
 
-	bool OutPin::TryGetAvailableBuffer(BufferSPTR* outValue)
+	//printf("OutPin: WorkTread exited.\n");
+}
+
+
+OutPin::OutPin(ElementWPTR owner, PinInfoSPTR info)
+	: Pin(PinDirectionEnum::Out, owner, info)
+{
+}
+
+
+void OutPin::AddAvailableBuffer(BufferSPTR buffer)
+{
+	if (!buffer)
+		throw ArgumentNullException();
+
+	ElementSPTR element = Owner().lock();
+	if (buffer->Owner() != element)
 	{
-		return availableBuffers.TryPop(outValue);
+		throw InvalidOperationException("The buffer being added does not belong to this object.");
 	}
 
-	void OutPin::SendBuffer(BufferSPTR buffer)
-	{
-		InPinSPTR pin = sink;
+	availableBuffers.Push(buffer);
 
-		if (pin)
+	element->Wake();
+
+	//printf("OutPin::AddAvailableBuffer (%s).\n", element->Name().c_str());
+}
+
+bool OutPin::TryGetAvailableBuffer(BufferSPTR* outValue)
+{
+	return availableBuffers.TryPop(outValue);
+}
+
+void OutPin::SendBuffer(BufferSPTR buffer)
+{
+	InPinSPTR pin = sink;
+
+	if (pin)
+	{
+		auto owner = pin->Owner().lock();
+		if (owner && (owner->ExecutionState() == ExecutionStateEnum::Executing ||
+			owner->ExecutionState() == ExecutionStateEnum::Idle))
 		{
-			auto owner = pin->Owner().lock();
-			if (owner && (owner->ExecutionState() == ExecutionStateEnum::Executing ||
-				owner->ExecutionState() == ExecutionStateEnum::Idle))
-			{
 
-				pin->ReceiveBuffer(buffer);
-			}
-			else
-			{
-				AcceptProcessedBuffer(buffer);
-			}
+			pin->ReceiveBuffer(buffer);
 		}
 		else
 		{
-			//AddAvailableBuffer(buffer);
-
-			// This is required to generate an event
 			AcceptProcessedBuffer(buffer);
 		}
 	}
-
-	void OutPin::Flush()
+	else
 	{
-		// TODO: cascade to connected pin?
+		//AddAvailableBuffer(buffer);
+
+		// This is required to generate an event
+		AcceptProcessedBuffer(buffer);
 	}
+}
+
+void OutPin::Flush()
+{
+	// TODO: cascade to connected pin?
+}
 
 
-	OutPin::~OutPin()
+OutPin::~OutPin()
+{
+	if (sink)
 	{
-		if (sink)
-		{
-			OutPinSPTR thisPin = std::static_pointer_cast<OutPin>(shared_from_this());
-			sink->Disconnect(thisPin);
-		}
-	}
-
-
-	void OutPin::Connect(InPinSPTR sink)
-	{
-		if (!sink)
-			throw ArgumentNullException();
-
-		//ElementSPTR parent = Owner().lock();
-
-		//if (parent->IsExecuting())
-		//	throw InvalidOperationException();
-
-
-		sinkMutex.Lock();
-
-
 		OutPinSPTR thisPin = std::static_pointer_cast<OutPin>(shared_from_this());
-
-		// If a pin is connected, disconnect it
-		if (this->sink)
-		{
-			this->sink->Disconnect(thisPin);
-		}
-
-		// Connect new pin
-		this->sink = sink;
-		this->sink->AcceptConnection(thisPin);
-
-		
-		pinThread = std::make_shared<Thread>(std::function<void()>(std::bind(&OutPin::WorkThread, this)));
-		pinThread->Start();
-
-
-		sinkMutex.Unlock();
+		sink->Disconnect(thisPin);
 	}
+}
 
-	void OutPin::AcceptProcessedBuffer(BufferSPTR buffer)
+
+void OutPin::Connect(InPinSPTR sink)
+{
+	if (!sink)
+		throw ArgumentNullException();
+
+	//ElementSPTR parent = Owner().lock();
+
+	//if (parent->IsExecuting())
+	//	throw InvalidOperationException();
+
+
+	sinkMutex.Lock();
+
+
+	OutPinSPTR thisPin = std::static_pointer_cast<OutPin>(shared_from_this());
+
+	// If a pin is connected, disconnect it
+	if (this->sink)
 	{
-		if (!buffer)
-			throw ArgumentNullException();
+		this->sink->Disconnect(thisPin);
+	}
 
-		//if (buffer->Owner() != (void*)this)
-		//{
-		//	throw InvalidOperationException("The buffer being returned does not belong to this object.");
-		//}
+	// Connect new pin
+	this->sink = sink;
+	this->sink->AcceptConnection(thisPin);
 
 		
-		//availableBuffers.Push(buffer);
-		AddAvailableBuffer(buffer);
+	pinThread = std::make_shared<Thread>(std::function<void()>(std::bind(&OutPin::WorkThread, this)));
+	pinThread->Start();
 
-		// Wake the work thread
-		waitCondition.Signal();
 
-		//BufferEventArgs args(buffer);
-		BufferReturned.Invoke(this, EventArgs::Empty());
-	}
+	sinkMutex.Unlock();
+}
+
+void OutPin::AcceptProcessedBuffer(BufferSPTR buffer)
+{
+	if (!buffer)
+		throw ArgumentNullException();
+
+	//if (buffer->Owner() != (void*)this)
+	//{
+	//	throw InvalidOperationException("The buffer being returned does not belong to this object.");
+	//}
+
+		
+	//availableBuffers.Push(buffer);
+	AddAvailableBuffer(buffer);
+
+	// Wake the work thread
+	waitCondition.Signal();
+
+	//BufferEventArgs args(buffer);
+	BufferReturned.Invoke(this, EventArgs::Empty());
+}
 

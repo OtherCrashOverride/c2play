@@ -80,6 +80,11 @@ public:
 		return surface;
 	}
 
+	virtual EGLContext Context() const override
+	{
+		return context;
+	}
+
 
 
 	X11AmlWindow();

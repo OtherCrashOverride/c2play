@@ -122,243 +122,260 @@ void MediaSourceElement::SetupPins()
 
 		switch (mediaType)
 		{
-		case AVMEDIA_TYPE_VIDEO:
-		{
-			VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
-			info->FrameRate = av_q2d(streamPtr->avg_frame_rate);;
-			info->Width = codecCtxPtr->width;
-			info->Height = codecCtxPtr->height;
-			info->ExtraData = ext;
-
-			if (url.compare(url.size() - 4, 4, ".avi") == 0)
+			case AVMEDIA_TYPE_VIDEO:
 			{
-				info->HasEstimatedPts = true;
-				//printf("MediaSourceElement: info->HasEstimatedPts = true\n");
-			}
+				VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
+				info->FrameRate = av_q2d(streamPtr->avg_frame_rate);;
+				info->Width = codecCtxPtr->width;
+				info->Height = codecCtxPtr->height;
+				info->ExtraData = ext;
+
+				if (url.compare(url.size() - 4, 4, ".avi") == 0)
+				{
+					info->HasEstimatedPts = true;
+					//printf("MediaSourceElement: info->HasEstimatedPts = true\n");
+				}
 
 #if 0
-			printf("EXTRA DATA = ");
+				printf("EXTRA DATA = ");
 
-			for (int j = 0; j < size; ++j)
-			{
-				printf("%02x ", src[j]);
+				for (int j = 0; j < size; ++j)
+				{
+					printf("%02x ", src[j]);
 
-			}
+				}
 
-			printf("\n");
+				printf("\n");
 #endif
 
-			ElementWPTR weakPtr = shared_from_this();
-			OutPinSPTR videoPin = std::make_shared<OutPin>(weakPtr, info);
-			videoPin->SetName("Video");
+				ElementWPTR weakPtr = shared_from_this();
+				OutPinSPTR videoPin = std::make_shared<OutPin>(weakPtr, info);
+				videoPin->SetName("Video");
 
-			AddOutputPin(videoPin);
+				AddOutputPin(videoPin);
 
-			streamList[i] = videoPin;
+				streamList[i] = videoPin;
 
 
-			switch (codec_id)
-			{
-			case CODEC_ID_MPEG2VIDEO:
-				printf("stream #%d - VIDEO/MPEG2\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::Mpeg2;
-				break;
+				switch (codec_id)
+				{
+					case CODEC_ID_MPEG2VIDEO:
+						printf("stream #%d - VIDEO/MPEG2\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::Mpeg2;
+						break;
 
-			case AV_CODEC_ID_MSMPEG4V3:
-				printf("stream #%d - VIDEO/MPEG4V3\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::Mpeg4V3;
-				break;
+					case AV_CODEC_ID_MSMPEG4V3:
+						printf("stream #%d - VIDEO/MPEG4V3\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::Mpeg4V3;
+						break;
 
-			case CODEC_ID_MPEG4:
-				printf("stream #%d - VIDEO/MPEG4\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::Mpeg4;
-				break;
+					case CODEC_ID_MPEG4:
+						printf("stream #%d - VIDEO/MPEG4\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::Mpeg4;
+						break;
 
-			case CODEC_ID_H264:
-				printf("stream #%d - VIDEO/H264\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::Avc;
+					case CODEC_ID_H264:
+						printf("stream #%d - VIDEO/H264\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::Avc;
 
-				break;
+						break;
 
-			case AV_CODEC_ID_HEVC:
-				printf("stream #%d - VIDEO/HEVC\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::Hevc;
-				break;
+					case AV_CODEC_ID_HEVC:
+						printf("stream #%d - VIDEO/HEVC\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::Hevc;
+						break;
 
-			case CODEC_ID_VC1:
-				printf("stream #%d - VIDEO/VC1\n", i);
-				if (info)
-					info->Format = VideoFormatEnum::VC1;
-				break;
+					case CODEC_ID_VC1:
+						printf("stream #%d - VIDEO/VC1\n", i);
+						if (info)
+							info->Format = VideoFormatEnum::VC1;
+						break;
 
-			default:
-				printf("stream #%d - VIDEO/UNKNOWN(%x)\n", i, codec_id);
-				if (info)
-					info->Format = VideoFormatEnum::Unknown;
-				//throw NotSupportedException();
+					default:
+						printf("stream #%d - VIDEO/UNKNOWN(%x)\n", i, codec_id);
+						if (info)
+							info->Format = VideoFormatEnum::Unknown;
+						//throw NotSupportedException();
+				}
+
+
+				printf("\tw=%d h=%d ", info->Width, info->Height);
+
+				printf("fps=%f(%d/%d) ", info->FrameRate,
+					streamPtr->avg_frame_rate.num,
+					streamPtr->avg_frame_rate.den);
+
+				printf("SAR=(%d/%d) ",
+					streamPtr->sample_aspect_ratio.num,
+					streamPtr->sample_aspect_ratio.den);
+
+				// TODO: DAR
+
+				printf("\n");
+
 			}
-
-
-			printf("\tw=%d h=%d ", info->Width, info->Height);
-
-			printf("fps=%f(%d/%d) ", info->FrameRate,
-				streamPtr->avg_frame_rate.num,
-				streamPtr->avg_frame_rate.den);
-
-			printf("SAR=(%d/%d) ",
-				streamPtr->sample_aspect_ratio.num,
-				streamPtr->sample_aspect_ratio.den);
-
-			// TODO: DAR
-
-			printf("\n");
-
-		}
-		break;
-
-		case AVMEDIA_TYPE_AUDIO:
-		{
-			AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
-			info->Channels = codecCtxPtr->channels;
-			info->SampleRate = codecCtxPtr->sample_rate;
-			info->Format = AudioFormatEnum::Unknown;
-			info->ExtraData = ext;
-
-			//printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
-
-			OutPinSPTR audioPin = std::make_shared<OutPin>(shared_from_this(), info);
-			audioPin->SetName("Audio");
-
-			AddOutputPin(audioPin);
-
-			streamList[i] = audioPin;
-
-
-			switch (codec_id)
-			{
-			case CODEC_ID_MP3:
-				printf("stream #%d - AUDIO/MP3\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Mpeg2Layer3;
-				break;
-
-			case CODEC_ID_AAC:
-				printf("stream #%d - AUDIO/AAC\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Aac;
-				break;
-
-			case CODEC_ID_AC3:
-				printf("stream #%d - AUDIO/AC3\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Ac3;
-				break;
-
-			case CODEC_ID_DTS:
-				printf("stream #%d - AUDIO/DTS\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Dts;
-				break;
-
-			case AV_CODEC_ID_WMAPRO:
-				printf("stream #%d - AUDIO/WMAPRO\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::WmaPro;
-				break;
-
-			case AV_CODEC_ID_TRUEHD:
-				printf("stream #%d - AUDIO/TRUEHD\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::DolbyTrueHD;
-				break;
-
-			case AV_CODEC_ID_EAC3:
-				printf("stream #%d - AUDIO/EAC3\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::EAc3;
-				break;
-
-			case AV_CODEC_ID_OPUS:
-				printf("stream #%d - AUDIO/OPUS\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Opus;
-				break;
-
-			case AV_CODEC_ID_VORBIS:
-				printf("stream #%d - AUDIO/VORBIS\n", i);
-				if (info)
-					info->Format = AudioFormatEnum::Vorbis;
-				break;
-				//case AVCodecID.CODEC_ID_WMAV2:
-				//    break;
-
-			default:
-				printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);
-				//throw NotSupportedException();
-				break;
-			}
-		}
-		break;
-
-
-		case AVMEDIA_TYPE_SUBTITLE:
-		{
-			// TODO: Subtitle support
-
-			switch (codec_id)
-			{
-			case  CODEC_ID_DVB_SUBTITLE:
-				printf("stream #%d - SUBTITLE/DVB_SUBTITLE\n", i);
-				break;
-
-			case  CODEC_ID_TEXT:
-				printf("stream #%d - SUBTITLE/TEXT\n", i);
-				break;
-
-			case  CODEC_ID_XSUB:
-				printf("stream #%d - SUBTITLE/XSUB\n", i);
-				break;
-
-			case  CODEC_ID_SSA:
-				printf("stream #%d - SUBTITLE/SSA\n", i);
-				break;
-
-			case  CODEC_ID_MOV_TEXT:
-				printf("stream #%d - SUBTITLE/MOV_TEXT\n", i);
-				break;
-
-			case  CODEC_ID_HDMV_PGS_SUBTITLE:
-				printf("stream #%d - SUBTITLE/HDMV_PGS_SUBTITLE\n", i);
-				break;
-
-			case  CODEC_ID_DVB_TELETEXT:
-				printf("stream #%d - SUBTITLE/DVB_TELETEXT\n", i);
-				break;
-
-			case  CODEC_ID_SRT:
-				printf("stream #%d - SUBTITLE/SRT\n", i);
-				break;
-
-			default:
-				printf("stream #%d - SUBTITLE/UNKNOWN (0x%x)\n", i, codec_id);
-				break;
-			}
-		}
-		break;
-
-
-		case AVMEDIA_TYPE_DATA:
-			printf("stream #%d - DATA\n", i);
 			break;
 
-		default:
-			printf("stream #%d - Unknown mediaType (%x)\n", i, mediaType);
-			//throw NotSupportedException();
+			case AVMEDIA_TYPE_AUDIO:
+			{
+				AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
+				info->Channels = codecCtxPtr->channels;
+				info->SampleRate = codecCtxPtr->sample_rate;
+				info->Format = AudioFormatEnum::Unknown;
+				info->ExtraData = ext;
+
+				//printf("MediaSourceElement: audio SampleRate=%d\n", info->SampleRate);
+
+				OutPinSPTR audioPin = std::make_shared<OutPin>(shared_from_this(), info);
+				audioPin->SetName("Audio");
+
+				AddOutputPin(audioPin);
+
+				streamList[i] = audioPin;
+
+
+				switch (codec_id)
+				{
+					case CODEC_ID_MP3:
+						printf("stream #%d - AUDIO/MP3\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Mpeg2Layer3;
+						break;
+
+					case CODEC_ID_AAC:
+						printf("stream #%d - AUDIO/AAC\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Aac;
+						break;
+
+					case CODEC_ID_AC3:
+						printf("stream #%d - AUDIO/AC3\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Ac3;
+						break;
+
+					case CODEC_ID_DTS:
+						printf("stream #%d - AUDIO/DTS\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Dts;
+						break;
+
+					case AV_CODEC_ID_WMAPRO:
+						printf("stream #%d - AUDIO/WMAPRO\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::WmaPro;
+						break;
+
+					case AV_CODEC_ID_TRUEHD:
+						printf("stream #%d - AUDIO/TRUEHD\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::DolbyTrueHD;
+						break;
+
+					case AV_CODEC_ID_EAC3:
+						printf("stream #%d - AUDIO/EAC3\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::EAc3;
+						break;
+
+					case AV_CODEC_ID_OPUS:
+						printf("stream #%d - AUDIO/OPUS\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Opus;
+						break;
+
+					case AV_CODEC_ID_VORBIS:
+						printf("stream #%d - AUDIO/VORBIS\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Vorbis;
+						break;
+						//case AVCodecID.CODEC_ID_WMAV2:
+						//    break;
+
+					default:
+						printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);
+						//throw NotSupportedException();
+						break;
+				}
+			}
+			break;
+
+
+			case AVMEDIA_TYPE_SUBTITLE:
+			{
+				// TODO: Subtitle support
+				SubtitlePinInfoSPTR info = std::make_shared<SubtitlePinInfo>();
+
+				OutPinSPTR pin = std::make_shared<OutPin>(shared_from_this(), info);
+				pin->SetName("Subtitle");
+
+				AddOutputPin(pin);
+
+				streamList[i] = pin;
+
+
+				switch (codec_id)
+				{
+					case AV_CODEC_ID_SUBRIP:
+						printf("stream #%d - SUBTITLE/SUBRIP\n", i);
+						info->Format = SubtitleFormatEnum::SubRip;
+						break;
+
+					case  CODEC_ID_HDMV_PGS_SUBTITLE:
+						printf("stream #%d - SUBTITLE/HDMV_PGS_SUBTITLE\n", i);
+						info->Format = SubtitleFormatEnum::Pgs;
+						break;
+
+					case  CODEC_ID_DVB_SUBTITLE:
+						printf("stream #%d - TODO SUBTITLE/DVB_SUBTITLE\n", i);
+						break;
+
+					case  CODEC_ID_TEXT:
+						printf("stream #%d - SUBTITLE/TEXT\n", i);
+						info->Format = SubtitleFormatEnum::Text;
+						break;
+
+					case  CODEC_ID_XSUB:
+						printf("stream #%d - TODO SUBTITLE/XSUB\n", i);
+						break;
+
+					case  CODEC_ID_SSA:
+						printf("stream #%d - TODO SUBTITLE/SSA\n", i);
+						break;
+
+					case  CODEC_ID_MOV_TEXT:
+						printf("stream #%d - TODO SUBTITLE/MOV_TEXT\n", i);
+						break;
+
+
+					case  CODEC_ID_DVB_TELETEXT:
+						printf("stream #%d - TODO SUBTITLE/DVB_TELETEXT\n", i);
+						break;
+
+					case  CODEC_ID_SRT:
+						printf("stream #%d - TODO SUBTITLE/SRT\n", i);
+						break;
+
+					default:
+						printf("stream #%d - SUBTITLE/UNKNOWN (0x%x)\n", i, codec_id);
+						break;
+				}
+			}
+			break;
+
+
+			case AVMEDIA_TYPE_DATA:
+				printf("stream #%d - DATA (0x%x)\n", i, codec_id);
+				break;
+
+			default:
+				printf("stream #%d - Unknown mediaType (%x)\n", i, mediaType);
+				//throw NotSupportedException();
 		}
 
 	}

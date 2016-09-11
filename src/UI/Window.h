@@ -34,6 +34,7 @@ public:
 	virtual EGLDisplay EglDisplay() const = 0;
 
 	virtual EGLSurface Surface() const = 0;
+	virtual EGLContext Context() const = 0;
 
 
 	virtual ~WindowBase() {}

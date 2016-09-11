@@ -69,6 +69,11 @@ void MediaPlayer::SetState(MediaState value)
 		{
 			videoSink->SetState(state);
 		}
+
+		if (subtitleCodec)
+		{
+			subtitleCodec->SetState(state);
+		}
 	}
 
 }
@@ -114,9 +119,13 @@ const ChapterListSPTR MediaPlayer::Chapters() const
 }
 
 
-MediaPlayer::MediaPlayer(std::string url)
-	:url(url)
+MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
+	:url(url), compositor(compositor)
 {
+	if (!compositor)
+		throw ArgumentNullException();
+
+
 	source = std::make_shared<MediaSourceElement>(url);
 	source->SetName(std::string("Source"));
 	source->Execute();
@@ -154,6 +163,30 @@ MediaPlayer::MediaPlayer(std::string url)
 
 		audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
 	}
+
+	OutPinSPTR sourceSubtitlePin;
+	//OutPinSPTR sourceSubtitlePin = source->Outputs()->FindFirst(MediaCategoryEnum::Subtitle);
+	if (sourceSubtitlePin)
+	{
+		subtitleCodec = std::make_shared<SubtitleDecoderElement>();
+		subtitleCodec->SetName("SubtitleDecoderElement");
+		subtitleCodec->Execute();
+		subtitleCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		sourceSubtitlePin->Connect(subtitleCodec->Inputs()->Item(0));
+
+
+		subtitleRender = std::make_shared<SubtitleRenderElement>(compositor);
+		subtitleRender->SetName("SubtitleRenderElement");
+		subtitleRender->Execute();
+		subtitleRender->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		subtitleCodec->Outputs()->Item(0)->Connect(subtitleRender->Inputs()->Item(0));
+
+
+		printf("MediaPlayer: Connected subtitle decoder.\n");
+	}
+
 
 
 	if (audioSink && videoSink)
@@ -214,8 +247,14 @@ void MediaPlayer::Seek(double timeStamp)
 		videoSink->SetState(MediaState::Pause);
 	}
 
+	if (subtitleCodec)
+	{
+		subtitleCodec->SetState(MediaState::Pause);
+		subtitleRender->SetState(MediaState::Pause);
+	}
 
-	source->Flush();
+
+	/*source->Flush();*/
 
 
 	if (audioCodec)
@@ -233,7 +272,14 @@ void MediaPlayer::Seek(double timeStamp)
 		videoSink->Flush();
 	}
 
+	if (subtitleCodec)
+	{
+		subtitleCodec->Flush();
+		subtitleRender->Flush();
+	}
 
+
+	source->Flush();
 	source->Seek(timeStamp);
 
 
@@ -251,6 +297,13 @@ void MediaPlayer::Seek(double timeStamp)
 	{
 		audioSink->SetState(MediaState::Play);
 	}
+
+	if (subtitleCodec)
+	{
+		subtitleCodec->SetState(MediaState::Play);
+		subtitleRender->SetState(MediaState::Play);
+	}
+
 
 	source->SetState(MediaState::Play);
 }

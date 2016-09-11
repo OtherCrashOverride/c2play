@@ -28,7 +28,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2
+  LDFLAGS   += -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -50,7 +50,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2
+  LDFLAGS   += -s -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -66,6 +66,7 @@ endif
 OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/Window.o \
+	$(OBJDIR)/Compositor.o \
 	$(OBJDIR)/Texture2D.o \
 	$(OBJDIR)/Osd.o \
 	$(OBJDIR)/Shader.o \
@@ -81,6 +82,7 @@ OBJECTS := \
 	$(OBJDIR)/AmlVideoSink.o \
 	$(OBJDIR)/MediaSourceElement.o \
 	$(OBJDIR)/AlsaAudioSink.o \
+	$(OBJDIR)/Image.o \
 	$(OBJDIR)/Codec.o \
 	$(OBJDIR)/MediaPlayer.o \
 	$(OBJDIR)/InPin.o \
@@ -89,6 +91,7 @@ OBJECTS := \
 	$(OBJDIR)/Buffer.o \
 	$(OBJDIR)/Mutex.o \
 	$(OBJDIR)/AudioCodec.o \
+	$(OBJDIR)/SubtitleCodecElement.o \
 	$(OBJDIR)/Pin.o \
 	$(OBJDIR)/Exception.o \
 	$(OBJDIR)/OutPin.o \
@@ -158,6 +161,9 @@ $(OBJDIR)/main.o: ../../src/main.cpp
 $(OBJDIR)/Window.o: ../../src/UI/Window.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Compositor.o: ../../src/UI/Compositor.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Texture2D.o: ../../src/UI/Texture2D.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
@@ -203,6 +209,9 @@ $(OBJDIR)/MediaSourceElement.o: ../../src/Media/MediaSourceElement.cpp
 $(OBJDIR)/AlsaAudioSink.o: ../../src/Media/AlsaAudioSink.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Image.o: ../../src/Media/Image.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Codec.o: ../../src/Media/Codec.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
@@ -225,6 +234,9 @@ $(OBJDIR)/Mutex.o: ../../src/Media/Mutex.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/AudioCodec.o: ../../src/Media/AudioCodec.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/SubtitleCodecElement.o: ../../src/Media/SubtitleCodecElement.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Pin.o: ../../src/Media/Pin.cpp

@@ -45,6 +45,15 @@ class InPin : public Pin
 
 		while (true)
 		{
+			//// Scope the shared pointer
+			//{
+			//	ElementSPTR owner = Owner().lock();
+			//	if (owner && owner->State() == MediaState::Play)
+			//	{
+			//		DoWork();
+			//	}
+			//}
+
 			DoWork();
 
 			waitCondition.WaitForSignal();
@@ -163,3 +172,27 @@ public:
 };
 
 typedef std::shared_ptr<VideoInPin> VideoInPinSPTR;
+
+
+class AudioInPin : public GenericInPin<AudioPinInfo>
+{
+public:
+	AudioInPin(ElementWPTR owner, AudioPinInfoSPTR info)
+		: GenericInPin(owner, info)
+	{
+	}
+};
+
+typedef std::shared_ptr<AudioInPin> AudioInPinSPTR;
+
+
+class SubtitleInPin : public GenericInPin<SubtitlePinInfo>
+{
+public:
+	SubtitleInPin(ElementWPTR owner, SubtitlePinInfoSPTR info)
+		: GenericInPin(owner, info)
+	{
+	}
+};
+
+typedef std::shared_ptr<SubtitleInPin> SubtitleInPinSPTR;

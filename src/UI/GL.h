@@ -17,10 +17,12 @@
 #pragma once
 
 #include <sstream>
+#include <memory>
 
 #include <GLES2/gl2.h>
 
 #include "Exception.h"
+#include "Egl.h"
 
 
 
@@ -89,3 +91,46 @@ public:
 #endif
 	}
 };
+
+
+
+class RenderContext
+{
+	EGLDisplay eglDisplay;
+	EGLSurface eglSurface;
+	EGLContext glContext;
+
+public:
+
+	EGLDisplay EglDisplay() const
+	{
+		return eglDisplay;
+	}
+
+	EGLSurface EglSurface() const
+	{
+		return eglSurface;
+	}
+
+	EGLContext GLContext() const
+	{
+		return glContext;
+	}
+
+
+	RenderContext(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext glContext)
+		: eglDisplay(eglDisplay), eglSurface(eglSurface), glContext(glContext)
+	{
+		if (eglDisplay == EGL_NO_DISPLAY)
+			throw ArgumentException();
+
+		if (eglSurface == EGL_NO_SURFACE)
+			throw ArgumentException();
+
+		if (glContext = EGL_NO_CONTEXT)
+			throw ArgumentException();
+	}
+
+};
+
+typedef std::shared_ptr<RenderContext> RenderContextSPTR;

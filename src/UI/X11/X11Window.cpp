@@ -141,6 +141,9 @@
 X11AmlWindow::X11AmlWindow()
 	: AmlWindow()
 {
+	XInitThreads();
+
+
 	display = XOpenDisplay(nullptr);
 	if (display == nullptr)
 	{
@@ -297,6 +300,12 @@ X11AmlWindow::X11AmlWindow()
 	}
 
 	EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
+	if (success != EGL_TRUE)
+	{
+		Egl::CheckError();
+	}
+
+	success = eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 	if (success != EGL_TRUE)
 	{
 		Egl::CheckError();

@@ -38,23 +38,35 @@ extern "C"
 
 class AmlWindow : public WindowBase
 {
-	int video_fd = -1;
+	//int video_fd = -1;
 	
+
+	int OpenDevice()
+	{
+		int video_fd = open("/dev/amvideo", O_RDWR);
+		if (video_fd < 0)
+		{
+			throw Exception("open /dev/amvideo failed.");
+		}
+
+		return video_fd;
+	}
+
+	void CloseDevice(int fd)
+	{
+		close(fd);
+	}
 
 protected:
 	
 	AmlWindow()
 		: WindowBase()
 	{
-		video_fd = open("/dev/amvideo", O_RDWR);
-		if (video_fd < 0)
-		{
-			throw Exception("open /dev/amvideo failed.");
-		}
+
 	}
 	virtual ~AmlWindow()
 	{
-		close(video_fd);
+		//close(video_fd);
 
 
 		// Restore alpha setting
@@ -87,13 +99,20 @@ protected:
 
 	void SetVideoAxis(int x, int y, int width, int height)
 	{
+		int video_fd = OpenDevice();
+
 		int params[4]{ x, y, x + width, y + height };
 
 		int ret = ioctl(video_fd, AMSTREAM_IOC_SET_VIDEO_AXIS, &params);
+		
+		CloseDevice(video_fd);
+
 		if (ret < 0)
 		{
 			throw Exception("ioctl AMSTREAM_IOC_SET_VIDEO_AXIS failed.");
 		}
+
+		
 	}
 };
 
