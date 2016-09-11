@@ -92,7 +92,7 @@ void GetDevices()
 	dpdf = opendir(path.c_str());
 	if (dpdf != NULL)
 	{
-		while (epdf = readdir(dpdf))
+		while ((epdf = readdir(dpdf)))
 		{
 			//printf("Filename: %s\n", epdf->d_name);
 			// std::cout << epdf->d_name << std::endl;
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
 
 	if (optionChapter > -1)
 	{
-		if (optionChapter <= mediaPlayer->Chapters()->size())
+		if (optionChapter <= (int)mediaPlayer->Chapters()->size())
 		{
 			optionStartPosition = mediaPlayer->Chapters()->at(optionChapter - 1).TimeStamp;
 			printf("MAIN: Chapter found (%f).\n", optionStartPosition);

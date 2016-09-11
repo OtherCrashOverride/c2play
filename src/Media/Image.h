@@ -16,10 +16,10 @@ enum class ImageFormatEnum
 
 class Image
 {
+	ImageFormatEnum format;
 	int width;
 	int height;
 	int stride;
-	ImageFormatEnum format;
 	void* data;
 
 

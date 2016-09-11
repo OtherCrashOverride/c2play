@@ -432,7 +432,7 @@ MediaSourceElement::MediaSourceElement(std::string url)
 	{
 		AVChapter* avChapter = avChapters[i];
 
-		int index = i + 1;
+		//int index = i + 1;
 		double start = avChapter->start * avChapter->time_base.num / (double)avChapter->time_base.den;
 
 

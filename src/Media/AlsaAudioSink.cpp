@@ -169,7 +169,7 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 		int dstIndex = 0;
 
 		int* source = (int*)pcmData->Channel[0];
-		short* dest = data;
+		//short* dest = data;
 
 		for (int i = 0; i < pcmData->Samples; ++i)
 		{
@@ -262,7 +262,7 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 	if (doPauseFlag)
 	{
-		int ret = snd_pcm_pause(handle, 1);
+		snd_pcm_pause(handle, 1);
 		doPauseFlag = false;
 	}
 
@@ -286,7 +286,7 @@ double AlsaAudioSinkElement::Clock() const
 }
 
 
-void AlsaAudioSinkElement::Flush() 
+void AlsaAudioSinkElement::Flush()
 {
 	Element::Flush();
 
@@ -298,7 +298,7 @@ void AlsaAudioSinkElement::Flush()
 }
 
 
-void AlsaAudioSinkElement::Initialize() 
+void AlsaAudioSinkElement::Initialize()
 {
 	ClearOutputPins();
 	ClearInputPins();
@@ -336,7 +336,7 @@ void AlsaAudioSinkElement::Initialize()
 	}
 }
 
-void AlsaAudioSinkElement::DoWork() 
+void AlsaAudioSinkElement::DoWork()
 {
 	BufferSPTR buffer;
 	if (audioPin->TryGetFilledBuffer(&buffer))
@@ -370,34 +370,37 @@ void AlsaAudioSinkElement::DoWork()
 
 		switch (buffer->Type())
 		{
-		case BufferTypeEnum::Marker:
-		{
-			MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
-			printf("AlsaAudioSink: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
-
-			switch (markerBuffer->Marker())
+			case BufferTypeEnum::Marker:
 			{
-			case MarkerEnum::EndOfStream:
-				//SetExecutionState(ExecutionStateEnum::Idle);
-				SetState(MediaState::Pause);
-				break;
+				MarkerBufferSPTR markerBuffer = std::static_pointer_cast<MarkerBuffer>(buffer);
+				printf("AlsaAudioSink: got marker buffer Marker=%d\n", (int)markerBuffer->Marker());
 
-			default:
-				// ignore unknown 
+				switch (markerBuffer->Marker())
+				{
+					case MarkerEnum::EndOfStream:
+						//SetExecutionState(ExecutionStateEnum::Idle);
+						SetState(MediaState::Pause);
+						break;
+
+					default:
+						// ignore unknown 
+						break;
+				}
+
 				break;
 			}
 
-			break;
-		}
+			case BufferTypeEnum::PcmData:
+			{
+				PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
 
-		case BufferTypeEnum::PcmData:
-		{
-			PcmDataBufferSPTR pcmBuffer = std::static_pointer_cast<PcmDataBuffer>(buffer);
+				ProcessBuffer(pcmBuffer);
 
-			ProcessBuffer(pcmBuffer);
+				break;
+			}
 
-			break;
-		}
+			default:
+				throw NotSupportedException("Unexpected buffer type.");
 		}
 
 
@@ -408,7 +411,7 @@ void AlsaAudioSinkElement::DoWork()
 
 }
 
-void AlsaAudioSinkElement::Terminating() 
+void AlsaAudioSinkElement::Terminating()
 {
 	snd_pcm_drop(handle);
 	snd_pcm_close(handle);
@@ -416,7 +419,7 @@ void AlsaAudioSinkElement::Terminating()
 	handle = nullptr;
 }
 
-void AlsaAudioSinkElement::ChangeState(MediaState oldState, MediaState newState) 
+void AlsaAudioSinkElement::ChangeState(MediaState oldState, MediaState newState)
 {
 	Element::ChangeState(oldState, newState);
 
@@ -424,33 +427,33 @@ void AlsaAudioSinkElement::ChangeState(MediaState oldState, MediaState newState)
 	{
 		switch (newState)
 		{
-		case MediaState::Play:
-		{
-			playPauseMutex.Lock();
+			case MediaState::Play:
+			{
+				playPauseMutex.Lock();
 
-			doPauseFlag = false;
-			doResumeFlag = true;
+				doPauseFlag = false;
+				doResumeFlag = true;
 
-			//int ret = snd_pcm_pause(handle, 0);
+				//int ret = snd_pcm_pause(handle, 0);
 
-			playPauseMutex.Unlock();
-			break;
-		}
+				playPauseMutex.Unlock();
+				break;
+			}
 
-		case MediaState::Pause:
-		{
-			playPauseMutex.Lock();
+			case MediaState::Pause:
+			{
+				playPauseMutex.Lock();
 
-			doPauseFlag = true;
-			doResumeFlag = false;
-			//int ret = snd_pcm_pause(handle, 1);
+				doPauseFlag = true;
+				doResumeFlag = false;
+				//int ret = snd_pcm_pause(handle, 1);
 
-			playPauseMutex.Unlock();
-			break;
-		}
+				playPauseMutex.Unlock();
+				break;
+			}
 
-		default:
-			break;
+			default:
+				break;
 		}
 	}
 }

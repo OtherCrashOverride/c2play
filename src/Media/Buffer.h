@@ -514,8 +514,8 @@ public:
 	//{
 	//}
 	AVFrameBuffer(ElementSPTR owner)
-		: GenericBuffer(BufferTypeEnum::AVFrame, owner, CreatePayload()),
-		timeStamp(timeStamp)
+		: GenericBuffer(BufferTypeEnum::AVFrame, owner, CreatePayload())
+		//timeStamp(timeStamp)
 	{
 		//printf("AVFrameBuffer ctor: payload=%p, timeStamp=%f\n", Payload(), timeStamp);
 	}
@@ -605,8 +605,8 @@ public:
 
 
 	ImageBuffer(ElementSPTR owner, ImageSPTR image)
-		: GenericBuffer(BufferTypeEnum::Image, owner, image),
-		timeStamp(timeStamp)
+		: GenericBuffer(BufferTypeEnum::Image, owner, image)
+		//timeStamp(timeStamp)
 	{
 		if (!image)
 			throw ArgumentNullException();
@@ -655,8 +655,8 @@ public:
 
 
 	ImageListBuffer(ElementSPTR owner, ImageListSPTR imageList)
-		: GenericBuffer(BufferTypeEnum::ImageList, owner, imageList),
-		timeStamp(timeStamp)
+		: GenericBuffer(BufferTypeEnum::ImageList, owner, imageList)
+		//timeStamp(timeStamp)
 	{
 		if (!imageList)
 			throw ArgumentNullException();

@@ -250,42 +250,44 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 		{
 			switch (videoFormat)
 			{
-			case VideoFormatEnum::Avc:
-				//if (!isExtraDataSent)
-			{
-				// Copy AnnexB data if NAL unit type is 5
-				nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
-
-				if (nal_unit_type == 5)
+				case VideoFormatEnum::Avc:
+					//if (!isExtraDataSent)
 				{
-					ConvertH264ExtraDataToAnnexB();
+					// Copy AnnexB data if NAL unit type is 5
+					nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
 
-					//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-					amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+					if (nal_unit_type == 5)
+					{
+						ConvertH264ExtraDataToAnnexB();
+
+						//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+						amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+					}
+
+					isExtraDataSent = true;
 				}
+				break;
 
-				isExtraDataSent = true;
-			}
-			break;
-
-			case VideoFormatEnum::Hevc:
-				//if (!isExtraDataSent)
-			{
-				nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
-
-				/* prepend extradata to IRAP frames */
-				if (nal_unit_type >= 16 && nal_unit_type <= 23)
+				case VideoFormatEnum::Hevc:
+					//if (!isExtraDataSent)
 				{
-					HevcExtraDataToAnnexB();
+					nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
 
-					//SendCodecData(0, &videoExtraData[0], videoExtraData.size());
-					amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
+					/* prepend extradata to IRAP frames */
+					if (nal_unit_type >= 16 && nal_unit_type <= 23)
+					{
+						HevcExtraDataToAnnexB();
+
+						//SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+						amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
+					}
+
+					isExtraDataSent = true;
 				}
+				break;
 
-				isExtraDataSent = true;
-			}
-			break;
-
+				default:
+					throw NotSupportedException("Unexpected video format.");
 			}
 
 
@@ -533,6 +535,9 @@ void AmlVideoSinkElement::DoWork()
 					ProcessBuffer(avPacketBuffer);
 					break;
 				}
+
+				default:
+					throw NotSupportedException("Unexpected buffer type.");
 			}
 
 			videoPin->PushProcessedBuffer(buffer);
@@ -548,46 +553,46 @@ void AmlVideoSinkElement::ChangeState(MediaState oldState, MediaState newState)
 
 	switch (newState)
 	{
-	case MediaState::Play:
-	{
-		playPauseMutex.Lock();
-
-		//int ret = codec_resume(&codecContext);
-		if (amlCodec.IsOpen())
+		case MediaState::Play:
 		{
-			amlCodec.Resume();
+			playPauseMutex.Lock();
+
+			//int ret = codec_resume(&codecContext);
+			if (amlCodec.IsOpen())
+			{
+				amlCodec.Resume();
+			}
+
+			//doPauseFlag = false;
+			//doResumeFlag = true;
+			isEndOfStream = false;
+			//timer.Start();
+
+			playPauseMutex.Unlock();
+			break;
 		}
 
-		//doPauseFlag = false;
-		//doResumeFlag = true;
-		isEndOfStream = false;
-		//timer.Start();
-
-		playPauseMutex.Unlock();
-		break;
-	}
-
-	case MediaState::Pause:
-	{
-		playPauseMutex.Lock();
-
-		//doResumeFlag = false;
-		//doPauseFlag = true;
-		//int ret = codec_pause(&codecContext);
-
-		if (amlCodec.IsOpen())
+		case MediaState::Pause:
 		{
-			amlCodec.Pause();
+			playPauseMutex.Lock();
+
+			//doResumeFlag = false;
+			//doPauseFlag = true;
+			//int ret = codec_pause(&codecContext);
+
+			if (amlCodec.IsOpen())
+			{
+				amlCodec.Pause();
+			}
+
+			//timer.Stop();
+
+			playPauseMutex.Unlock();
+			break;
 		}
 
-		//timer.Stop();
-
-		playPauseMutex.Unlock();
-		break;
-	}
-
-	default:
-		break;
+		default:
+			break;
 	}
 }
 
@@ -599,7 +604,7 @@ void AmlVideoSinkElement::Flush()
 
 	timer.Stop();
 
-	
+
 	////int codec_flush_video(codec_para_t *pcodec)
 	//if (codec_flush_video(&codecContext) < 0)
 	//{
@@ -802,6 +807,8 @@ void AmlVideoSinkElement::HevcExtraDataToAnnexB()
 
 		int offset = 21;
 		int length_size = (extraData[offset++] & 3) + 1;
+		length_size = length_size;// silence compiler warning
+
 		int num_arrays = extraData[offset++];
 
 		//printf("HevcExtraDataToAnnexB: length_size=%d, num_arrays=%d\n", length_size, num_arrays);
@@ -810,7 +817,10 @@ void AmlVideoSinkElement::HevcExtraDataToAnnexB()
 		for (int i = 0; i < num_arrays; i++)
 		{
 			int type = extraData[offset++] & 0x3f;
-			int cnt = extraData[offset++] << 8 | extraData[offset++];
+			type = type; // silence compiler warning
+
+			int cnt = extraData[offset++] << 8;
+			cnt |= extraData[offset++];
 
 			for (int j = 0; j < cnt; j++)
 			{
@@ -819,7 +829,9 @@ void AmlVideoSinkElement::HevcExtraDataToAnnexB()
 				videoExtraData.push_back(0);
 				videoExtraData.push_back(1);
 
-				int nalu_len = extraData[offset++] << 8 | extraData[offset++];
+				int nalu_len = extraData[offset++] << 8;
+				nalu_len |= extraData[offset++];
+
 				for (int k = 0; k < nalu_len; ++k)
 				{
 					videoExtraData.push_back(extraData[offset++]);

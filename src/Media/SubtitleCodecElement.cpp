@@ -19,7 +19,7 @@
 
 void SubtitleDecoderElement::static_msg_callback(int level, const char* fmt, va_list va, void *data)
 {
-	SubtitleDecoderElement* this_ = (SubtitleDecoderElement*)data;
+	//SubtitleDecoderElement* this_ = (SubtitleDecoderElement*)data;
 	//if (level > 6)
 	//	return;
 #ifdef DEBUG
@@ -281,7 +281,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 						if (!ass_line)
 							break;
 
-						size_t len = strlen(ass_line);
+						//size_t len = strlen(ass_line);
 						//ass_process_data(ass_track, ass_line, len);
 
 						std::string assString(ass_line);

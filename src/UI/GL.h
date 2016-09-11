@@ -127,7 +127,7 @@ public:
 		if (eglSurface == EGL_NO_SURFACE)
 			throw ArgumentException();
 
-		if (glContext = EGL_NO_CONTEXT)
+		if (glContext == EGL_NO_CONTEXT)
 			throw ArgumentException();
 	}
 

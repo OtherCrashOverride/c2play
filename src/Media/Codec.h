@@ -422,6 +422,8 @@ class Sink
 	{
 		Sink* ptr = (Sink*)argument;
 		ptr->WorkThread();
+
+		return nullptr;
 	}
 
 protected:
@@ -495,7 +497,7 @@ public:
 			pthread_mutex_lock(&mutex);
 			count = buffers.size();
 
-			if (count >= MAX_BUFFERS)
+			if (count >= (size_t)MAX_BUFFERS)
 			{
 				pthread_mutex_unlock(&mutex);
 

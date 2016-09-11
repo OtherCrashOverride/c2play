@@ -48,6 +48,8 @@ class InputDevice
 	{
 		InputDevice* ptr = (InputDevice*)argument;
 		ptr->WorkThread();
+
+		return nullptr;
 	}
 
 
@@ -165,7 +167,7 @@ public:
 	{
 		pthread_mutex_lock(&mutex);
 
-		if (keyQueue.size() >= MAX_QUEUE_SIZE)
+		if (keyQueue.size() >= (size_t)MAX_QUEUE_SIZE)
 		{
 			pthread_mutex_unlock(&mutex);
 			printf("InputDevice: EnqueKey failed (buffer full).\n");

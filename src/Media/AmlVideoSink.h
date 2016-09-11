@@ -291,7 +291,10 @@ public:
 		// This is needed because the codec remains paused
 		// even after closing
 		int ret = codec_resume(&codec);
-
+		if (ret < 0)
+		{
+			printf("codec_resume failed (%x).\n", ret);
+		}
 
 		isOpen = true;
 		codecMutex.Unlock();

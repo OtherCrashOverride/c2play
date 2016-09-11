@@ -25,6 +25,8 @@ void* Thread::ThreadTrampoline(void* argument)
 {
 	Thread* ptr = (Thread*)argument;
 	ptr->function();
+
+	return nullptr;
 }
 
 

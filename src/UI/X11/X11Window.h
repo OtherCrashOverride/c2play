@@ -94,7 +94,7 @@ public:
 	virtual void WaitForMessage() override;
 	virtual bool ProcessMessages() override;
 
-	bool HideMouse();
+	void HideMouse();
 
-	bool UnHideMouse();
+	void UnHideMouse();
 };

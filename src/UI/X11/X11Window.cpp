@@ -362,7 +362,7 @@ bool X11AmlWindow::ProcessMessages()
 			{
 				XClientMessageEvent* xclient = (XClientMessageEvent*)&xev;
 
-				if (xclient->data.l[0] == wm_delete_window)
+				if (xclient->data.l[0] == (long)wm_delete_window)
 				{
 					printf("X11Window: Window closed.\n");
 					run = false;
@@ -375,7 +375,7 @@ bool X11AmlWindow::ProcessMessages()
 	return run;
 }
 
-bool X11AmlWindow::HideMouse()
+void X11AmlWindow::HideMouse()
 {
 	static char bitmap[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	Pixmap pixmap = XCreateBitmapFromData(display, xwin, bitmap, 8, 8);
@@ -395,7 +395,7 @@ bool X11AmlWindow::HideMouse()
 	XFreePixmap(display, pixmap);
 }
 
-bool X11AmlWindow::UnHideMouse()
+void X11AmlWindow::UnHideMouse()
 {
 	XUndefineCursor(display, xwin);
 }

@@ -275,7 +275,7 @@ public:
 
 	T Item(int index)
 	{
-		if (index < 0 || index >= pins.size())
+		if (index < 0 || index >= (int)pins.size())
 			throw ArgumentOutOfRangeException();
 
 		return pins[index];
