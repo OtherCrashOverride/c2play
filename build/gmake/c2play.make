@@ -28,7 +28,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
+  LDFLAGS   += -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -50,7 +50,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -L/usr/lib/aml_libs -lavformat -lavcodec -lavutil -lamcodec -lamadec -lamavutils -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
+  LDFLAGS   += -s -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -85,6 +85,7 @@ OBJECTS := \
 	$(OBJDIR)/Image.o \
 	$(OBJDIR)/Codec.o \
 	$(OBJDIR)/MediaPlayer.o \
+	$(OBJDIR)/AmlCodec.o \
 	$(OBJDIR)/InPin.o \
 	$(OBJDIR)/Element.o \
 	$(OBJDIR)/Thread.o \
@@ -216,6 +217,9 @@ $(OBJDIR)/Codec.o: ../../src/Media/Codec.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/MediaPlayer.o: ../../src/Media/MediaPlayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AmlCodec.o: ../../src/Media/AmlCodec.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/InPin.o: ../../src/Media/InPin.cpp
