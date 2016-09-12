@@ -295,9 +295,9 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 							char buffer[1024];
 
-							int s_hrs = (int)(timeStamp / 360);
-							int s_min = (int)((timeStamp - (s_hrs * 360)) / 60);
-							double s_sec = (timeStamp - s_hrs * 360 - s_min * 60);
+							int s_hrs = (int)(timeStamp / 3600);
+							int s_min = (int)((timeStamp - (s_hrs * 3600)) / 60);
+							double s_sec = (timeStamp - s_hrs * 3600 - s_min * 60);
 							sprintf(buffer, "%d:%02d:%02.2f", s_hrs, s_min, s_sec);
 							printf("Start Time=%s\n", buffer);
 							
@@ -305,9 +305,9 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 
 							double endTime = timeStamp + duration;
-							int e_hrs = (int)(endTime / 360);
-							int e_min = (int)((endTime - (e_hrs * 360)) / 60);
-							double e_sec = (endTime - e_hrs * 360 - e_min * 60);
+							int e_hrs = (int)(endTime / 3600);
+							int e_min = (int)((endTime - (e_hrs * 3600)) / 60);
+							double e_sec = (endTime - e_hrs * 3600 - e_min * 60);
 							sprintf(buffer, "%d:%02d:%02.2f", e_hrs, e_min, e_sec);
 							printf("End Time=%s\n", buffer);
 
@@ -688,7 +688,10 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 			SpriteList removals;
 			for (SpriteEntry& entry : expiredEntries)
 			{
-				removals.push_back(entry.Sprite);
+				if (entry.IsActive)
+				{
+					removals.push_back(entry.Sprite);
+				}
 
 				/*auto iter = std::find(std::begin(spriteEntries), std::end(spriteEntries), entry);
 				if (iter == spriteEntries.end())
@@ -749,7 +752,7 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 
 		SpriteEntry entry;
 		entry.StartTime = image->TimeStamp();
-		entry.StopTime = image->Duration();
+		entry.StopTime = image->TimeStamp() + image->Duration();
 		entry.Sprite = sprite;
 
 		spriteEntries.push_back(entry);

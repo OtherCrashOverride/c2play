@@ -164,8 +164,8 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
 		audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
 	}
 
-	OutPinSPTR sourceSubtitlePin;
-	//OutPinSPTR sourceSubtitlePin = source->Outputs()->FindFirst(MediaCategoryEnum::Subtitle);
+	//OutPinSPTR sourceSubtitlePin;
+	OutPinSPTR sourceSubtitlePin = source->Outputs()->FindFirst(MediaCategoryEnum::Subtitle);
 	if (sourceSubtitlePin)
 	{
 		subtitleCodec = std::make_shared<SubtitleDecoderElement>();

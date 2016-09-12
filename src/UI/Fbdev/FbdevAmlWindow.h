@@ -162,11 +162,11 @@ public:
 			Egl::CheckError();
 		}
 
-		EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
-		if (success != EGL_TRUE)
-		{
-			Egl::CheckError();
-		}
+		//EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
+		//if (success != EGL_TRUE)
+		//{
+		//	Egl::CheckError();
+		//}
 
 	}
 
