@@ -183,6 +183,10 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
 
 		subtitleCodec->Outputs()->Item(0)->Connect(subtitleRender->Inputs()->Item(0));
 
+		if (audioSink)
+		{
+			audioSink->ClockSinks()->Add(subtitleRender);
+		}
 
 		printf("MediaPlayer: Connected subtitle decoder.\n");
 	}

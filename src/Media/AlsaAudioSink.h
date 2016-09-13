@@ -28,6 +28,7 @@
 #include "Codec.h"
 #include "Element.h"
 #include "InPin.h"
+#include "IClock.h"
 
 
 
@@ -44,7 +45,7 @@ class AlsaAudioSinkElement : public Element
 	unsigned int sampleRate = 0;
 	snd_pcm_t* handle = nullptr;
 	snd_pcm_sframes_t frames;
-	IClockSinkPtr clockSink;
+	//IClockSinkPtr clockSink;
 	double lastTimeStamp = -1;
 	bool canPause = true;
 	LockedQueue<PcmDataBufferPtr> pcmBuffers = LockedQueue<PcmDataBufferPtr>(128);
@@ -63,7 +64,8 @@ class AlsaAudioSinkElement : public Element
 	bool doResumeFlag = false;
 	bool doPauseFlag = false;
 	Mutex playPauseMutex;
-
+	//std::vector<IClockSinkSPTR> 
+	ClockList clockSinks;
 
 	void SetupAlsa(int frameSize);
 
@@ -75,6 +77,11 @@ public:
 	void SetAudioAdjustSeconds(double value);
 
 	double Clock() const;
+
+	ClockList* ClockSinks()
+	{
+		return &clockSinks;
+	}
 
 
 	virtual void Flush() override;

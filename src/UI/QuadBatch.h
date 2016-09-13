@@ -28,6 +28,7 @@
 #include "Texture2D.h"
 #include "QuadBatchProgram.h"
 #include "Matrix4.h"
+#include "Rectangle.h"
 
 
 #pragma pack(push, 1)
@@ -39,6 +40,10 @@ public:
 	PackedColor Color;
 	Vector2 TexCoord;
 
+
+	PositionColorTexture()
+	{
+	}
 
 	PositionColorTexture(Vector3 position,
 		PackedColor color,
@@ -54,59 +59,74 @@ public:
 
 
 
-struct Rectangle
-{
-public:
-	float X;
-	float Y;
-	float Width;
-	float Height;
-
-
-
-	float Left() const
-	{
-		return X;
-	}
-
-	float Right() const
-	{
-		return X + Width;
-	}
-
-	float Top() const
-	{
-		return Y;
-	}
-
-	float Bottom() const
-	{
-		return Y + Height;
-	}
-
-
-
-	Rectangle()
-		: X(0), Y(0), Width(0), Height(0)
-	{
-	}
-
-	Rectangle(float x, float y, float width, float height)
-		: X(x), Y(y), Width(width), Height(height)
-	{
-	}
-};
+//struct Rectangle
+//{
+//public:
+//	float X;
+//	float Y;
+//	float Width;
+//	float Height;
+//
+//
+//
+//	float Left() const
+//	{
+//		return X;
+//	}
+//
+//	float Right() const
+//	{
+//		return X + Width;
+//	}
+//
+//	float Top() const
+//	{
+//		return Y;
+//	}
+//
+//	float Bottom() const
+//	{
+//		return Y + Height;
+//	}
+//
+//
+//
+//	Rectangle()
+//		: X(0), Y(0), Width(0), Height(0)
+//	{
+//	}
+//
+//	Rectangle(float x, float y, float width, float height)
+//		: X(x), Y(y), Width(width), Height(height)
+//	{
+//	}
+//};
 
 
 
 typedef std::vector<PositionColorTexture> Vertices;
 typedef std::shared_ptr<Vertices> VerticesSPTR;
 
+
+struct QuadEntry
+{
+public:
+	Vertices Verts;
+	Texture2DSPTR Texture;
+
+
+	QuadEntry()
+	{
+	}
+};
+
+
 class QuadBatch
 {
 	int width;
 	int height;
 	std::map<Texture2DSPTR, VerticesSPTR> batches;
+	std::vector<QuadEntry> quads;
 	QuadBatchProgramSPTR program;
 
 
@@ -134,6 +154,7 @@ public:
 	void Clear()
 	{
 		batches.clear();
+		quads.clear();
 	}
 
 	void AddQuad(Texture2DSPTR texture, Rectangle destination, PackedColor color, float zDepth)
@@ -192,13 +213,28 @@ public:
 		batch->push_back(vert0);
 		batch->push_back(vert2);
 		batch->push_back(vert3);
+
+
+		//
+		QuadEntry quad;
+		quad.Texture = texture;
+		
+		quad.Verts.push_back(vert0);
+		quad.Verts.push_back(vert1);
+		quad.Verts.push_back(vert2);
+
+		quad.Verts.push_back(vert0);
+		quad.Verts.push_back(vert2);
+		quad.Verts.push_back(vert3);
+
+		quads.push_back(quad);
 	}
 
 	void Draw()
 	{
 		for(auto& iter : batches)
 		{
-			program->SetDiffuseMap(iter.first);
+			program->SetDiffuseMap(iter.first);			
 			program->Apply();
 
 			VerticesSPTR verts = iter.second;
@@ -233,6 +269,42 @@ public:
 			//printf("QuadBatch: glDrawArrays count=%ld\n", verts->size());
 		}
 
+	}
+
+	void DrawOrdered()
+	{
+		for (auto& quad : quads)
+		{
+			program->SetDiffuseMap(quad.Texture);
+			program->Apply();
+
+
+			unsigned char* data = (unsigned char*)(&quad.Verts[0]);
+
+
+			glVertexAttribPointer(program->PositionAttribute(), 3, GL_FLOAT, GL_FALSE, sizeof(PositionColorTexture), data);
+			GL::CheckError();
+			data += 3 * sizeof(float);
+
+			glVertexAttribPointer(program->ColorAttribute(), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(PositionColorTexture), data);
+			GL::CheckError();
+			data += 4 * sizeof(unsigned char);
+
+			glVertexAttribPointer(program->TexCoordAttribute(), 2, GL_FLOAT, GL_FALSE, sizeof(PositionColorTexture), data);
+			GL::CheckError();
+
+			glDrawArrays(GL_TRIANGLES, 0, quad.Verts.size());
+			GL::CheckError();
+
+			//printf("QuadBatch: glDrawArrays count=%ld\n", verts->size());
+		}
+	}
+
+private:
+
+	static bool SortFunction()
+	{
+		throw NotImplementedException();
 	}
 };
 typedef std::shared_ptr<QuadBatch> QuadBatchSPTR;

@@ -8,6 +8,7 @@ extern "C"
 
 #include "Mutex.h"
 #include "Pin.h"
+#include "Rectangle.h"
 
 
 class AmlCodec
@@ -27,7 +28,7 @@ class AmlCodec
 	typedef int CODEC_HANDLE;
 
 
-	codec_para_t codec = { 0 };
+	//codec_para_t codec = { 0 };
 	bool isOpen = false;
 	Mutex codecMutex;
 	CODEC_HANDLE handle;
@@ -54,5 +55,7 @@ public:
 	void Resume();
 	buf_status GetBufferStatus();
 	void SendData(unsigned long pts, unsigned char* data, int length);
+	void SetVideoAxis(Int32Rectangle rectangle);
+	Int32Rectangle GetVideoAxis();
 
 };

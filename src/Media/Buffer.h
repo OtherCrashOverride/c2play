@@ -592,11 +592,11 @@ public:
 		y = value;
 	}
 
-	int Duration() const
+	double Duration() const
 	{
 		return duration;
 	}
-	void SetDuration(int value)
+	void SetDuration(double value)
 	{
 		duration = value;
 	}

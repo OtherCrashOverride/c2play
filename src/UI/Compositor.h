@@ -238,6 +238,9 @@ class Compositor
 		glBlendEquation(GL_FUNC_ADD);
 		GL::CheckError();
 
+		glDisable(GL_DEPTH_TEST);
+		GL::CheckError();
+
 
 		// Clear and present the framebuffer
 		ClearDisplay();
@@ -291,7 +294,8 @@ class Compositor
 					sprite->Composed();
 				}
 
-				quadBatch->Draw();
+				//quadBatch->Draw();
+				quadBatch->DrawOrdered();
 
 				isDirty = false;
 			}

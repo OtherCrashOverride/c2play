@@ -223,6 +223,18 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 			//printf("AmlAudioSinkElement: clock=%f\n", clockPinBuffer->TimeStamp());
 		}
+
+
+		// New clock interface
+		for (IClockSinkSPTR sink : clockSinks)
+		{
+			//printf("AmlAudioSinkElement: IClockSinkSPTR sink=%p\n", sink.get());
+
+			if (sink)
+			{
+				sink->SetTimeStamp(time);
+			}
+		}
 	}
 
 

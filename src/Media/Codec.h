@@ -405,203 +405,203 @@ typedef std::shared_ptr<OutPin> OutPinSPTR;
 
 // ----------
 
-// abstract base class
-class Sink
-{
-	const int MAX_BUFFERS = 128;
-
-	std::queue<AVPacketBufferPtr> buffers;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_t thread;
-	bool isThreadStarted = false;
-	bool isRunning = false;
-	MediaState state = MediaState::Pause;
-
-
-	static void* ThreadTrampoline(void* argument)
-	{
-		Sink* ptr = (Sink*)argument;
-		ptr->WorkThread();
-
-		return nullptr;
-	}
-
-protected:
-	
-	bool IsRunning() const
-	{
-		return isRunning;
-	}
-	
-
-	
-	Sink() {}
-
-
-	virtual bool TryGetBuffer(AVPacketBufferPtr* outValue)
-	{
-		bool result;
-
-		pthread_mutex_lock(&mutex);
-		size_t count = buffers.size();
-
-		if (count < 1)
-		{
-			pthread_mutex_unlock(&mutex);
-			
-			(*outValue).reset();
-			result = false;
-
-			//printf("TryGetBuffer failed.\n");
-		}
-		else
-		{
-			*outValue = buffers.front();
-			buffers.pop();
-			result = true;
-
-			pthread_mutex_unlock(&mutex);
-
-			//printf("TryGetBuffer success.\n");
-		}
-
-		return result;
-	}
-
-	virtual void WorkThread() = 0;
-
-
-public:
-
-	virtual ~Sink()
-	{
-		isRunning = false;
-
-		if (isThreadStarted)
-		{
-			pthread_join(thread, NULL);
-		}
-	}
-
-
-	virtual void AddBuffer(AVPacketBufferPtr buffer)
-	{
-		if (!isThreadStarted)
-			throw InvalidOperationException();
-
-
-		size_t count;
-
-		while (isRunning)
-		{
-			pthread_mutex_lock(&mutex);
-			count = buffers.size();
-
-			if (count >= (size_t)MAX_BUFFERS)
-			{
-				pthread_mutex_unlock(&mutex);
-
-				usleep(1);
-			}
-			else
-			{
-				buffers.push(buffer);
-
-				pthread_mutex_unlock(&mutex);
-				break;
-			}
-		}
-	}
-
-	virtual void Start()
-	{
-		if (isThreadStarted)
-			throw InvalidOperationException();
-
-		// ----- start decoder -----
-		isRunning = true;
-
-		int result_code = pthread_create(&thread, NULL, ThreadTrampoline, (void*)this);
-		if (result_code != 0)
-		{
-			throw Exception("Sink pthread_create failed.\n");
-		}
-
-		isThreadStarted = true;
-	}
-
-	virtual void Stop()
-	{
-		if (!isThreadStarted)
-			throw InvalidOperationException();
-
-		Flush();
-
-		isRunning = false;
-
-		pthread_join(thread, NULL);
-
-		isThreadStarted = false;
-	}
-
-
-	virtual MediaState State()
-	{
-		//if (!isRunning)
-		//	throw InvalidOperationException();
-
-		return state;
-	}
-	virtual void SetState(MediaState state)
-	{
-		//if (!isRunning)
-		//	throw InvalidOperationException();
-
-		this->state = state;
-	}
-
-	virtual void Flush()
-	{
-		pthread_mutex_lock(&mutex);
-
-		while (buffers.size() > 0)
-		{
-			buffers.pop();
-		}
-
-		pthread_mutex_unlock(&mutex);
-	}
-};
-
-typedef std::shared_ptr<Sink> SinkPtr;
-
-
-class IClockSource
-{
-protected:
-	IClockSource() {}
-
-public:
-	virtual ~IClockSource() {}
-
-	virtual double GetTimeStamp() = 0;
-};
-
-typedef std::shared_ptr<IClockSource> IClockSourcePtr;
+//// abstract base class
+//class Sink
+//{
+//	const int MAX_BUFFERS = 128;
+//
+//	std::queue<AVPacketBufferPtr> buffers;
+//	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+//	pthread_t thread;
+//	bool isThreadStarted = false;
+//	bool isRunning = false;
+//	MediaState state = MediaState::Pause;
+//
+//
+//	static void* ThreadTrampoline(void* argument)
+//	{
+//		Sink* ptr = (Sink*)argument;
+//		ptr->WorkThread();
+//
+//		return nullptr;
+//	}
+//
+//protected:
+//	
+//	bool IsRunning() const
+//	{
+//		return isRunning;
+//	}
+//	
+//
+//	
+//	Sink() {}
+//
+//
+//	virtual bool TryGetBuffer(AVPacketBufferPtr* outValue)
+//	{
+//		bool result;
+//
+//		pthread_mutex_lock(&mutex);
+//		size_t count = buffers.size();
+//
+//		if (count < 1)
+//		{
+//			pthread_mutex_unlock(&mutex);
+//			
+//			(*outValue).reset();
+//			result = false;
+//
+//			//printf("TryGetBuffer failed.\n");
+//		}
+//		else
+//		{
+//			*outValue = buffers.front();
+//			buffers.pop();
+//			result = true;
+//
+//			pthread_mutex_unlock(&mutex);
+//
+//			//printf("TryGetBuffer success.\n");
+//		}
+//
+//		return result;
+//	}
+//
+//	virtual void WorkThread() = 0;
+//
+//
+//public:
+//
+//	virtual ~Sink()
+//	{
+//		isRunning = false;
+//
+//		if (isThreadStarted)
+//		{
+//			pthread_join(thread, NULL);
+//		}
+//	}
+//
+//
+//	virtual void AddBuffer(AVPacketBufferPtr buffer)
+//	{
+//		if (!isThreadStarted)
+//			throw InvalidOperationException();
+//
+//
+//		size_t count;
+//
+//		while (isRunning)
+//		{
+//			pthread_mutex_lock(&mutex);
+//			count = buffers.size();
+//
+//			if (count >= (size_t)MAX_BUFFERS)
+//			{
+//				pthread_mutex_unlock(&mutex);
+//
+//				usleep(1);
+//			}
+//			else
+//			{
+//				buffers.push(buffer);
+//
+//				pthread_mutex_unlock(&mutex);
+//				break;
+//			}
+//		}
+//	}
+//
+//	virtual void Start()
+//	{
+//		if (isThreadStarted)
+//			throw InvalidOperationException();
+//
+//		// ----- start decoder -----
+//		isRunning = true;
+//
+//		int result_code = pthread_create(&thread, NULL, ThreadTrampoline, (void*)this);
+//		if (result_code != 0)
+//		{
+//			throw Exception("Sink pthread_create failed.\n");
+//		}
+//
+//		isThreadStarted = true;
+//	}
+//
+//	virtual void Stop()
+//	{
+//		if (!isThreadStarted)
+//			throw InvalidOperationException();
+//
+//		Flush();
+//
+//		isRunning = false;
+//
+//		pthread_join(thread, NULL);
+//
+//		isThreadStarted = false;
+//	}
+//
+//
+//	virtual MediaState State()
+//	{
+//		//if (!isRunning)
+//		//	throw InvalidOperationException();
+//
+//		return state;
+//	}
+//	virtual void SetState(MediaState state)
+//	{
+//		//if (!isRunning)
+//		//	throw InvalidOperationException();
+//
+//		this->state = state;
+//	}
+//
+//	virtual void Flush()
+//	{
+//		pthread_mutex_lock(&mutex);
+//
+//		while (buffers.size() > 0)
+//		{
+//			buffers.pop();
+//		}
+//
+//		pthread_mutex_unlock(&mutex);
+//	}
+//};
+//
+//typedef std::shared_ptr<Sink> SinkPtr;
 
 
-class IClockSink
-{
-protected:
-	IClockSink() {}
+//class IClockSource
+//{
+//protected:
+//	IClockSource() {}
+//
+//public:
+//	virtual ~IClockSource() {}
+//
+//	virtual double GetTimeStamp() = 0;
+//};
+//
+//typedef std::shared_ptr<IClockSource> IClockSourcePtr;
 
-public:
-	virtual ~IClockSink() {}
 
-	virtual void SetTimeStamp(double value) = 0;
-};
-
-typedef std::shared_ptr<IClockSink> IClockSinkPtr;
+//class IClockSink
+//{
+//protected:
+//	IClockSink() {}
+//
+//public:
+//	virtual ~IClockSink() {}
+//
+//	virtual void SetTimeStamp(double value) = 0;
+//};
+//
+//typedef std::shared_ptr<IClockSink> IClockSinkSPTR;
 
 
 

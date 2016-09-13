@@ -22,12 +22,12 @@ void SubtitleDecoderElement::static_msg_callback(int level, const char* fmt, va_
 	//SubtitleDecoderElement* this_ = (SubtitleDecoderElement*)data;
 	//if (level > 6)
 	//	return;
-#ifdef DEBUG
-	char buffer[4096] = { 0 };
-	vsprintf(buffer, fmt, va);
-	std::string msg = "static_msg_callback: " + std::string(buffer) + "\n";
-	printf("%s", msg.c_str());
-#endif // DEBUG
+//#ifdef DEBUG
+//	char buffer[4096] = { 0 };
+//	vsprintf(buffer, fmt, va);
+//	std::string msg = "static_msg_callback: " + std::string(buffer) + "\n";
+//	printf("%s", msg.c_str());
+//#endif // DEBUG
 }
 
 void SubtitleDecoderElement::SetupCodec()
@@ -432,11 +432,24 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 							unsigned char green = (img->color >> 16) * lum / 0xff;
 							unsigned char blue = (img->color >> 8) * lum / 0xff;
 							unsigned char alpha = 0xff - (img->color & 0xff);
-							unsigned int color = (red << 24) | (green << 16) | (blue << 8) | alpha;
+							alpha = alpha * lum / 0xff;
 
+							//unsigned int color = (red << 24) | (green << 16) | (blue << 8) | alpha;
+							unsigned int color = (alpha << 24) | (blue << 16) | (green << 8) | (red << 0);
 							//color |= 0xff0000ff;
 
 							//printf("0x%08x ", color);
+
+#if 0
+							//DEBUG
+							if (color == 0)
+							{
+								//color = 0xffff00ff;
+								//color = 0xffffff00;	//ARGB
+								//color = 0x00ffffff;		//BGRA
+								color = 0xff00ffff;		// ABGR
+							}
+#endif
 
 							imageData[y * img->w + x] = color;
 						}
@@ -446,13 +459,17 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					ImageBufferSPTR imageBuffer = std::make_shared<ImageBuffer>(
 						shared_from_this(),
 						image);
-					imageBuffer->SetTimeStamp(pkt->pts * av_q2d(buffer->TimeBase()));
-					imageBuffer->SetDuration(pkt->duration * av_q2d(buffer->TimeBase()));
+					imageBuffer->SetTimeStamp(timeStamp);
+					imageBuffer->SetDuration(duration);
 					imageBuffer->SetX(img->dst_x);
 					imageBuffer->SetY(img->dst_y);
 
 					//outPin->SendBuffer(imageBuffer);
 					imageList->push_back(imageBuffer);
+
+					//printf("ASS_Image: Added Image timeStamp=%f/%f duration=%f/%f\n",
+					//	timeStamp, imageBuffer->TimeStamp(),
+					//	duration, imageBuffer->Duration());
 
 					img = img->next;
 				}
@@ -674,6 +691,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 	{
 		entriesMutex.Lock();
 		
+		//printf("SubtitleRenderElement::timer_Expired currentTime=%f\n", currentTime);
+
 		// Remove stale entries
 		{
 			std::vector<SpriteEntry> expiredEntries;
@@ -721,7 +740,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 
 					additions.push_back(entry.Sprite);
 
-					printf("SubtitleRenderElement: Displaying sprite.\n");
+					//printf("SubtitleRenderElement: Displaying sprite. (StartTime=%f StopTime=%f\n",
+					//	entry.StartTime, entry.StopTime);
 				}
 			}
 
@@ -742,6 +762,8 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 {
 	entriesMutex.Lock();
 	
+	float z = -1;
+
 	for (ImageBufferSPTR image : *(buffer->Payload()))
 	{
 		SourceSPTR source = std::make_shared<Source>(image->Payload());
@@ -749,81 +771,26 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 		SpriteSPTR sprite = std::make_shared<Sprite>(source);
 		sprite->SetDestinationRect(Rectangle(image->X(), image->Y(), image->Payload()->Width(), image->Payload()->Height()));
 		sprite->SetColor(PackedColor(0xff, 0xff, 0xff, 0xff));
+		sprite->SetZOrder(z);
 
 		SpriteEntry entry;
 		entry.StartTime = image->TimeStamp();
 		entry.StopTime = image->TimeStamp() + image->Duration();
 		entry.Sprite = sprite;
+		entry.IsActive = false;
 
 		spriteEntries.push_back(entry);
+
+		z += 0.001;
+
+		//printf("SubtitleRenderElement::ProcessBuffer - Added (StartTime=%f StopTime=%f\n",
+		//	entry.StartTime, entry.StopTime);
 	}
 
 	entriesMutex.Unlock();
 }
 
-//void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
-//{
-//	// TODO: Clock
-//
-//	EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
-//	if (success != EGL_TRUE)
-//	{
-//		Egl::CheckError();
-//	}
-//
-//
-//	quadBatch->Clear();
-//
-//	for (ImageBufferSPTR image : *buffer->Payload())
-//	{
-//		Texture2DSPTR texture = std::make_shared<Texture2D>(image->Payload()->Width(), image->Payload()->Height());
-//		texture->WriteData(image->Payload()->Data());
-//
-//
-//		quadBatch->AddQuad(texture,
-//			Rectangle(image->X(), image->Y(), image->Payload()->Width(), image->Payload()->Height()),
-//			PackedColor(0xff, 0xff, 0xff, 0xff),
-//			0);
-//
-//	}
-//
-//
-//
-//	glClearColor(0.0f, 0, 0, 0.0f);
-//	glClear(GL_COLOR_BUFFER_BIT |
-//		GL_DEPTH_BUFFER_BIT |
-//		GL_STENCIL_BUFFER_BIT);
-//
-//
-//	glEnable(GL_BLEND);
-//	GL::CheckError();
-//
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	GL::CheckError();
-//
-//	glBlendEquation(GL_FUNC_ADD);
-//	GL::CheckError();
-//
-//
-//	quadBatch->Draw();
-//
-//
-//	glDisable(GL_BLEND);
-//	GL::CheckError();
-//
-//	eglSwapBuffers(eglDisplay, surface);
-//
-//
-//	success = eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-//	if (success != EGL_TRUE)
-//	{
-//		Egl::CheckError();
-//	}
-//}
 
-
-//SubtitleRenderElement::SubtitleRenderElement(EGLDisplay eglDisplay, EGLSurface surface, EGLContext context)
-//	: eglDisplay(eglDisplay), surface(surface), context(context)
 SubtitleRenderElement::SubtitleRenderElement(CompositorSPTR compositor)
 	: compositor(compositor)
 {
@@ -834,60 +801,8 @@ SubtitleRenderElement::SubtitleRenderElement(CompositorSPTR compositor)
 		std::bind(&SubtitleRenderElement::timer_Expired, this, std::placeholders::_1, std::placeholders::_2));
 
 	timer.Expired.AddListener(timerExpiredListener);
-	timer.SetInterval(1.0 / (60.0 * 2.0));
+	timer.SetInterval(1.0 / 60.0);	// 60fps
 	timer.Start();
-
-	//if (!eglDisplay)
-	//	throw ArgumentNullException();
-
-	//if (!surface)
-	//	throw ArgumentNullException();
-
-	//if (!context)
-	//	throw ArgumentNullException();
-
-
-	//EGLBoolean success = eglMakeCurrent(eglDisplay, surface, surface, context);
-	//if (success != EGL_TRUE)
-	//{
-	//	Egl::CheckError();
-	//}
-
-
-	//EGLint width;
-	//eglQuerySurface(eglDisplay, surface, EGL_WIDTH, &width);
-	//Egl::CheckError();
-
-	//EGLint height;
-	//eglQuerySurface(eglDisplay, surface, EGL_HEIGHT, &height);
-	//Egl::CheckError();
-
-
-
-	//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	//GL::CheckError();
-
-	//glEnable(GL_CULL_FACE);
-	////glDisable(GL_CULL_FACE);
-	//GL::CheckError();
-
-	//glCullFace(GL_BACK);
-	//GL::CheckError();
-
-	//glFrontFace(GL_CW);
-	//GL::CheckError();
-
-
-
-	////quadBatch = std::make_shared<QuadBatch>(width, height);
-	//quadBatch = std::make_shared<QuadBatch>(1920, 1080);
-
-
-	//success = eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-	//if (success != EGL_TRUE)
-	//{
-	//	Egl::CheckError();
-	//}
 }
 SubtitleRenderElement::~SubtitleRenderElement()
 {
@@ -999,5 +914,33 @@ void SubtitleRenderElement::ChangeState(MediaState oldState, MediaState newState
 
 void SubtitleRenderElement::Flush()
 {
+	entriesMutex.Lock();
+
 	Element::Flush();
+
+
+	SpriteList removals;
+	for (SpriteEntry& entry : spriteEntries)
+	{
+		if (entry.IsActive)
+		{
+			removals.push_back(entry.Sprite);
+		}
+	}
+
+	compositor->RemoveSprites(removals);
+
+	spriteEntries.clear();
+
+	entriesMutex.Unlock();
+}
+
+void SubtitleRenderElement::SetTimeStamp(double value)
+{
+	entriesMutex.Lock();
+
+	currentTime = value;
+
+	entriesMutex.Unlock();
+	//printf("SubtitleRenderElement::SetTimeStamp = %f\n", value);
 }

@@ -32,6 +32,7 @@ extern "C"
 //#include "QuadBatch.h"
 #include "Compositor.h"
 #include "Timer.h"
+#include "IClock.h"
 
 
 
@@ -105,7 +106,7 @@ public:
 };
 
 
-class SubtitleRenderElement : public Element
+class SubtitleRenderElement : public Element, public virtual IClockSink
 {
 	//EGLDisplay eglDisplay;
 	//EGLSurface surface;
@@ -138,6 +139,10 @@ public:
 	virtual void DoWork() override;
 	virtual void ChangeState(MediaState oldState, MediaState newState) override;
 	virtual void Flush() override;
+
+
+	// Inherited via IClockSink
+	virtual void SetTimeStamp(double value) override;
 };
 
 typedef std::shared_ptr<SubtitleRenderElement> SubtitleRenderElementSPTR;

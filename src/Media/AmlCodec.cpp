@@ -495,4 +495,51 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 	}
 }
 
+void AmlCodec::SetVideoAxis(Int32Rectangle rectangle)
+{
+	if (!isOpen)
+		throw InvalidOperationException("The codec is not open.");
 
+	codecMutex.Lock();
+
+	int params[4]{ rectangle.X,
+		rectangle.Y,
+		rectangle.X + rectangle.Width,
+		rectangle.Y + rectangle.Height };
+
+	int ret = ioctl(cntl_handle, AMSTREAM_IOC_SET_VIDEO_AXIS, &params);
+
+	codecMutex.Unlock();
+
+	if (ret < 0)
+	{
+		throw Exception("AMSTREAM_IOC_SET_VIDEO_AXIS failed.");
+	}
+}
+
+Int32Rectangle AmlCodec::GetVideoAxis()
+{
+	if (!isOpen)
+		throw InvalidOperationException("The codec is not open.");
+
+	codecMutex.Lock();
+
+	int params[4] = { 0 };
+
+	int ret = ioctl(cntl_handle, AMSTREAM_IOC_GET_VIDEO_AXIS, &params);
+
+	codecMutex.Unlock();
+
+	if (ret < 0)
+	{
+		throw Exception("AMSTREAM_IOC_GET_VIDEO_AXIS failed.");
+	}
+
+	
+	Int32Rectangle result(params[0],
+		params[1],
+		params[2] - params[0],
+		params[3] - params[1]);
+	
+	return result;
+}
