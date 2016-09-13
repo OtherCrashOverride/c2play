@@ -908,7 +908,7 @@ void SubtitleRenderElement::DoWork()
 					}
 
 					//SetExecutionState(ExecutionStateEnum::Idle);
-					SetState(MediaState::Pause);
+					//SetState(MediaState::Pause);
 					break;
 
 				default:
