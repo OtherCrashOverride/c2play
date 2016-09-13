@@ -119,6 +119,7 @@ public:
 	void SetColor(PackedColor value)
 	{
 		color = value;
+		isDirty = true;
 	}
 
 	bool IsDirty()
@@ -254,7 +255,7 @@ class Compositor
 		{
 			mutex.Lock();
 
-			bool needsDraw;
+			bool needsDraw = false;
 
 			if (isDirty)
 			{
@@ -262,19 +263,19 @@ class Compositor
 			}
 			else
 			{
-				needsDraw = false;
 				for (SpriteSPTR sprite : sprites)
 				{
 					if (sprite->IsDirty())
 					{
 						needsDraw = true;
+						break;
 					}
 				}
 			}
 
 			if (needsDraw)
 			{
-				ClearDisplay();
+				//printf("Compositor::RenderThread() isDirty=%u, needsDraw=%u\n", isDirty, needsDraw);
 
 				quadBatch->Clear();
 
@@ -294,21 +295,19 @@ class Compositor
 					sprite->Composed();
 				}
 
-				//quadBatch->Draw();
-				quadBatch->DrawOrdered();
-
 				isDirty = false;
-			}
 
-			mutex.Unlock();
+				mutex.Unlock();
 
-
-			if (needsDraw)
-			{
+				ClearDisplay();
+				//quadBatch->Draw();
+				quadBatch->DrawOrdered();	
 				SwapBuffers();
 			}
 			else
 			{
+				mutex.Unlock();
+
 				WaitForVSync();
 			}
 		}
@@ -372,9 +371,9 @@ public:
 		for (SpriteSPTR sprite : additions)
 		{
 			sprites.push_back(sprite);
+			isDirty = true;
 		}
 
-		isDirty = true;
 
 		mutex.Unlock();
 	}
@@ -393,6 +392,7 @@ public:
 				{
 					sprites.erase(iter);
 					found = true;
+					isDirty = true;
 					break;
 				}
 			}
@@ -401,7 +401,6 @@ public:
 				throw InvalidOperationException();
 		}
 
-		isDirty = true;
 
 		mutex.Unlock();
 	}
