@@ -66,9 +66,19 @@ void OutPin::AddAvailableBuffer(BufferSPTR buffer)
 	//printf("OutPin::AddAvailableBuffer (%s).\n", element->Name().c_str());
 }
 
+void OutPin::DoWork()
+{
+	// Work should not block in the thread
+}
+
 bool OutPin::TryGetAvailableBuffer(BufferSPTR* outValue)
 {
 	return availableBuffers.TryPop(outValue);
+}
+
+bool OutPin::TryPeekAvailableBuffer(BufferSPTR* buffer)
+{
+	return availableBuffers.TryPeek(buffer);
 }
 
 void OutPin::SendBuffer(BufferSPTR buffer)
@@ -111,6 +121,12 @@ OutPin::~OutPin()
 		OutPinSPTR thisPin = std::static_pointer_cast<OutPin>(shared_from_this());
 		sink->Disconnect(thisPin);
 	}
+}
+
+
+void OutPin::Wake()
+{
+	waitCondition.Signal();
 }
 
 

@@ -68,11 +68,14 @@ OBJECTS := \
 	$(OBJDIR)/Window.o \
 	$(OBJDIR)/Compositor.o \
 	$(OBJDIR)/Texture2D.o \
+	$(OBJDIR)/Egl.o \
 	$(OBJDIR)/Osd.o \
 	$(OBJDIR)/Shader.o \
+	$(OBJDIR)/AmlWindow.o \
 	$(OBJDIR)/Vector2.o \
 	$(OBJDIR)/InputDevice.o \
 	$(OBJDIR)/QuadBatch.o \
+	$(OBJDIR)/GL.o \
 	$(OBJDIR)/QuadBatchProgram.o \
 	$(OBJDIR)/Matrix4.o \
 	$(OBJDIR)/Vector3.o \
@@ -168,10 +171,16 @@ $(OBJDIR)/Compositor.o: ../../src/UI/Compositor.cpp
 $(OBJDIR)/Texture2D.o: ../../src/UI/Texture2D.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Egl.o: ../../src/UI/Egl.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Osd.o: ../../src/UI/Osd.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Shader.o: ../../src/UI/Shader.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AmlWindow.o: ../../src/UI/AmlWindow.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Vector2.o: ../../src/UI/Vector2.cpp
@@ -181,6 +190,9 @@ $(OBJDIR)/InputDevice.o: ../../src/UI/InputDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/QuadBatch.o: ../../src/UI/QuadBatch.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/GL.o: ../../src/UI/GL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/QuadBatchProgram.o: ../../src/UI/QuadBatchProgram.cpp

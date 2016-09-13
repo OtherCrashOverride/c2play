@@ -66,11 +66,7 @@ class OutPin : public Pin
 protected:
 
 	void AddAvailableBuffer(BufferSPTR buffer);
-
-	virtual void DoWork()
-	{
-		// Work should not block in the thread
-	}
+	virtual void DoWork();
 
 
 public:
@@ -82,16 +78,10 @@ public:
 	virtual ~OutPin();
 
 	
-	void Wake()
-	{
-		waitCondition.Signal();
-	}
+	void Wake();
 
 	bool TryGetAvailableBuffer(BufferSPTR* outValue);
-	bool TryPeekAvailableBuffer(BufferSPTR* buffer)
-	{
-		return availableBuffers.TryPeek(buffer);
-	}
+	bool TryPeekAvailableBuffer(BufferSPTR* buffer);
 	void SendBuffer(BufferSPTR buffer);
 	virtual void Flush() override;
 

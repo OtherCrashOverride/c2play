@@ -1,3 +1,19 @@
+/*
+*
+* Copyright (C) 2016 OtherCrashOverride@users.noreply.github.com.
+* All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2, as
+* published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+* more details.
+*
+*/
+
 #pragma once
 
 #include <memory>
@@ -53,76 +69,25 @@ public:
 
 
 
-	Image(ImageFormatEnum format, int width, int height, int stride, void* data)
-		: format(format), width(width), height(height), stride(stride), data(data)
-	{
-		if (width < 1)
-			throw ArgumentOutOfRangeException();
-
-		if (height < 1)
-			throw ArgumentOutOfRangeException();
-
-		if (stride < 1)
-			throw ArgumentOutOfRangeException();
-
-		if (data == nullptr)
-			throw ArgumentNullException();
-	}
-
-	virtual ~Image()
-	{
-	}
+	Image(ImageFormatEnum format, int width, int height, int stride, void* data);
+	virtual ~Image();
 };
 
 typedef std::shared_ptr<Image> ImageSPTR;
 
 
+
 class AllocatedImage : public Image
 {
 
-	static int GetBytesPerPixel(ImageFormatEnum format)
-	{
-		int bytesPerPixel;
+	static int GetBytesPerPixel(ImageFormatEnum format);
+	static int CalculateStride(int width, ImageFormatEnum format);
+	static void* Allocate(int width, int height, ImageFormatEnum format);
 
-		switch (format)
-		{
-		case ImageFormatEnum::R8G8B8:
-			bytesPerPixel = 3;
-			break;
-
-		case ImageFormatEnum::R8G8B8A8:
-			bytesPerPixel = 4;
-			break;
-
-		default:
-			throw NotSupportedException();
-		}
-
-		return bytesPerPixel;
-	}
-
-	static int CalculateStride(int width, ImageFormatEnum format)
-	{
-		return width * GetBytesPerPixel(format);
-	}
-
-	static void* Allocate(int width, int height, ImageFormatEnum format)
-	{
-		int stride = CalculateStride(width, format);
-		return malloc(stride * height);
-	}
 
 public:
-	AllocatedImage(ImageFormatEnum format, int width, int height)
-		: Image(format, width, height, CalculateStride(width, format), Allocate(width, height, format))
-	{
-
-	}
-
-	virtual ~AllocatedImage()
-	{
-		free(Data());
-	}
+	AllocatedImage(ImageFormatEnum format, int width, int height);
+	virtual ~AllocatedImage();
 };
 
 typedef std::shared_ptr<AllocatedImage> AllocatedImageSPTR;

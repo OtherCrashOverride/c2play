@@ -16,42 +16,43 @@
 
 #pragma once
 
-//extern "C"
-//{
-//#include <libavformat/avformat.h>
-//#include <libavcodec/avcodec.h>
-//}
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/fb.h>
 
-#include <pthread.h>
-#include <queue>
-#include <memory>
+// from include/linux/amlogic/amports/amstream.h
+//#define _A_M 'S'
+//#define AMSTREAM_IOC_SET_VIDEO_AXIS _IOW((_A_M), 0x4c, int)
+extern "C"
+{
+#include <codec.h>	// aml_lib
+}
 
 #include "Exception.h"
-#include "Thread.h"
-#include "LockedQueue.h"
-#include "Buffer.h"
+#include "Window.h"
 
 
 
-enum class MediaState
+class AmlWindow : public WindowBase
 {
-	Pause = 0,
-	Play
+
+
+	static int OpenDevice();
+	static void CloseDevice(int fd);
+
+
+
+protected:
+	
+	AmlWindow();
+	virtual ~AmlWindow();
+
+
+
+	void SetVideoAxis(int x, int y, int width, int height);
 };
-
-
-// Forward Declarations
-class Element;
-typedef std::shared_ptr<Element> ElementSPTR;
-typedef std::weak_ptr<Element> ElementWPTR;
-
-class Pin;
-typedef std::shared_ptr<Pin> PinSPTR;
-
-class InPin;
-typedef std::shared_ptr<InPin> InPinSPTR;
-
-class OutPin;
-typedef std::shared_ptr<OutPin> OutPinSPTR;
 
 

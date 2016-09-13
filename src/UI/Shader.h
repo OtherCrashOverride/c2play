@@ -29,6 +29,7 @@ enum class ShaderTypeEnum
 
 
 
+
 class Shader;
 typedef std::shared_ptr<Shader> ShaderSPTR;
 
@@ -38,23 +39,7 @@ class Shader
 	GLuint id;
 
 
-	void PrintInfoLog()
-	{
-		int param;
-		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &param);
-		GL::CheckError();
-
-		int logLength = param;
-		GLchar log[logLength + 1];
-
-		glGetShaderInfoLog(id, logLength, &param, log);
-		GL::CheckError();
-
-		printf("Shader compile Log: %s\n", log);
-	}
-
-protected:
-
+	void PrintInfoLog();
 
 
 
@@ -72,43 +57,13 @@ public:
 
 
 
-	Shader(ShaderTypeEnum shaderType)
-		: shaderType(shaderType)
-	{
-		id = glCreateShader((GLenum)shaderType);
-		GL::CheckError();
-	}
+	Shader(ShaderTypeEnum shaderType);
+	virtual ~Shader() {}
 
 
-
-	static ShaderSPTR CreateFromSource(ShaderTypeEnum shaderType, const char* source)
-	{
-		ShaderSPTR shader = std::make_shared<Shader>(shaderType);
-
-		const char* glSrcCode[] = { source };
-		const int lengths[]{ -1 }; // Tell OpenGL the string is NULL terminated
-
-		glShaderSource(shader->Id(), 1, glSrcCode, lengths);
-		GL::CheckError();
-
-		glCompileShader(shader->Id());
-		GL::CheckError();
-
-
-		GLint param;
-
-		glGetShaderiv(shader->Id(), GL_COMPILE_STATUS, &param);
-		GL::CheckError();
-
-		if (param == GL_FALSE)
-		{
-			shader->PrintInfoLog();
-			throw Exception("Shader Compilation Failed.");
-		}
-
-		return shader;
-	}
+	static ShaderSPTR CreateFromSource(ShaderTypeEnum shaderType, const char* source);
 };
+
 
 
 
@@ -117,7 +72,7 @@ class GlslProgram
 	ShaderSPTR vertexShader;
 	ShaderSPTR fragmentShader;
 	GLuint id;
-	//bool isLinked = false;
+
 
 
 public:
@@ -139,48 +94,11 @@ public:
 
 
 
-	GlslProgram(ShaderSPTR vertexShader, ShaderSPTR fragmentShader)
-		: vertexShader(vertexShader), fragmentShader(fragmentShader)
-	{
-		if (!vertexShader)
-			throw ArgumentNullException();
-
-		if (!fragmentShader)
-			throw ArgumentNullException();
+	GlslProgram(ShaderSPTR vertexShader, ShaderSPTR fragmentShader);
+	virtual ~GlslProgram() {}
 
 
-		id = glCreateProgram();
-		GL::CheckError();
-
-		glAttachShader(id, vertexShader->Id());
-		GL::CheckError();
-
-		glAttachShader(id, fragmentShader->Id());
-		GL::CheckError();
-
-		glLinkProgram(id);
-		GL::CheckError();
-	}
-
-
-	//virtual void OnLink()
-	//{
-	//	glLinkProgram(id);
-	//	GL::CheckError();
-
-	//	isLinked = true;
-	//}
-
-	virtual void Apply()
-	{
-		//if (!isLinked)
-		//{
-		//	OnLink();
-		//}
-
-		glUseProgram(id);
-		GL::CheckError();
-	}
-
+	virtual void Apply();
 };
+
 typedef std::shared_ptr<GlslProgram> GlslProgramSPTR;

@@ -29,49 +29,11 @@
 class OpenGLException : public Exception
 {
 
-	static std::string GetErrorString(int errorCode)
-	{
-		std::string result;
+	static std::string GetErrorString(int errorCode);
 
-		switch (errorCode)
-		{
-			case GL_INVALID_ENUM:
-				result = "OpenGL Exception : GL_INVALID_ENUM";
-				break;
-
-			case GL_INVALID_VALUE:
-				result = "OpenGL Exception : GL_INVALID_VALUE";
-				break;
-
-			case GL_INVALID_OPERATION:
-				result = "OpenGL Exception : GL_INVALID_OPERATION";
-				break;
-
-			case GL_OUT_OF_MEMORY:
-				result = "OpenGL Exception : GL_OUT_OF_MEMORY";
-				break;
-
-			case GL_INVALID_FRAMEBUFFER_OPERATION:
-				result = "OpenGL Exception : GL_INVALID_FRAMEBUFFER_OPERATION";
-				break;
-
-			default:
-			{
-				std::stringstream stream;
-				stream << "OpenGL Exception : 0x" << std::hex << errorCode;
-				result = stream.str();
-			}
-				break;
-		}
-
-		return result;
-	}
 
 public:
-	OpenGLException(int errorCode)
-		: Exception(GetErrorString(errorCode).c_str())
-	{
-	}
+	OpenGLException(int errorCode);
 };
 
 
@@ -80,16 +42,7 @@ class GL
 {
 public:
 
-	static void CheckError()
-	{
-#ifdef DEBUG
-		int error = glGetError();
-		if (error != GL_NO_ERROR)
-		{
-			throw OpenGLException(error);
-		}
-#endif
-	}
+	static void CheckError();
 };
 
 
@@ -102,34 +55,14 @@ class RenderContext
 
 public:
 
-	EGLDisplay EglDisplay() const
-	{
-		return eglDisplay;
-	}
-
-	EGLSurface EglSurface() const
-	{
-		return eglSurface;
-	}
-
-	EGLContext GLContext() const
-	{
-		return glContext;
-	}
+	EGLDisplay EglDisplay() const;
+	EGLSurface EglSurface() const;
+	EGLContext GLContext() const;
 
 
-	RenderContext(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext glContext)
-		: eglDisplay(eglDisplay), eglSurface(eglSurface), glContext(glContext)
-	{
-		if (eglDisplay == EGL_NO_DISPLAY)
-			throw ArgumentException();
 
-		if (eglSurface == EGL_NO_SURFACE)
-			throw ArgumentException();
-
-		if (glContext == EGL_NO_CONTEXT)
-			throw ArgumentException();
-	}
+	RenderContext(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext glContext);
+	virtual ~RenderContext() {}
 
 };
 

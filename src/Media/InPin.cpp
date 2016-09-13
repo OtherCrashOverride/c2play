@@ -19,6 +19,28 @@
 #include "OutPin.h"
 #include "Element.h"
 
+void  InPin::WorkThread()
+{
+	//printf("InPin: WorkTread started.\n");
+
+	while (true)
+	{
+		//// Scope the shared pointer
+		//{
+		//	ElementSPTR owner = Owner().lock();
+		//	if (owner && owner->State() == MediaState::Play)
+		//	{
+		//		DoWork();
+		//	}
+		//}
+
+		DoWork();
+
+		waitCondition.WaitForSignal();
+	}
+
+	//printf("InPin: WorkTread exited.\n");
+}
 
 	void InPin::ReturnAllBuffers()
 	{
@@ -49,6 +71,12 @@
 	}
 
 
+	void InPin::DoWork()
+	{
+		// Work should not block in the thread
+	}
+
+
 	InPin::InPin(ElementWPTR owner, PinInfoSPTR info)
 		: Pin(PinDirectionEnum::In, owner, info)
 	{
@@ -62,6 +90,20 @@
 		}
 	}
 
+	bool InPin::TryGetFilledBuffer(BufferSPTR* buffer)
+	{
+		return filledBuffers.TryPop(buffer);
+	}
+
+	bool InPin::TryPeekFilledBuffer(BufferSPTR* buffer)
+	{
+		return filledBuffers.TryPeek(buffer);
+	}
+
+	void InPin::PushProcessedBuffer(BufferSPTR buffer)
+	{
+		processedBuffers.Push(buffer);
+	}
 
 	void InPin::ReturnProcessedBuffers()
 	{

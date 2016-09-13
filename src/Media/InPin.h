@@ -39,37 +39,14 @@ class InPin : public Pin
 
 
 
-	void WorkThread()
-	{
-		//printf("InPin: WorkTread started.\n");
+	void WorkThread();
 
-		while (true)
-		{
-			//// Scope the shared pointer
-			//{
-			//	ElementSPTR owner = Owner().lock();
-			//	if (owner && owner->State() == MediaState::Play)
-			//	{
-			//		DoWork();
-			//	}
-			//}
-
-			DoWork();
-
-			waitCondition.WaitForSignal();
-		}
-
-		//printf("InPin: WorkTread exited.\n");
-	}
 
 
 protected:
-	void ReturnAllBuffers();
 
-	virtual void DoWork()
-	{
-		// Work should not block in the thread
-	}
+	void ReturnAllBuffers();
+	virtual void DoWork();
 
 
 
@@ -92,34 +69,9 @@ public:
 
 
 	// From this element
-	//ThreadSafeQueue<BufferPTR>* FilledBuffers()
-	//{
-	//	return &filledBuffers;
-	//}
-
-	bool TryGetFilledBuffer(BufferSPTR* buffer)
-	{
-		return filledBuffers.TryPop(buffer);
-	}
-	
-	//void WaitForFilledBuffer(BufferSPTR* buffer)
-	//{
-	//	while (!TryGetFilledBuffer(buffer))
-	//	{
-	//		waitCondition.WaitForSignal();
-	//	}
-	//}
-
-	bool TryPeekFilledBuffer(BufferSPTR* buffer)
-	{
-		return filledBuffers.TryPeek(buffer);
-	}
-
-	void PushProcessedBuffer(BufferSPTR buffer)
-	{
-		processedBuffers.Push(buffer);
-	}
-
+	bool TryGetFilledBuffer(BufferSPTR* buffer);
+	bool TryPeekFilledBuffer(BufferSPTR* buffer);
+	void PushProcessedBuffer(BufferSPTR buffer);
 	void ReturnProcessedBuffers();
 
 

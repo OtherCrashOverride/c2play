@@ -47,3 +47,97 @@ const char* QuadBatchProgram::fragmentSource = R"(
 		//gl_FragColor = vec4(1, 1, 1, 1);
 	}
 	)";
+
+
+QuadBatchProgram::QuadBatchProgram()
+	: GlslProgram(
+		Shader::CreateFromSource(ShaderTypeEnum::Vertex, vertexSource),
+		Shader::CreateFromSource(ShaderTypeEnum::Fragment, fragmentSource))
+{
+	//glBindAttribLocation(Id(), 0, "Attr_Position");
+	//GL::CheckError();
+
+	//glBindAttribLocation(Id(), 1, "Attr_Color0");
+	//GL::CheckError();
+
+	//glBindAttribLocation(Id(), 2, "Attr_TexCoord0");
+	//GL::CheckError();
+
+
+	//GlslProgram::OnLink();
+
+
+	worldViewProjectionParameter = glGetUniformLocation(Id(), "WorldViewProjection");
+	GL::CheckError();
+
+	if (worldViewProjectionParameter == -1)
+		throw InvalidOperationException();
+
+
+	diffuseMapParameter = glGetUniformLocation(Id(), "DiffuseMap");
+	GL::CheckError();
+
+	if (diffuseMapParameter == -1)
+		throw InvalidOperationException();
+
+
+	positionAttribute = glGetAttribLocation(Id(), "Attr_Position");
+	GL::CheckError();
+
+	colorAttribute = glGetAttribLocation(Id(), "Attr_Color0");
+	GL::CheckError();
+
+	textCoordAttribute = glGetAttribLocation(Id(), "Attr_TexCoord0");
+	GL::CheckError();
+}
+
+
+
+void QuadBatchProgram::Apply()
+{
+	GlslProgram::Apply();
+
+
+	// WorldViewProjection
+	Matrix4 param = Matrix4::CreateTranspose(worldViewProjection);
+	glUniformMatrix4fv(worldViewProjectionParameter,
+		1,
+		GL_FALSE,
+		(GLfloat*)&param);
+	GL::CheckError();
+
+
+	// Diffuse Map
+	if (diffuseMapParameter > -1)
+	{
+		//printf("diffuseMapParameter=%d\n", diffuseMapParameter);
+
+		glActiveTexture(GL_TEXTURE0);
+		GL::CheckError();
+
+		glUniform1i(diffuseMapParameter, 0);
+		GL::CheckError();
+
+		if (texture)
+		{
+			texture->Bind();
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+			GL::CheckError();
+		}
+	}
+
+
+	// Vertex Attributes
+	glEnableVertexAttribArray(0);
+	GL::CheckError();
+
+	glEnableVertexAttribArray(1);
+	GL::CheckError();
+
+	glEnableVertexAttribArray(2);
+	GL::CheckError();
+
+}
