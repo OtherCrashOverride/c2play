@@ -30,10 +30,33 @@ extern "C"
 {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libavutil/error.h>
 }
 
 
 #include <memory>
+
+
+
+class AVException : public Exception
+{
+	static std::string GetErrorString(int error)
+	{
+		char buffer[AV_ERROR_MAX_STRING_SIZE + 1];
+		char* message = av_make_error_string(buffer, AV_ERROR_MAX_STRING_SIZE, error);
+
+		// Return a copy that survives after buffer goes out of scope
+		return std::string(message);
+	}
+
+public:
+
+	AVException(int error)
+		: Exception(GetErrorString(error).c_str())
+	{
+	}
+};
+
 
 
 struct Chapter

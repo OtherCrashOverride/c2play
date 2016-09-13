@@ -75,7 +75,7 @@ class AmlVideoSinkClockInPin : public InPin
 				//}
 				codecPTR->SetCurrentPts(pts);
 
-				printf("AmlVideoSink: codecPTR->SetCurrentPts - pts=%f drift=%f (%f frames)\n", pts, drift, driftFrames);
+				printf("AmlVideoSink: Adjust PTS - pts=%f drift=%f (%f frames)\n", pts, drift, driftFrames);
 			}
 		}
 	}

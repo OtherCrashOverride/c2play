@@ -16,6 +16,8 @@
 
 #include "AudioCodec.h"
 
+#include <algorithm>
+
 
 void AudioCodecElement::SetupCodec()
 {
@@ -222,7 +224,11 @@ void AudioCodecElement::ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSP
 					decoded_frame->channel_layout,
 					AV_CH_FRONT_CENTER);
 
-				void* channels[3];
+
+				// left, right, center
+				const int DOWNMIX_MAX_CHANNELS = 3;
+
+				void* channels[DOWNMIX_MAX_CHANNELS] = { 0 };
 				channels[0] = (void*)decoded_frame->data[leftChannelIndex];
 				channels[1] = (void*)decoded_frame->data[rightChannelIndex];
 
@@ -230,12 +236,13 @@ void AudioCodecElement::ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSP
 				{
 					channels[2] = (void*)decoded_frame->data[centerChannelIndex];
 				}
-				else
-				{
-					channels[2] = nullptr;
-				}
+				//else
+				//{
+				//	channels[2] = nullptr;
+				//}
 
-				for (int i = 0; i < decoded_frame->channels; ++i)
+				int channelCount = std::min(DOWNMIX_MAX_CHANNELS, decoded_frame->channels);
+				for (int i = 0; i < channelCount; ++i)
 				{
 					PcmData* pcmData = pcmDataBuffer->GetPcmData();
 					memcpy(pcmData->Channel[i], channels[i], pcmData->ChannelSize);

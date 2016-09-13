@@ -413,6 +413,7 @@ MediaSourceElement::MediaSourceElement(std::string url)
 	if (ret < 0)
 	{
 		printf("avformat_open_input failed.\n");
+		throw AVException(ret);
 	}
 
 
