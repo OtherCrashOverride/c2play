@@ -749,7 +749,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				}				
 			}
 
-			compositor->RemoveSprites(removals);
+			if (removals.size() > 0)
+				compositor->RemoveSprites(removals);
 		}
 
 		// Add new entries
@@ -772,7 +773,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				}
 			}
 
-			compositor->AddSprites(additions);
+			if (additions.size() > 0)
+				compositor->AddSprites(additions);
 		}
 
 		currentTime += timer.Interval();
