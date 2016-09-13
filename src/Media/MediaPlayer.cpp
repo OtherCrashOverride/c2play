@@ -74,6 +74,16 @@ void MediaPlayer::SetState(MediaState value)
 		{
 			subtitleCodec->SetState(state);
 		}
+
+		if (subtitleCodec)
+		{
+			subtitleCodec->SetState(state);
+		}
+
+		if (subtitleRender)
+		{
+			subtitleRender->SetState(state);
+		}
 	}
 
 }
