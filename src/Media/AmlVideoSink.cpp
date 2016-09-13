@@ -381,6 +381,9 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 double AmlVideoSinkElement::Clock()
 {
+	// NOTE: This value is not valid until pts checking
+	// and SetPts have converged.
+
 	//int vpts = codec_get_vpts(&codecContext);
 	//double result = vpts / (double)PTS_FREQ;
 
@@ -634,9 +637,9 @@ void AmlVideoSinkElement::Flush()
 	{
 		//codec_set_syncenable(&codecContext, 0);
 
-		printf("AmlVideoSinkElement: codec_resume.\n");
-		//codec_resume(&codecContext);
-		amlCodec.Resume();
+		//printf("AmlVideoSinkElement: codec_resume.\n");
+		////codec_resume(&codecContext);
+		//amlCodec.Resume();
 
 		printf("AmlVideoSinkElement: reset.\n");
 		//codec_close(&codecContext);
@@ -645,9 +648,9 @@ void AmlVideoSinkElement::Flush()
 		//printf("AmlVideoSinkElement: codec_init.\n");
 		//codec_init(&codecContext);
 
-		printf("AmlVideoSinkElement: codec_pause.\n");
-		//codec_pause(&codecContext);
-		amlCodec.Pause();
+		//printf("AmlVideoSinkElement: codec_pause.\n");
+		////codec_pause(&codecContext);
+		//amlCodec.Pause();
 
 		//codec_set_syncenable(&codecContext, 1);
 	}

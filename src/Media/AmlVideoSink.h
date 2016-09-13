@@ -39,43 +39,43 @@ class AmlVideoSinkClockInPin : public InPin
 
 	//codec_para_t* codecContextPtr;
 	AmlCodec* codecPTR;
-	double clock = 0;
+	//double clock = 0;
 	double frameRate = 0;	// TODO just read info from Owner()
 
 
 	void ProcessClockBuffer(BufferSPTR buffer)
 	{
-		clock = buffer->TimeStamp();
-		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+		double pts = buffer->TimeStamp();
+		//unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
 
 
 		//int vpts = codec_get_vpts(codecContextPtr);
-		int vpts = codecPTR->GetCurrentPts() * PTS_FREQ;
+		double vpts = codecPTR->GetCurrentPts();
 
-		if (clock < (vpts / (double)PTS_FREQ))
-		{
-			clock = (vpts / (double)PTS_FREQ);
-		}
+		//if (clock < (vpts / (double)PTS_FREQ))
+		//{
+		//	clock = (vpts / (double)PTS_FREQ);
+		//}
 
 
-		int drift = vpts - pts;
-		double driftTime = drift / (double)PTS_FREQ;
-		double driftFrames = driftTime * frameRate;
+		double drift = vpts - pts;
+		//double driftTime = drift / (double)PTS_FREQ;
+		double driftFrames = drift * frameRate;
 
 		// To minimize clock jitter, only adjust the clock if it
 		// deviates more than +/- 2 frames
 		if (driftFrames >= 2.0 || driftFrames <= -2.0)
 		{
-			if (pts > 0)
+			//if (pts > 0)
 			{
 				//int codecCall = codec_set_pcrscr(codecContextPtr, (int)pts);
 				//if (codecCall != 0)
 				//{
 				//	printf("codec_set_pcrscr failed.\n");
 				//}
-				codecPTR->SetCurrentPts(pts / (double)PTS_FREQ);
+				codecPTR->SetCurrentPts(pts);
 
-				printf("AmlVideoSink: codec_set_pcrscr - pts=%lu drift=%f (%f frames)\n", pts, driftTime, driftFrames);
+				printf("AmlVideoSink: codecPTR->SetCurrentPts - pts=%f drift=%f (%f frames)\n", pts, drift, driftFrames);
 			}
 		}
 	}

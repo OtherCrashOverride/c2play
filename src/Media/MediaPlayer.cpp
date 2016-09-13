@@ -22,13 +22,13 @@ double MediaPlayer::Position() const
 {
 	double result;
 
-	if (videoSink)
-	{
-		result = videoSink->Clock();
-	}
-	else if (audioSink)
+	if (audioSink)
 	{
 		result = audioSink->Clock();
+	}
+	else if (videoSink)
+	{
+		result = videoSink->Clock();
 	}
 	else
 	{

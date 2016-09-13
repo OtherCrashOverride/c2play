@@ -298,7 +298,7 @@ double AmlCodec::GetCurrentPts()
 
 
 	//int vpts = codec_get_vpts(&codec);
-	unsigned int vpts;
+	//unsigned int vpts;
 	am_ioctl_parm parm = { 0 };
 
 	parm.cmd = AMSTREAM_GET_VPTS;
@@ -311,8 +311,11 @@ double AmlCodec::GetCurrentPts()
 		throw Exception("AMSTREAM_GET_VPTS failed.");
 	}
 
-	vpts = parm.data_32;
+	unsigned int vpts = parm.data_32;
+	//unsigned long vpts = parm.data_64;
 
+	//printf("AmlCodec::GetCurrentPts() parm.data_32=%u parm.data_64=%llu\n",
+	//	parm.data_32, parm.data_64);
 
 	codecMutex.Unlock();
 
@@ -327,7 +330,7 @@ void AmlCodec::SetCurrentPts(double value)
 
 	codecMutex.Lock();
 
-	unsigned int pts = value * PTS_FREQ;
+	//unsigned int pts = value * PTS_FREQ;
 
 	//int codecCall = codec_set_pcrscr(&codec, (int)pts);
 	//if (codecCall != 0)
@@ -338,13 +341,18 @@ void AmlCodec::SetCurrentPts(double value)
 	am_ioctl_parm parm = { 0 };
 	
 	parm.cmd = AMSTREAM_SET_PCRSCR;
-	parm.data_32 = pts;
+	parm.data_32 = (unsigned int)(value * PTS_FREQ);
+	//parm.data_64 = value * PTS_FREQ;
 
 	int ret = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 	if (ret < 0) 
 	{
 		codecMutex.Unlock();
 		throw Exception("AMSTREAM_SET_PCRSCR failed.");
+	}
+	else
+	{
+		//printf("AmlCodec::SetCurrentPts - parm.data_32=%u\n", parm.data_32);
 	}
 
 	codecMutex.Unlock();
@@ -458,13 +466,17 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 		
 		parm.cmd = AMSTREAM_SET_TSTAMP;
 		parm.data_32 = (unsigned int)pts;
+		//parm.data_64 = pts;
 
 		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 		if (r < 0)
 		{
 			printf("codec_checkin_pts failed\n");
 		}
-
+		else
+		{
+			//printf("AmlCodec::SendData - pts=%lu\n", pts);
+		}
 
 		codecMutex.Unlock();
 	}

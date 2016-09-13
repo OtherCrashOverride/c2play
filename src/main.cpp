@@ -349,12 +349,12 @@ int main(int argc, char** argv)
 		// Process Input
 		int keycode;
 		double newTime;
+		double currentTime = mediaPlayer->Position();
 
 		for (InputDevicePtr dev : inputDevices)
 		{
 			while (dev->TryGetKeyPress(&keycode))
 			{
-				double currentTime = mediaPlayer->Position();
 
 				switch (keycode)
 				{
@@ -449,7 +449,7 @@ seek:
 		{
 			osd->SetDuration(mediaPlayer->Duration());
 
-			double currentTime = mediaPlayer->Position();
+			/*double currentTime = mediaPlayer->Position();*/
 			osd->SetCurrentTimeStamp(currentTime);
 
 			if (isFbdev)
@@ -473,7 +473,7 @@ seek:
 		}
 		else
 		{
-			usleep(1000);
+			usleep(100);
 		}
 	}
 
