@@ -17,6 +17,7 @@
 #include "X11Window.h"
 
 #include "Egl.h"
+#include "GL.h"
 
 
 //void X11AmlWindow::IntializeEgl()
@@ -304,6 +305,10 @@ X11AmlWindow::X11AmlWindow()
 	{
 		Egl::CheckError();
 	}
+
+	// experimental workaround for wrong sized gl surface
+	glViewport(0, 0, width, height);
+
 
 	success = eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 	if (success != EGL_TRUE)

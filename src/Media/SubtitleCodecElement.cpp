@@ -476,12 +476,12 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			}
 
 
-			if (imageList->size() > 0)
+			//if (imageList->size() > 0)
 			{
 				ImageListBufferSPTR imageListBuffer = std::make_shared<ImageListBuffer>(
 					shared_from_this(),
 					imageList);
-				imageListBuffer->SetTimeStamp(pkt->pts * av_q2d(buffer->TimeBase()));
+				imageListBuffer->SetTimeStamp(timeStamp);
 
 				outPin->SendBuffer(imageListBuffer);
 			}
@@ -704,10 +704,34 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				}
 			}
 
+
+			bool clearAllActiveFlag = false;
+			
+			for (SpriteEntry& entry : expiredEntries)
+			{
+				if (!entry.Sprite)
+				{
+					clearAllActiveFlag = true;
+					break;
+				}
+			}
+
+			if (clearAllActiveFlag)
+			{
+				for (SpriteEntry& entry : spriteEntries)
+				{
+					if (entry.IsActive)
+					{
+						expiredEntries.push_back(entry);
+					}
+				}
+			}
+
+
 			SpriteList removals;
 			for (SpriteEntry& entry : expiredEntries)
 			{
-				if (entry.IsActive)
+				if (entry.IsActive && entry.Sprite)
 				{
 					removals.push_back(entry.Sprite);
 				}
@@ -738,7 +762,10 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				{
 					entry.IsActive = true;
 
-					additions.push_back(entry.Sprite);
+					if (entry.Sprite)
+					{
+						additions.push_back(entry.Sprite);
+					}
 
 					//printf("SubtitleRenderElement: Displaying sprite. (StartTime=%f StopTime=%f\n",
 					//	entry.StartTime, entry.StopTime);
@@ -764,27 +791,51 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 	
 	float z = -1;
 
-	for (ImageBufferSPTR image : *(buffer->Payload()))
+	if (buffer->Payload()->size() < 1)
 	{
-		SourceSPTR source = std::make_shared<Source>(image->Payload());
-		
-		SpriteSPTR sprite = std::make_shared<Sprite>(source);
-		sprite->SetDestinationRect(Rectangle(image->X(), image->Y(), image->Payload()->Width(), image->Payload()->Height()));
-		sprite->SetColor(PackedColor(0xff, 0xff, 0xff, 0xff));
-		sprite->SetZOrder(z);
-
+		// Empty buffer is used to signal "clear all"
 		SpriteEntry entry;
-		entry.StartTime = image->TimeStamp();
-		entry.StopTime = image->TimeStamp() + image->Duration();
-		entry.Sprite = sprite;
+		entry.StartTime = buffer->TimeStamp();
+		entry.StopTime = buffer->TimeStamp();
+		//entry.Sprite = sprite;
 		entry.IsActive = false;
 
 		spriteEntries.push_back(entry);
 
-		z += 0.001;
+		printf("SubtitleRenderElement::ProcessBuffer - Got empty ImageListBuffer. (TimeStamp = %f)\n", buffer->TimeStamp());
+	}
+	else
+	{
+		for (ImageBufferSPTR image : *(buffer->Payload()))
+		{
+			SourceSPTR source = std::make_shared<Source>(image->Payload());
 
-		//printf("SubtitleRenderElement::ProcessBuffer - Added (StartTime=%f StopTime=%f\n",
-		//	entry.StartTime, entry.StopTime);
+			SpriteSPTR sprite = std::make_shared<Sprite>(source);
+			sprite->SetDestinationRect(Rectangle(image->X(), image->Y(), image->Payload()->Width(), image->Payload()->Height()));
+			sprite->SetColor(PackedColor(0xff, 0xff, 0xff, 0xff));
+			sprite->SetZOrder(z);
+
+			SpriteEntry entry;
+			entry.StartTime = image->TimeStamp();
+			if (image->Duration() > 0)
+			{
+				entry.StopTime = image->TimeStamp() + image->Duration();
+			}
+			else
+			{
+				entry.StopTime = image->TimeStamp() + 10.0 * 60.0;	// Max 10 minutes
+			}
+
+			entry.Sprite = sprite;
+			entry.IsActive = false;
+
+			spriteEntries.push_back(entry);
+
+			z += 0.001;
+
+			//printf("SubtitleRenderElement::ProcessBuffer - Added (StartTime=%f StopTime=%f\n",
+			//	entry.StartTime, entry.StopTime);
+		}
 	}
 
 	entriesMutex.Unlock();
