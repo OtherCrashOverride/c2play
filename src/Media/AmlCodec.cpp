@@ -199,6 +199,15 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 		throw Exception("AMSTREAM_PORT_INIT failed.");
 	}
 
+	
+	////codec_h_control(pcodec->cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)enable);
+	//r = ioctl(cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)1);
+	//if (r != 0)
+	//{
+	//	codecMutex.Unlock();
+	//	throw Exception("AMSTREAM_IOC_SYNCENABLE failed.");
+	//}
+
 
 	//// Rotation
 	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x10000); //90
@@ -327,8 +336,8 @@ double AmlCodec::GetCurrentPts()
 		throw Exception("AMSTREAM_GET_VPTS failed.");
 	}
 
-	unsigned int vpts = parm.data_32;
-	//unsigned long vpts = parm.data_64;
+	//unsigned int vpts = parm.data_32;
+	unsigned long vpts = parm.data_64;
 
 	//printf("AmlCodec::GetCurrentPts() parm.data_32=%u parm.data_64=%llu\n",
 	//	parm.data_32, parm.data_64);
@@ -357,8 +366,8 @@ void AmlCodec::SetCurrentPts(double value)
 	am_ioctl_parm parm = { 0 };
 	
 	parm.cmd = AMSTREAM_SET_PCRSCR;
-	parm.data_32 = (unsigned int)(value * PTS_FREQ);
-	//parm.data_64 = value * PTS_FREQ;
+	//parm.data_32 = (unsigned int)(value * PTS_FREQ);
+	parm.data_64 = (unsigned long)(value * PTS_FREQ);
 
 	int ret = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 	if (ret < 0) 
@@ -481,8 +490,8 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 		am_ioctl_parm parm = { 0 };
 		
 		parm.cmd = AMSTREAM_SET_TSTAMP;
-		parm.data_32 = (unsigned int)pts;
-		//parm.data_64 = pts;
+		//parm.data_32 = (unsigned int)pts;
+		parm.data_64 = pts;
 
 		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 		if (r < 0)
