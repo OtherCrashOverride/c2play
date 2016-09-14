@@ -88,10 +88,19 @@ class Element : public std::enable_shared_from_this<Element>
 
 
 
+
+
 	void SetExecutionState(ExecutionStateEnum newState);
 
 
 protected:
+
+	bool IsRunning() const
+	{
+		return isRunning;
+	}
+
+
 
 	Element();
 

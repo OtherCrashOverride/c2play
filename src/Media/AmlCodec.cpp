@@ -268,11 +268,14 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	if (frameRate < 1)
 		throw ArgumentOutOfRangeException("frameRate");
 
-	if (isOpen)
-		throw InvalidOperationException("The codec is already open.");
-
 
 	codecMutex.Lock();
+
+	if (isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is already open.");
+	}	
 
 	InternalOpen(format, width, height, frameRate);
 
@@ -291,11 +294,14 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 
 void AmlCodec::Close()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
+
 
 	InternalClose();
 
@@ -304,11 +310,13 @@ void AmlCodec::Close()
 
 void AmlCodec::Reset()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 	//codec_reset(&codec);
 
@@ -330,11 +338,13 @@ void AmlCodec::Reset()
 
 double AmlCodec::GetCurrentPts()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 
 	//int vpts = codec_get_vpts(&codec);
@@ -364,11 +374,13 @@ double AmlCodec::GetCurrentPts()
 
 void AmlCodec::SetCurrentPts(double value)
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 	//unsigned int pts = value * PTS_FREQ;
 
@@ -404,11 +416,14 @@ void AmlCodec::SetCurrentPts(double value)
 
 void AmlCodec::Pause()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
+
 	
 	//codec_pause(&codec);
 	int ret = ioctl(cntl_handle, AMSTREAM_IOC_VPAUSE, 1);
@@ -423,11 +438,14 @@ void AmlCodec::Pause()
 
 void AmlCodec::Resume()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
+
 	
 	//codec_resume(&codec);
 	int ret = ioctl(cntl_handle, AMSTREAM_IOC_VPAUSE, 0);
@@ -442,8 +460,13 @@ void AmlCodec::Resume()
 
 buf_status AmlCodec::GetBufferStatus()
 {
+	codecMutex.Lock();
+
 	if (!isOpen)
+	{
+		codecMutex.Unlock();
 		throw InvalidOperationException("The codec is not open.");
+	}
 
 	
 	//if (true) 
@@ -457,10 +480,14 @@ buf_status AmlCodec::GetBufferStatus()
 
 		parm.cmd = AMSTREAM_GET_EX_VB_STATUS;
 		
+		//codecMutex.Lock();
+
 		int r = ioctl(handle, AMSTREAM_IOC_GET_EX, (unsigned long)&parm);
+
+		codecMutex.Unlock();
+
 		if (r < 0)
 		{
-			codecMutex.Unlock();
 			throw Exception("AMSTREAM_GET_EX_VB_STATUS failed.");
 		}
 
@@ -535,7 +562,7 @@ bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 
 
 	int offset = 0;
-	int maxAttempts = 50;
+	int maxAttempts = 150;
 	while (api == -EAGAIN || offset < length)
 	{
 		//codecMutex.Lock();
@@ -574,10 +601,13 @@ bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 
 void AmlCodec::SetVideoAxis(Int32Rectangle rectangle)
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 	int params[4]{ rectangle.X,
 		rectangle.Y,
@@ -596,10 +626,13 @@ void AmlCodec::SetVideoAxis(Int32Rectangle rectangle)
 
 Int32Rectangle AmlCodec::GetVideoAxis()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 	int params[4] = { 0 };
 
@@ -623,11 +656,13 @@ Int32Rectangle AmlCodec::GetVideoAxis()
 
 void AmlCodec::SetSyncThreshold(unsigned long pts)
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
 	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
 
 	//return codec_h_control(pcodec->cntl_handle, AMSTREAM_IOC_SYNCTHRESH, (unsigned long)syncthresh);
 	int ret = ioctl(cntl_handle, AMSTREAM_IOC_SYNCTHRESH, pts);
