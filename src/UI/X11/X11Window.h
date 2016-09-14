@@ -37,10 +37,10 @@
 // from include/linux/amlogic/amports/amstream.h
 //#define _A_M 'S'
 //#define AMSTREAM_IOC_SET_VIDEO_AXIS _IOW((_A_M), 0x4c, int)
-extern "C"
-{	
-#include <codec.h>	// aml_lib
-}
+//extern "C"
+//{	
+//#include <codec.h>	// aml_lib
+//}
 
 
 

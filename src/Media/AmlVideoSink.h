@@ -141,79 +141,79 @@ typedef std::shared_ptr<AmlVideoSinkClockInPin> AmlVideoSinkClockInPinSPTR;
 
 
 
-class AmlVideoSinkClockOutPin : public OutPin
-{
-	const unsigned long PTS_FREQ = 90000;
-
-	codec_para_t* codecContextPtr;
-	Timer timer;
-	Mutex mutex;
-	EventListenerSPTR<EventArgs> timerExpiredListener;
-
-
-	void timer_Expired(void* sender, const EventArgs& args)
-	{
-		mutex.Lock();
-
-		ElementSPTR element = Owner().lock();
-		if (element)
-		{
-			if (element->State() == MediaState::Play)
-			{
-				BufferSPTR buffer;
-				if (TryGetAvailableBuffer(&buffer))
-				{
-					if (buffer->Type() != BufferTypeEnum::ClockData)
-						throw InvalidOperationException();
-
-					ClockDataBufferSPTR clockBuffer = std::static_pointer_cast<ClockDataBuffer>(buffer);
-
-					int vpts = codec_get_vpts(codecContextPtr);
-					double clock = vpts / (double)PTS_FREQ;
-
-					clockBuffer->SetTimeStamp(clock);
-					SendBuffer(clockBuffer);
-
-					//printf("AmlVideoSinkClockOutPin: TimeStamp=%f\n", clockBuffer->TimeStamp());
-				}
-			}
-		}
-
-		mutex.Unlock();
-	}
-
-
-protected:
-
-	//virtual void DoWork() override
-	//{
-
-	//}
-
-public:
-
-	AmlVideoSinkClockOutPin(ElementWPTR owner, PinInfoSPTR info, codec_para_t* codecContextPtr)
-		: OutPin(owner, info),
-		codecContextPtr(codecContextPtr)
-	{
-		ElementSPTR element = owner.lock();
-		if (!element)
-			throw InvalidOperationException();
-
-		ClockDataBufferSPTR clockBuffer = std::make_shared<ClockDataBuffer>(element);
-		AddAvailableBuffer(clockBuffer);
-
-
-		timerExpiredListener = std::make_shared<EventListener<EventArgs>>(
-			std::bind(&AmlVideoSinkClockOutPin::timer_Expired, this, std::placeholders::_1, std::placeholders::_2));
-
-		timer.Expired.AddListener(timerExpiredListener);
-		timer.SetInterval(1.0 / (60.0 * 2.0));
-		timer.Start();
-	}
-};
-
-typedef std::shared_ptr<AmlVideoSinkClockOutPin> AmlVideoSinkClockOutPinSPTR;
+//class AmlVideoSinkClockOutPin : public OutPin
+//{
+//	const unsigned long PTS_FREQ = 90000;
+//
+//	codec_para_t* codecContextPtr;
+//	Timer timer;
+//	Mutex mutex;
+//	EventListenerSPTR<EventArgs> timerExpiredListener;
+//
+//
+//	void timer_Expired(void* sender, const EventArgs& args)
+//	{
+//		mutex.Lock();
+//
+//		ElementSPTR element = Owner().lock();
+//		if (element)
+//		{
+//			if (element->State() == MediaState::Play)
+//			{
+//				BufferSPTR buffer;
+//				if (TryGetAvailableBuffer(&buffer))
+//				{
+//					if (buffer->Type() != BufferTypeEnum::ClockData)
+//						throw InvalidOperationException();
+//
+//					ClockDataBufferSPTR clockBuffer = std::static_pointer_cast<ClockDataBuffer>(buffer);
+//
+//					int vpts = codec_get_vpts(codecContextPtr);
+//					double clock = vpts / (double)PTS_FREQ;
+//
+//					clockBuffer->SetTimeStamp(clock);
+//					SendBuffer(clockBuffer);
+//
+//					//printf("AmlVideoSinkClockOutPin: TimeStamp=%f\n", clockBuffer->TimeStamp());
+//				}
+//			}
+//		}
+//
+//		mutex.Unlock();
+//	}
+//
+//
+//protected:
+//
+//	//virtual void DoWork() override
+//	//{
+//
+//	//}
+//
+//public:
+//
+//	AmlVideoSinkClockOutPin(ElementWPTR owner, PinInfoSPTR info, codec_para_t* codecContextPtr)
+//		: OutPin(owner, info),
+//		codecContextPtr(codecContextPtr)
+//	{
+//		ElementSPTR element = owner.lock();
+//		if (!element)
+//			throw InvalidOperationException();
+//
+//		ClockDataBufferSPTR clockBuffer = std::make_shared<ClockDataBuffer>(element);
+//		AddAvailableBuffer(clockBuffer);
+//
+//
+//		timerExpiredListener = std::make_shared<EventListener<EventArgs>>(
+//			std::bind(&AmlVideoSinkClockOutPin::timer_Expired, this, std::placeholders::_1, std::placeholders::_2));
+//
+//		timer.Expired.AddListener(timerExpiredListener);
+//		timer.SetInterval(1.0 / (60.0 * 2.0));
+//		timer.Start();
+//	}
+//};
+//
+//typedef std::shared_ptr<AmlVideoSinkClockOutPin> AmlVideoSinkClockOutPinSPTR;
 
 
 
@@ -257,7 +257,7 @@ class AmlVideoSinkElement : public Element
 	bool doResumeFlag = false;
 	Mutex playPauseMutex;
 
-	AmlVideoSinkClockOutPinSPTR clockOutPin;
+	//AmlVideoSinkClockOutPinSPTR clockOutPin;
 	AmlCodec amlCodec;
 
 
