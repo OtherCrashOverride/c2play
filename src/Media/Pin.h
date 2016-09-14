@@ -307,8 +307,12 @@ public:
 
 	T Find(MediaCategoryEnum category, int index)
 	{
-		if (index < 0)
-			throw ArgumentOutOfRangeException();
+		// TODO: Disable this check for now until
+		// a method to ignore a stream is added.
+		// Until then, index=-1 is used.
+
+		//if (index < 0)
+		//	throw ArgumentOutOfRangeException();
 
 		int count = 0;
 		for (auto item : pins)
