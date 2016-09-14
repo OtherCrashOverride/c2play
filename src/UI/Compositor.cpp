@@ -219,7 +219,6 @@ void Compositor::RemoveSprites(const SpriteList& removals)
 			throw InvalidOperationException();
 	}
 
-
 	mutex.Unlock();
 }
 

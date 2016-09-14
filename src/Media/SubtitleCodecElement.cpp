@@ -722,7 +722,20 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				{
 					if (entry.IsActive)
 					{
-						expiredEntries.push_back(entry);
+						// Check if entry is already on the
+						// exired list.
+						bool found = false;
+						for (SpriteEntry& existing : spriteEntries)
+						{
+							if (existing.Sprite == entry.Sprite)
+							{
+								found = true;
+								break;
+							}
+						}
+
+						if (!found)
+							expiredEntries.push_back(entry);
 					}
 				}
 			}
@@ -734,6 +747,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				if (entry.IsActive && entry.Sprite)
 				{
 					removals.push_back(entry.Sprite);
+					printf("SubtitleRenderElement::timer_Expired - removal (Sprite=%p)\n",
+						entry.Sprite.get());
 				}
 
 				/*auto iter = std::find(std::begin(spriteEntries), std::end(spriteEntries), entry);
@@ -766,6 +781,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 					if (entry.Sprite)
 					{
 						additions.push_back(entry.Sprite);
+						printf("SubtitleRenderElement::timer_Expired - addition (Sprite=%p)\n",
+							entry.Sprite.get());
 					}
 
 					//printf("SubtitleRenderElement: Displaying sprite. (StartTime=%f StopTime=%f\n",
@@ -791,7 +808,6 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 {
 	entriesMutex.Lock();
 	
-	float z = -1;
 
 	if (buffer->Payload()->size() < 1)
 	{
@@ -808,6 +824,8 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 	}
 	else
 	{
+		float z = -1;
+
 		for (ImageBufferSPTR image : *(buffer->Payload()))
 		{
 			SourceSPTR source = std::make_shared<Source>(image->Payload());
@@ -835,8 +853,8 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 
 			z += 0.001;
 
-			//printf("SubtitleRenderElement::ProcessBuffer - Added (StartTime=%f StopTime=%f\n",
-			//	entry.StartTime, entry.StopTime);
+			printf("SubtitleRenderElement::ProcessBuffer - Added (StartTime=%f StopTime=%f Sprite=%p)\n",
+				entry.StartTime, entry.StopTime, entry.Sprite.get());
 		}
 	}
 
