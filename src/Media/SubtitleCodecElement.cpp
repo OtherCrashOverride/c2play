@@ -747,8 +747,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 				if (entry.IsActive && entry.Sprite)
 				{
 					removals.push_back(entry.Sprite);
-					printf("SubtitleRenderElement::timer_Expired - removal (Sprite=%p)\n",
-						entry.Sprite.get());
+					printf("SubtitleRenderElement::timer_Expired - [%f] removal (Sprite=%p)\n",
+						currentTime, entry.Sprite.get());
 				}
 
 				/*auto iter = std::find(std::begin(spriteEntries), std::end(spriteEntries), entry);
@@ -781,8 +781,8 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 					if (entry.Sprite)
 					{
 						additions.push_back(entry.Sprite);
-						printf("SubtitleRenderElement::timer_Expired - addition (Sprite=%p)\n",
-							entry.Sprite.get());
+						printf("SubtitleRenderElement::timer_Expired - [%f] addition (Sprite=%p)\n",
+							currentTime, entry.Sprite.get());
 					}
 
 					//printf("SubtitleRenderElement: Displaying sprite. (StartTime=%f StopTime=%f\n",
