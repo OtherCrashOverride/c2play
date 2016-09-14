@@ -35,6 +35,10 @@ void AudioCodecElement::SetupCodec()
 		soundCodec = avcodec_find_decoder(AV_CODEC_ID_DTS);
 		break;
 
+	case AudioFormatEnum::MpegLayer2:
+		soundCodec = avcodec_find_decoder(AV_CODEC_ID_MP2);
+		break;
+
 	case AudioFormatEnum::Mpeg2Layer3:
 		soundCodec = avcodec_find_decoder(AV_CODEC_ID_MP3);
 		break;

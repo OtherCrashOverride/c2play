@@ -241,6 +241,12 @@ void MediaSourceElement::SetupPins()
 
 				switch (codec_id)
 				{
+					case CODEC_ID_MP2:
+						printf("stream #%d - AUDIO/MP2\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::MpegLayer2;
+						break;
+
 					case CODEC_ID_MP3:
 						printf("stream #%d - AUDIO/MP3\n", i);
 						if (info)
@@ -332,7 +338,8 @@ void MediaSourceElement::SetupPins()
 						break;
 
 					case  CODEC_ID_DVB_SUBTITLE:
-						printf("stream #%d - TODO SUBTITLE/DVB_SUBTITLE\n", i);
+						printf("stream #%d - SUBTITLE/DVB_SUBTITLE\n", i);
+						info->Format = SubtitleFormatEnum::Dvb;
 						break;
 
 					case  CODEC_ID_TEXT:
@@ -354,7 +361,8 @@ void MediaSourceElement::SetupPins()
 
 
 					case  CODEC_ID_DVB_TELETEXT:
-						printf("stream #%d - TODO SUBTITLE/DVB_TELETEXT\n", i);
+						printf("stream #%d - SUBTITLE/DVB_TELETEXT\n", i);
+						info->Format = SubtitleFormatEnum::DvbTeletext;
 						break;
 
 					case  CODEC_ID_SRT:

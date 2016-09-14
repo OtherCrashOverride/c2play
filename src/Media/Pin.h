@@ -58,6 +58,7 @@ enum class AudioFormatEnum
 {
 	Unknown = 0,
 	Pcm,
+	MpegLayer2,
 	Mpeg2Layer3,
 	Ac3,
 	Aac,
@@ -75,6 +76,8 @@ enum class SubtitleFormatEnum
 	Text,
 	SubRip,
 	Pgs, //Presentation Graphic Stream
+	Dvb,
+	DvbTeletext
 };
 
 enum class PictureFormatEnum

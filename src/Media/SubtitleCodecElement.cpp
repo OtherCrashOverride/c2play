@@ -43,6 +43,14 @@ void SubtitleDecoderElement::SetupCodec()
 			avcodec = avcodec_find_decoder(CODEC_ID_HDMV_PGS_SUBTITLE);
 			break;
 
+		case SubtitleFormatEnum::Dvb:
+			avcodec = avcodec_find_decoder(CODEC_ID_DVB_SUBTITLE);
+			break;
+
+		case SubtitleFormatEnum::DvbTeletext:
+			avcodec = avcodec_find_decoder(CODEC_ID_DVB_TELETEXT);
+			break;
+
 		default:
 			printf("Subtitle format %d is not supported.\n", (int)format);
 			throw NotSupportedException();
