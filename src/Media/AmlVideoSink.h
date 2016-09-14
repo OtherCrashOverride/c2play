@@ -45,12 +45,20 @@ class AmlVideoSinkClockInPin : public InPin
 
 	void ProcessClockBuffer(BufferSPTR buffer)
 	{
-		double pts = buffer->TimeStamp();
+		// truncate to 32bit
+		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+		pts &= 0xffffffff;
+
+		unsigned long vpts = (unsigned long)(codecPTR->GetCurrentPts() * PTS_FREQ);
+		vpts &= 0xffffffff;
+
+		//double pts = pts1 / (double)PTS_FREQ;
+
 		//unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
 
 
 		//int vpts = codec_get_vpts(codecContextPtr);
-		double vpts = codecPTR->GetCurrentPts();
+		//double vpts = vpts1 / (double)PTS_FREQ;
 
 		//if (clock < (vpts / (double)PTS_FREQ))
 		//{
@@ -58,7 +66,7 @@ class AmlVideoSinkClockInPin : public InPin
 		//}
 
 
-		double drift = vpts - pts;
+		double drift = ((double)vpts - (double)pts) / (double)PTS_FREQ;
 		//double driftTime = drift / (double)PTS_FREQ;
 		double driftFrames = drift * frameRate;
 
@@ -73,9 +81,9 @@ class AmlVideoSinkClockInPin : public InPin
 				//{
 				//	printf("codec_set_pcrscr failed.\n");
 				//}
-				codecPTR->SetCurrentPts(pts);
+				codecPTR->SetCurrentPts(buffer->TimeStamp());
 
-				printf("AmlVideoSink: Adjust PTS - pts=%f drift=%f (%f frames)\n", pts, drift, driftFrames);
+				printf("AmlVideoSink: Adjust PTS - pts=%f vpts=%f drift=%f (%f frames)\n", pts / (double)PTS_FREQ, vpts / (double)PTS_FREQ, drift, driftFrames);
 			}
 		}
 	}

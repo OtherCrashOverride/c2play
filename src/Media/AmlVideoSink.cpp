@@ -211,6 +211,11 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			isAnnexB = true;
 		}
 
+		//double timeStamp = av_q2d(buffer->TimeBase()) * pkt->pts;
+		//unsigned long pts = (unsigned long)(timeStamp * PTS_FREQ);
+
+		//amlCodec.SetSyncThreshold(pts);
+
 		isFirstVideoPacket = false;
 
 		printf("isAnnexB=%u\n", isAnnexB);
@@ -312,7 +317,13 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 		}
 
 		//SendCodecData(pts, pkt->data, pkt->size);
-		amlCodec.SendData(pts, pkt->data, pkt->size);
+		if (!amlCodec.SendData(pts, pkt->data, pkt->size))
+		{
+			// Resend extra data on codec reset
+			isExtraDataSent = false;
+
+			printf("AmlVideoSinkElement::ProcessBuffer - SendData Failed.\n");
+		}
 
 		//isExtraDataSent = false;
 	}

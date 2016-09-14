@@ -54,6 +54,11 @@ class AmlCodec
 	int height;
 	double frameRate;
 
+
+
+	void InternalOpen(VideoFormatEnum format, int width, int height, double frameRate);
+	void InternalClose();
+
 public:
 
 	bool IsOpen() const
@@ -70,8 +75,9 @@ public:
 	void Pause();
 	void Resume();
 	buf_status GetBufferStatus();
-	void SendData(unsigned long pts, unsigned char* data, int length);
+	bool SendData(unsigned long pts, unsigned char* data, int length);
 	void SetVideoAxis(Int32Rectangle rectangle);
 	Int32Rectangle GetVideoAxis();
+	void SetSyncThreshold(unsigned long pts);
 
 };

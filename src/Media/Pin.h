@@ -304,4 +304,28 @@ public:
 
 		return nullptr;
 	}
+
+	T Find(MediaCategoryEnum category, int index)
+	{
+		if (index < 0)
+			throw ArgumentOutOfRangeException();
+
+		int count = 0;
+		for (auto item : pins)
+		{
+			if (item->Info()->Category() == category)
+			{
+				if (count == index)
+				{
+					return item;
+				}
+				else
+				{
+					++count;
+				}
+			}
+		}
+
+		return nullptr;
+	}
 };

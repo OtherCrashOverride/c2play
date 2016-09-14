@@ -67,7 +67,7 @@ public:
 
 
 
-	MediaPlayer(std::string url, CompositorSPTR compositor);
+	MediaPlayer(std::string url, CompositorSPTR compositor, int videoStream, int audioStream, int subtitleStream);
 	~MediaPlayer();
 
 

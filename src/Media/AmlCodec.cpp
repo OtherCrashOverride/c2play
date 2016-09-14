@@ -23,24 +23,9 @@
 #include <fcntl.h>
 
 
-void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameRate)
+
+void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, double frameRate)
 {
-	if (width < 1)
-		throw ArgumentOutOfRangeException("width");
-
-	if (height < 1)
-		throw ArgumentOutOfRangeException("height");
-
-	if (frameRate < 1)
-		throw ArgumentOutOfRangeException("frameRate");
-
-	if (isOpen)
-		throw InvalidOperationException("The codec is already open.");
-
-
-	codecMutex.Lock();
-
-
 	this->format = format;
 	this->width = width;
 	this->height = height;
@@ -52,7 +37,7 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	switch (format)
 	{
 		case VideoFormatEnum::Hevc:
-		//case VideoFormatEnum::VP9:
+			//case VideoFormatEnum::VP9:
 			handle = open(CODEC_VIDEO_ES_HEVC_DEVICE, flags);
 			break;
 
@@ -80,7 +65,7 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	// frame-rate from PTS 
 	am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
 
-	// Note: Testing has shown that the ALSA clock requires the +1
+															 // Note: Testing has shown that the ALSA clock requires the +1
 	am_sysinfo.rate = 96000.0 / frameRate + 1;
 
 
@@ -155,7 +140,7 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	parm.data_vformat = amlFormat;
 
 	int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-	if (r < 0) 
+	if (r < 0)
 	{
 		codecMutex.Unlock();
 		throw Exception("AMSTREAM_IOC_SET failed.");
@@ -163,7 +148,7 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 
 
 	r = ioctl(handle, AMSTREAM_IOC_SYSINFO, (unsigned long)&am_sysinfo);
-	if (r < 0) 
+	if (r < 0)
 	{
 		codecMutex.Unlock();
 		throw Exception("AMSTREAM_IOC_SYSINFO failed.");
@@ -181,17 +166,17 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	/*
 	if (pcodec->vbuf_size > 0)
 	{
-		r = codec_h_ioctl(pcodec->handle, AMSTREAM_IOC_SET, AMSTREAM_SET_VB_SIZE, pcodec->vbuf_size);
-		if (r < 0)
-		{
-			return system_error_to_codec_error(r);
-		}
+	r = codec_h_ioctl(pcodec->handle, AMSTREAM_IOC_SET, AMSTREAM_SET_VB_SIZE, pcodec->vbuf_size);
+	if (r < 0)
+	{
+	return system_error_to_codec_error(r);
+	}
 	}
 	*/
 
 	parm = { 0 };
 	parm.cmd = AMSTREAM_PORT_INIT;
-	
+
 	r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 	if (r != 0)
 	{
@@ -199,14 +184,14 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 		throw Exception("AMSTREAM_PORT_INIT failed.");
 	}
 
-	
-	////codec_h_control(pcodec->cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)enable);
-	//r = ioctl(cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)1);
-	//if (r != 0)
-	//{
-	//	codecMutex.Unlock();
-	//	throw Exception("AMSTREAM_IOC_SYNCENABLE failed.");
-	//}
+
+	//codec_h_control(pcodec->cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)enable);
+	r = ioctl(cntl_handle, AMSTREAM_IOC_SYNCENABLE, (unsigned long)1);
+	if (r != 0)
+	{
+		codecMutex.Unlock();
+		throw Exception("AMSTREAM_IOC_SYNCENABLE failed.");
+	}
 
 
 	//// Rotation
@@ -238,29 +223,10 @@ void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameR
 	//}
 
 	isOpen = true;
-	codecMutex.Unlock();
-
-	//// This is needed because the codec remains paused
-	//// even after closing
-	//int ret = codec_resume(&codec);
-	//if (ret < 0)
-	//{
-	//	printf("codec_resume failed (%x).\n", ret);
-	//}
-
-	Resume();
 }
 
-void AmlCodec::Close()
+void AmlCodec::InternalClose()
 {
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-
-	codecMutex.Lock();
-
-	//codec_close(&codec);
-
 	int r;
 
 	r = ioctl(cntl_handle, AMSTREAM_IOC_CLEAR_VIDEO, 0);
@@ -289,6 +255,49 @@ void AmlCodec::Close()
 	handle = -1;
 
 	isOpen = false;
+}
+
+void AmlCodec::Open(VideoFormatEnum format, int width, int height, double frameRate)
+{
+	if (width < 1)
+		throw ArgumentOutOfRangeException("width");
+
+	if (height < 1)
+		throw ArgumentOutOfRangeException("height");
+
+	if (frameRate < 1)
+		throw ArgumentOutOfRangeException("frameRate");
+
+	if (isOpen)
+		throw InvalidOperationException("The codec is already open.");
+
+
+	codecMutex.Lock();
+
+	InternalOpen(format, width, height, frameRate);
+
+	codecMutex.Unlock();
+
+	//// This is needed because the codec remains paused
+	//// even after closing
+	//int ret = codec_resume(&codec);
+	//if (ret < 0)
+	//{
+	//	printf("codec_resume failed (%x).\n", ret);
+	//}
+
+	Resume();
+}
+
+void AmlCodec::Close()
+{
+	if (!isOpen)
+		throw InvalidOperationException("The codec is not open.");
+
+
+	codecMutex.Lock();
+
+	InternalClose();
 
 	codecMutex.Unlock();
 }
@@ -299,7 +308,7 @@ void AmlCodec::Reset()
 		throw InvalidOperationException("The codec is not open.");
 
 
-	//codecMutex.Lock();
+	codecMutex.Lock();
 
 	//codec_reset(&codec);
 
@@ -309,8 +318,14 @@ void AmlCodec::Reset()
 	int height = this->height ;
 	double frameRate = this->frameRate;
 
-	Close();
-	Open(format, width, height, frameRate);
+	//Close();
+	//Open(format, width, height, frameRate);
+
+
+	InternalClose();
+	InternalOpen(format, width, height, frameRate);
+
+	codecMutex.Unlock();
 }
 
 double AmlCodec::GetCurrentPts()
@@ -336,8 +351,8 @@ double AmlCodec::GetCurrentPts()
 		throw Exception("AMSTREAM_GET_VPTS failed.");
 	}
 
-	//unsigned int vpts = parm.data_32;
-	unsigned long vpts = parm.data_64;
+	unsigned int vpts = parm.data_32;
+	//unsigned long vpts = parm.data_64;
 
 	//printf("AmlCodec::GetCurrentPts() parm.data_32=%u parm.data_64=%llu\n",
 	//	parm.data_32, parm.data_64);
@@ -363,11 +378,15 @@ void AmlCodec::SetCurrentPts(double value)
 	//	printf("codec_set_pcrscr failed.\n");
 	//}
 
+	// truncate to 32bit
+	unsigned long pts = (unsigned long)(value * PTS_FREQ);
+	pts &= 0xffffffff;
+
 	am_ioctl_parm parm = { 0 };
 	
 	parm.cmd = AMSTREAM_SET_PCRSCR;
-	//parm.data_32 = (unsigned int)(value * PTS_FREQ);
-	parm.data_64 = (unsigned long)(value * PTS_FREQ);
+	parm.data_32 = (unsigned int)(pts);
+	//parm.data_64 = (unsigned long)(value * PTS_FREQ);
 
 	int ret = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 	if (ret < 0) 
@@ -457,7 +476,7 @@ buf_status AmlCodec::GetBufferStatus()
 	//}
 }
 
-void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
+bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 {
 	if (!isOpen)
 		throw InvalidOperationException("The codec is not open.");
@@ -469,10 +488,12 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 		throw ArgumentOutOfRangeException("length");
 
 
+	bool result = true;
 
 	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
 
-
+	// truncate to 32bit
+	pts &= 0xffffffff;
 
 	int api;
 
@@ -489,9 +510,15 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 
 		am_ioctl_parm parm = { 0 };
 		
+#if 1
 		parm.cmd = AMSTREAM_SET_TSTAMP;
-		//parm.data_32 = (unsigned int)pts;
-		parm.data_64 = pts;
+		parm.data_32 = (unsigned int)pts;
+#else
+		// This gets converted to a 32bit value
+		// https://github.com/hardkernel/linux/blob/odroidc2-3.14.y/drivers/amlogic/amports/ptsserv.c#L525
+		parm.cmd = AMSTREAM_SET_TSTAMP_US64;
+		parm.data_64 = pts; // todo microseconds
+#endif
 
 		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 		if (r < 0)
@@ -508,6 +535,7 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 
 
 	int offset = 0;
+	int maxAttempts = 50;
 	while (api == -EAGAIN || offset < length)
 	{
 		//codecMutex.Lock();
@@ -522,14 +550,26 @@ void AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 			offset += api;
 			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
 		}
-		else
+		else //if(api != -EAGAIN && api != -1)
 		{
 			//printf("codec_write failed (%x).\n", api);
+
+			maxAttempts -= 1;
+			if (maxAttempts <= 0)
+			{
+				printf("codec_write max attempts exceeded.\n");
+				Reset();
+				result = false;
+				break;
+			}
+			
 		}
 
 		//if (ExecutionState() == ExecutionStateEnum::Terminating)
 		//	break;
 	}
+
+	return result;
 }
 
 void AmlCodec::SetVideoAxis(Int32Rectangle rectangle)
@@ -579,4 +619,25 @@ Int32Rectangle AmlCodec::GetVideoAxis()
 		params[3] - params[1]);
 	
 	return result;
+}
+
+void AmlCodec::SetSyncThreshold(unsigned long pts)
+{
+	if (!isOpen)
+		throw InvalidOperationException("The codec is not open.");
+
+
+	codecMutex.Lock();
+
+	//return codec_h_control(pcodec->cntl_handle, AMSTREAM_IOC_SYNCTHRESH, (unsigned long)syncthresh);
+	int ret = ioctl(cntl_handle, AMSTREAM_IOC_SYNCTHRESH, pts);
+
+	codecMutex.Unlock();
+
+
+	if (ret < 0)
+	{
+		throw Exception("AMSTREAM_IOC_SYNCTHRESH failed.");
+	}
+
 }

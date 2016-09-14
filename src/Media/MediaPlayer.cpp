@@ -129,7 +129,7 @@ const ChapterListSPTR MediaPlayer::Chapters() const
 }
 
 
-MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
+MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor, int videoStream, int audioStream, int subtitleStream)
 	:url(url), compositor(compositor)
 {
 	if (!compositor)
@@ -144,7 +144,7 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
 
 	// Connections
 	OutPinSPTR sourceVideoPin = std::static_pointer_cast<OutPin>(
-		source->Outputs()->FindFirst(MediaCategoryEnum::Video));
+		source->Outputs()->Find(MediaCategoryEnum::Video, videoStream));
 	if (sourceVideoPin)
 	{
 		videoSink = std::make_shared<AmlVideoSinkElement>();
@@ -156,7 +156,7 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
 	}
 
 	OutPinSPTR sourceAudioPin = std::static_pointer_cast<OutPin>(
-		source->Outputs()->FindFirst(MediaCategoryEnum::Audio));
+		source->Outputs()->Find(MediaCategoryEnum::Audio, audioStream));
 	if (sourceAudioPin)
 	{
 		audioCodec = std::make_shared<AudioCodecElement>();
@@ -175,7 +175,7 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor)
 	}
 
 	//OutPinSPTR sourceSubtitlePin;
-	OutPinSPTR sourceSubtitlePin = source->Outputs()->FindFirst(MediaCategoryEnum::Subtitle);
+	OutPinSPTR sourceSubtitlePin = source->Outputs()->Find(MediaCategoryEnum::Subtitle, subtitleStream);
 	if (sourceSubtitlePin)
 	{
 		subtitleCodec = std::make_shared<SubtitleDecoderElement>();
@@ -224,6 +224,17 @@ MediaPlayer::~MediaPlayer()
 		printf("MediaPlayer: terminating audioCodec.\n");
 		audioCodec->Terminate();
 		audioCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	}
+
+	if (subtitleCodec)
+	{
+		printf("MediaPlayer: terminating subtitleCodec.\n");
+		subtitleCodec->Terminate();
+		subtitleCodec->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+
+		printf("MediaPlayer: terminating subtitleRender.\n");
+		subtitleRender->Terminate();
+		subtitleRender->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
 	}
 
 	if (videoSink)

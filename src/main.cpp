@@ -186,8 +186,11 @@ void GetDevices()
 }
 
 struct option longopts[] = {
-	{ "time",         required_argument,  NULL,          't' },
-	{ "chapter",      required_argument,  NULL,          'c' },
+	{ "time",			required_argument,  NULL,          't' },
+	{ "chapter",		required_argument,  NULL,          'c' },
+	{ "video",			required_argument,  NULL,          'v' },
+	{ "audio",			required_argument,  NULL,          'a' },
+	{ "subtitle",		required_argument,  NULL,          's' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -210,6 +213,9 @@ int main(int argc, char** argv)
 	int c;
 	double optionStartPosition = 0;
 	int optionChapter = -1;
+	int optionVideoIndex = 0;
+	int optionAudioIndex = 0;
+	int optionSubtitleIndex = -1;	//disabled by default
 
 	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
@@ -244,6 +250,21 @@ int main(int argc, char** argv)
 			case 'c':
 				optionChapter = atoi(optarg);
 				printf("optionChapter=%d\n", optionChapter);
+				break;
+
+			case 'v':
+				optionVideoIndex = atoi(optarg);
+				printf("optionVideoIndex=%d\n", optionVideoIndex);
+				break;
+
+			case 'a':
+				optionAudioIndex = atoi(optarg);
+				printf("optionAudioIndex=%d\n", optionAudioIndex);
+				break;
+
+			case 's':
+				optionSubtitleIndex = atoi(optarg);
+				printf("optionSubtitleIndex=%d\n", optionSubtitleIndex);
 				break;
 
 			default:
@@ -314,12 +335,19 @@ int main(int argc, char** argv)
 	 
 	window->ProcessMessages();
 
-	RenderContextSPTR renderContext = std::make_shared<RenderContext>(window->EglDisplay(), window->Surface(), window->Context());
+	RenderContextSPTR renderContext = std::make_shared<RenderContext>(window->EglDisplay(),
+		window->Surface(),
+		window->Context());
+
 	CompositorSPTR compositor = std::make_shared<Compositor>(renderContext, 1920, 1080);
 	osd = std::make_shared<Osd>(compositor);
 
 
-	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url, compositor);
+	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url,
+		compositor,
+		optionVideoIndex,
+		optionAudioIndex,
+		optionSubtitleIndex);
 
 
 	if (optionChapter > -1)
