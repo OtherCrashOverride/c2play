@@ -265,7 +265,7 @@ class AmlVideoSinkElement : public Element
 	void timer_Expired(void* sender, const EventArgs& args);
 	void SetupHardware();
 	void ProcessBuffer(AVPacketBufferSPTR buffer);	
-	//void SendCodecData(unsigned long pts, unsigned char* data, int length);
+	bool SendCodecData(unsigned long pts, unsigned char* data, int length);
 
 
 protected:

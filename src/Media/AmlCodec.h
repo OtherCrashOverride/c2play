@@ -254,9 +254,10 @@ public:
 	void Pause();
 	void Resume();
 	buf_status GetBufferStatus();
-	bool SendData(unsigned long pts, unsigned char* data, int length);
+	//bool SendData(unsigned long pts, unsigned char* data, int length);
 	void SetVideoAxis(Int32Rectangle rectangle);
 	Int32Rectangle GetVideoAxis();
 	void SetSyncThreshold(unsigned long pts);
-
+	void CheckinPts(unsigned long pts);
+	int WriteData(unsigned char* data, int length);
 };

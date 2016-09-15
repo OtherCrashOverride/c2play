@@ -238,12 +238,12 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 	if (isAnnexB)
 	{
-		//SendCodecData(pts, pkt->data, pkt->size);
-		amlCodec.SendData(pts, pkt->data, pkt->size);
+		SendCodecData(pts, pkt->data, pkt->size);
+		//amlCodec.SendData(pts, pkt->data, pkt->size);
 	}
 	else if (!isAnnexB &&
 		(videoFormat == VideoFormatEnum::Avc ||
-			videoFormat == VideoFormatEnum::Hevc))
+		 videoFormat == VideoFormatEnum::Hevc))
 	{
 		//unsigned char* nalHeader = (unsigned char*)pkt.data;
 
@@ -265,8 +265,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					{
 						ConvertH264ExtraDataToAnnexB();
 
-						//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-						amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+						SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+						//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
 					}
 
 					isExtraDataSent = true;
@@ -283,8 +283,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					{
 						HevcExtraDataToAnnexB();
 
-						//SendCodecData(0, &videoExtraData[0], videoExtraData.size());
-						amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
+						SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+						//amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
 					}
 
 					isExtraDataSent = true;
@@ -317,7 +317,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 		}
 
 		//SendCodecData(pts, pkt->data, pkt->size);
-		if (!amlCodec.SendData(pts, pkt->data, pkt->size))
+		//if (!amlCodec.SendData(pts, pkt->data, pkt->size))
+		if (!SendCodecData(pts, pkt->data, pkt->size))
 		{
 			// Resend extra data on codec reset
 			isExtraDataSent = false;
@@ -331,16 +332,16 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 	{
 		//printf("Sending Divx3\n");
 		Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height, pkt->size);
-		//SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-		amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+		SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+		//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
 
-		//SendCodecData(0, pkt->data, pkt->size);
-		amlCodec.SendData(0, pkt->data, pkt->size);
+		SendCodecData(0, pkt->data, pkt->size);
+		//amlCodec.SendData(0, pkt->data, pkt->size);
 	}
 	else
 	{
-		//SendCodecData(pts, pkt->data, pkt->size);
-		amlCodec.SendData(pts, pkt->data, pkt->size);
+		SendCodecData(pts, pkt->data, pkt->size);
+		//amlCodec.SendData(pts, pkt->data, pkt->size);
 	}
 
 
@@ -354,39 +355,51 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 	playPauseMutex.Unlock();
 }
 
-//void AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, int length)
-//{
-//	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
-//
-//	int api;
-//
-//	if (pts > 0)
-//	{
-//		if (codec_checkin_pts(&codecContext, pts))
-//		{
-//			printf("codec_checkin_pts failed\n");
-//		}
-//	}
-//
-//
-//	int offset = 0;
-//	while (api == -EAGAIN || offset < length)
-//	{
-//		api = codec_write(&codecContext, data + offset, length - offset);
-//		if (api > 0)
-//		{
-//			offset += api;
-//			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
-//		}
-//		else
-//		{
-//			//printf("codec_write failed (%x).\n", api);
-//		}
-//
-//		//if (ExecutionState() == ExecutionStateEnum::Terminating)
-//		//	break;
-//	}
-//}
+bool AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, int length)
+{
+	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
+	bool result = true;
+
+	if (pts > 0)
+	{
+		amlCodec.CheckinPts(pts);
+	}
+
+	int maxAttempts = 150;
+	int offset = 0;
+	while (offset < length)
+	{
+		if (!IsRunning())
+		{
+			result = false;
+			break;
+		}
+
+		int count = amlCodec.WriteData(data + offset, length - offset);
+		if (count > 0)
+		{
+			offset += count;
+			//printf("codec_write send %x bytes of %x total.\n", count, pkt.size);
+		}
+		else
+		{
+			//printf("codec_write failed (%x).\n", count);
+			maxAttempts -= 1;
+
+			if (maxAttempts <= 0)
+			{
+				printf("codec_write max attempts exceeded.\n");
+				
+				amlCodec.Reset();
+				result = false;
+
+				break;
+			}
+		}
+	}
+
+	return result;
+}
 
 
 

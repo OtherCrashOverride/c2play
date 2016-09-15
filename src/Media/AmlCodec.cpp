@@ -503,101 +503,101 @@ buf_status AmlCodec::GetBufferStatus()
 	//}
 }
 
-bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
-{
-	if (!isOpen)
-		throw InvalidOperationException("The codec is not open.");
-
-	if (data == nullptr)
-		throw ArgumentNullException("data");
-
-	if (length < 1)
-		throw ArgumentOutOfRangeException("length");
-
-
-	bool result = true;
-
-	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
-
-	// truncate to 32bit
-	pts &= 0xffffffff;
-
-	int api;
-
-	if (pts > 0)
-	{
-		codecMutex.Lock();
-
-		//if (codec_checkin_pts(&codec, pts))
-		//{
-		//	printf("codec_checkin_pts failed\n");
-		//}
-
-		//return codec_h_ioctl(pcodec->handle, AMSTREAM_IOC_SET, AMSTREAM_SET_TSTAMP, pts);
-
-		am_ioctl_parm parm = { 0 };
-		
-#if 1
-		parm.cmd = AMSTREAM_SET_TSTAMP;
-		parm.data_32 = (unsigned int)pts;
-#else
-		// This gets converted to a 32bit value
-		// https://github.com/hardkernel/linux/blob/odroidc2-3.14.y/drivers/amlogic/amports/ptsserv.c#L525
-		parm.cmd = AMSTREAM_SET_TSTAMP_US64;
-		parm.data_64 = pts; // todo microseconds
-#endif
-
-		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-		if (r < 0)
-		{
-			printf("codec_checkin_pts failed\n");
-		}
-		else
-		{
-			//printf("AmlCodec::SendData - pts=%lu\n", pts);
-		}
-
-		codecMutex.Unlock();
-	}
-
-
-	int offset = 0;
-	int maxAttempts = 150;
-	while (api == -EAGAIN || offset < length)
-	{
-		//codecMutex.Lock();
-
-		//api = codec_write(&codec, data + offset, length - offset);
-		api = write(handle, data + offset, length - offset);
-
-		//codecMutex.Unlock();
-
-		if (api > 0)
-		{
-			offset += api;
-			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
-		}
-		else //if(api != -EAGAIN && api != -1)
-		{
-			//printf("codec_write failed (%x).\n", api);
-
-			maxAttempts -= 1;
-			if (maxAttempts <= 0)
-			{
-				printf("codec_write max attempts exceeded.\n");
-				Reset();
-				result = false;
-				break;
-			}
-			
-		}
-
-		//if (ExecutionState() == ExecutionStateEnum::Terminating)
-		//	break;
-	}
-
-	return result;
-}
+//bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
+//{
+//	if (!isOpen)
+//		throw InvalidOperationException("The codec is not open.");
+//
+//	if (data == nullptr)
+//		throw ArgumentNullException("data");
+//
+//	if (length < 1)
+//		throw ArgumentOutOfRangeException("length");
+//
+//
+//	bool result = true;
+//
+//	//printf("AmlVideoSink: SendCodecData - pts=%lu, data=%p, length=0x%x\n", pts, data, length);
+//
+//	// truncate to 32bit
+//	pts &= 0xffffffff;
+//
+//	int api;
+//
+//	if (pts > 0)
+//	{
+//		codecMutex.Lock();
+//
+//		//if (codec_checkin_pts(&codec, pts))
+//		//{
+//		//	printf("codec_checkin_pts failed\n");
+//		//}
+//
+//		//return codec_h_ioctl(pcodec->handle, AMSTREAM_IOC_SET, AMSTREAM_SET_TSTAMP, pts);
+//
+//		am_ioctl_parm parm = { 0 };
+//		
+//#if 1
+//		parm.cmd = AMSTREAM_SET_TSTAMP;
+//		parm.data_32 = (unsigned int)pts;
+//#else
+//		// This gets converted to a 32bit value
+//		// https://github.com/hardkernel/linux/blob/odroidc2-3.14.y/drivers/amlogic/amports/ptsserv.c#L525
+//		parm.cmd = AMSTREAM_SET_TSTAMP_US64;
+//		parm.data_64 = pts; // todo microseconds
+//#endif
+//
+//		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+//		if (r < 0)
+//		{
+//			printf("codec_checkin_pts failed\n");
+//		}
+//		else
+//		{
+//			//printf("AmlCodec::SendData - pts=%lu\n", pts);
+//		}
+//
+//		codecMutex.Unlock();
+//	}
+//
+//
+//	int offset = 0;
+//	int maxAttempts = 150;
+//	while (api == -EAGAIN || offset < length)
+//	{
+//		//codecMutex.Lock();
+//
+//		//api = codec_write(&codec, data + offset, length - offset);
+//		api = write(handle, data + offset, length - offset);
+//
+//		//codecMutex.Unlock();
+//
+//		if (api > 0)
+//		{
+//			offset += api;
+//			//printf("codec_write send %x bytes of %x total.\n", api, pkt.size);
+//		}
+//		else //if(api != -EAGAIN && api != -1)
+//		{
+//			//printf("codec_write failed (%x).\n", api);
+//
+//			maxAttempts -= 1;
+//			if (maxAttempts <= 0)
+//			{
+//				printf("codec_write max attempts exceeded.\n");
+//				Reset();
+//				result = false;
+//				break;
+//			}
+//			
+//		}
+//
+//		//if (ExecutionState() == ExecutionStateEnum::Terminating)
+//		//	break;
+//	}
+//
+//	return result;
+//}
 
 void AmlCodec::SetVideoAxis(Int32Rectangle rectangle)
 {
@@ -675,4 +675,47 @@ void AmlCodec::SetSyncThreshold(unsigned long pts)
 		throw Exception("AMSTREAM_IOC_SYNCTHRESH failed.");
 	}
 
+}
+
+void AmlCodec::CheckinPts(unsigned long pts)
+{
+	codecMutex.Lock();
+
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
+
+
+	// truncate to 32bit
+	pts &= 0xffffffff;
+
+	am_ioctl_parm parm = { 0 };
+	parm.cmd = AMSTREAM_SET_TSTAMP;
+	parm.data_32 = (unsigned int)pts;
+
+	int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+	if (r < 0)
+	{
+		codecMutex.Unlock();
+		throw Exception("codec_checkin_pts failed\n");
+	}
+
+
+	codecMutex.Unlock();
+}
+
+int AmlCodec::WriteData(unsigned char* data, int length)
+{
+	if (data == nullptr)
+		throw ArgumentNullException("data");
+
+	if (length < 1)
+		throw ArgumentOutOfRangeException("length");
+
+
+	// This is done unlocked because it blocks	
+	return write(handle, data, length);
 }
