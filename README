@@ -1,0 +1,38 @@
+Install dependencies:
+	sudo apt install libasound2-dev libavformat-dev libass-dev
+
+Compile:
+	make c2play -j4
+or
+	make c2play-x11 -j4
+or
+	make -j4
+
+Command line options:
+	--time hh:mm:ss.ss	Start playback at specified time.
+	--chapter n		Start playback at chapter n.
+	--video n		Index of video stream to play.
+	--audio	n		Index of audio stream to play.
+	--subtitle n		Index of subtitle stream to play.
+
+Note: video, audio, and subtitle are index values.  The first stream of a type
+is index 0 and increments for each stream of the same type present.  This is
+not the same as stream index.  For example, the first video, audio or subtitle
+stream is index 0 regardless of its stream index.
+
+Supported codecs:
+	Video:
+		Mpeg2, Mpeg4v3 (Divx/Xvid), Mpeg4 (MP4), H264 (AVC), H265 (HEVC)
+		VC1 support is experimental
+
+	Audio (down-mixed only):
+		Mpeg Layer II (MP2), Mpeg Layer III (MP3), AAC, AC3, EAC3, DTS,
+		TrueHD, Opus, Vorbis
+		WmaPro support is experimental
+
+	Subtitle:
+		SubRip (SSA/ASS), PGS, DVB
+		DVB Teletext support is experimental
+
+Supported containers:
+	MKV, AVI, MP4 have been tested.
