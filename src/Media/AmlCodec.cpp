@@ -63,10 +63,13 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 
 	// Note: Without EXTERNAL_PTS | SYNC_OUTSIDE, the codec auto adjusts
 	// frame-rate from PTS 
-	am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE); //USE_IDR_FRAMERATE
+	//am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
+	//am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE | USE_IDR_FRAMERATE | UCODE_IP_ONLY_PARAM);
+	am_sysinfo.param = (void*)(EXTERNAL_PTS);
 
-															 // Note: Testing has shown that the ALSA clock requires the +1
+	// Note: Testing has shown that the ALSA clock requires the +1
 	am_sysinfo.rate = 96000.0 / frameRate + 1;
+
 
 
 	switch (format)
