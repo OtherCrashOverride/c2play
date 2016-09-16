@@ -70,6 +70,9 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	// Note: Testing has shown that the ALSA clock requires the +1
 	am_sysinfo.rate = 96000.0 / frameRate + 1;
 
+	//am_sysinfo.width = width;
+	//am_sysinfo.height = height;
+	//am_sysinfo.ratio64 = (((int64_t)width) << 32) | ((int64_t)height);
 
 
 	switch (format)
