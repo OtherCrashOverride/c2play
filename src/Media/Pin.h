@@ -67,7 +67,8 @@ enum class AudioFormatEnum
 	DolbyTrueHD,
 	EAc3,
 	Opus,
-	Vorbis
+	Vorbis,
+	PcmDvd
 };
 
 enum class SubtitleFormatEnum

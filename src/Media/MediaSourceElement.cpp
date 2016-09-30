@@ -300,8 +300,12 @@ void MediaSourceElement::SetupPins()
 						if (info)
 							info->Format = AudioFormatEnum::Vorbis;
 						break;
-						//case AVCodecID.CODEC_ID_WMAV2:
-						//    break;
+
+					case AV_CODEC_ID_PCM_DVD:
+						printf("stream #%d - AUDIO/PCM_DVD\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::PcmDvd;
+						break;
 
 					default:
 						printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);

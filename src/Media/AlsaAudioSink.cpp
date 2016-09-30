@@ -87,7 +87,30 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 	short data[alsa_channels * pcmData->Samples];
 
-	if (pcmData->Format == PcmFormat::Int16Planes)
+	if (pcmData->Format == PcmFormat::Int16)
+	{
+		int stride = pcmData->Channels * sizeof(short);
+		unsigned char* source = (unsigned char*)pcmData->Channel[0];
+
+		int index = 0;
+		for (int i = 0; i < pcmData->Samples; ++i)
+		{
+			short* samples = (short*)(source + i * stride);
+
+			for (int j = 0; j < alsa_channels; ++j)
+			{
+				if (j < pcmData->Channels)
+				{
+					data[index++] = *(samples++);
+				}
+				else
+				{
+					data[index++] = 0;
+				}
+			}
+		}
+	}
+	else if (pcmData->Format == PcmFormat::Int16Planes)
 	{
 		short* channels[alsa_channels] = { 0 };
 

@@ -63,7 +63,9 @@ void AudioCodecElement::SetupCodec()
 		soundCodec = avcodec_find_decoder(AV_CODEC_ID_VORBIS);
 		break;
 
-		//case AudioStreamType::Pcm:
+	case AudioFormatEnum::PcmDvd:
+		soundCodec = avcodec_find_decoder(AV_CODEC_ID_PCM_DVD);
+		break;
 
 	default:
 		printf("Audio format %d is not supported.\n", (int)audioFormat);
