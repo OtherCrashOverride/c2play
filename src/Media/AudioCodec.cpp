@@ -218,34 +218,48 @@ void AudioCodecElement::ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSP
 			}
 			else
 			{
-				int leftChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_LEFT);
-
-				int rightChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_RIGHT);
-
-				int centerChannelIndex = av_get_channel_layout_channel_index(
-					decoded_frame->channel_layout,
-					AV_CH_FRONT_CENTER);
-
-
 				// left, right, center
 				const int DOWNMIX_MAX_CHANNELS = 3;
 
 				void* channels[DOWNMIX_MAX_CHANNELS] = { 0 };
-				channels[0] = (void*)decoded_frame->data[leftChannelIndex];
-				channels[1] = (void*)decoded_frame->data[rightChannelIndex];
 
-				if (decoded_frame->channels > 2)
+				if (decoded_frame->channels == 1)
 				{
-					channels[2] = (void*)decoded_frame->data[centerChannelIndex];
+					// Mono
+					int monoChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_CENTER);
+
+
+					channels[0] = (void*)decoded_frame->data[monoChannelIndex];
 				}
-				//else
-				//{
-				//	channels[2] = nullptr;
-				//}
+				else
+				{
+					int leftChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_LEFT);
+
+					int rightChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_RIGHT);
+
+					int centerChannelIndex = av_get_channel_layout_channel_index(
+						decoded_frame->channel_layout,
+						AV_CH_FRONT_CENTER);
+
+
+					channels[0] = (void*)decoded_frame->data[leftChannelIndex];
+					channels[1] = (void*)decoded_frame->data[rightChannelIndex];
+
+					if (decoded_frame->channels > 2)
+					{
+						channels[2] = (void*)decoded_frame->data[centerChannelIndex];
+					}
+					//else
+					//{
+					//	channels[2] = nullptr;
+					//}
+				}
 
 				int channelCount = std::min(DOWNMIX_MAX_CHANNELS, decoded_frame->channels);
 				for (int i = 0; i < channelCount; ++i)
