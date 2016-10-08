@@ -471,7 +471,7 @@ void AmlVideoSinkElement::Initialize()
 		std::bind(&AmlVideoSinkElement::timer_Expired, this, std::placeholders::_1, std::placeholders::_2));
 
 	timer.Expired.AddListener(timerExpiredListener);
-	timer.SetInterval(0.25f);
+	timer.SetInterval(0.5f); //0.25f
 	timer.Start();
 }
 

@@ -487,10 +487,13 @@ void AlsaAudioSinkElement::DoWork()
 
 void AlsaAudioSinkElement::Terminating()
 {
-	snd_pcm_drop(handle);
-	snd_pcm_close(handle);
+	if (handle)
+	{
+		snd_pcm_drop(handle);
+		snd_pcm_close(handle);
 
-	handle = nullptr;
+		handle = nullptr;
+	}
 }
 
 void AlsaAudioSinkElement::ChangeState(MediaState oldState, MediaState newState)

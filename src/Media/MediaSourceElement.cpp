@@ -611,19 +611,18 @@ void MediaSourceElement::Seek(double timeStamp)
 		throw InvalidOperationException();
 	}
 
-	int flags = AVFMT_SEEK_TO_PTS;
-	unsigned long seekPts = (long)(timeStamp * AV_TIME_BASE);
+	int flags = 0; //AVFMT_SEEK_TO_PTS; //AVSEEK_FLAG_ANY;
+	long seekPts = (long)(timeStamp * AV_TIME_BASE);
 
-	if (seekPts < lastPts)
+	if (seekPts < (long)lastPts)
 	{
 		flags |= AVSEEK_FLAG_BACKWARD;
 	}
 
-	if (av_seek_frame(ctx, -1, (long)(timeStamp * AV_TIME_BASE), flags) < 0)
+	if (av_seek_frame(ctx, -1, seekPts, flags) < 0)
 	{
 		printf("av_seek_frame (%f) failed\n", timeStamp);
 	}
-
 
 	// Send all Output Pins a Discontinue marker
 	for (int i = 0; i < Outputs()->Count(); ++i)
