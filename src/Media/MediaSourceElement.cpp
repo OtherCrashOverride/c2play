@@ -85,6 +85,7 @@ void MediaSourceElement::SetupPins()
 
 
 	duration = ctx->duration / (double)AV_TIME_BASE;
+	printf("Duration: %f\n", duration);
 
 
 	int streamCount = ctx->nb_streams;
