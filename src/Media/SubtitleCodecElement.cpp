@@ -851,7 +851,8 @@ void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 			}
 			else
 			{
-				entry.StopTime = image->TimeStamp() + 10.0 * 60.0;	// Max 10 minutes
+				// If a duration is not specified, use a default
+				entry.StopTime = image->TimeStamp() + 2.0;	// seconds
 			}
 
 			entry.Sprite = sprite;
