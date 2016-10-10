@@ -308,6 +308,12 @@ void MediaSourceElement::SetupPins()
 							info->Format = AudioFormatEnum::PcmDvd;
 						break;
 
+					case AV_CODEC_ID_FLAC:
+						printf("stream #%d - AUDIO/FLAC\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::Flac;
+						break;
+
 					default:
 						printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);
 						//throw NotSupportedException();

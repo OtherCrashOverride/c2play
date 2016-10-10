@@ -67,6 +67,10 @@ void AudioCodecElement::SetupCodec()
 		soundCodec = avcodec_find_decoder(AV_CODEC_ID_PCM_DVD);
 		break;
 
+	case AudioFormatEnum::Flac:
+		soundCodec = avcodec_find_decoder(AV_CODEC_ID_FLAC);
+		break;
+
 	default:
 		printf("Audio format %d is not supported.\n", (int)audioFormat);
 		throw NotSupportedException();

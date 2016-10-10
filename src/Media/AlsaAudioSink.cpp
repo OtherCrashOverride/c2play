@@ -244,6 +244,45 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 			data[dstIndex++] = (short)(right >> 16);
 		}
 	}
+	else if (pcmData->Format == PcmFormat::Int32Planes)
+	{
+		if (alsa_channels != 2)
+		{
+			throw InvalidOperationException();
+		}
+
+
+		int* channels[alsa_channels] = { 0 };
+
+		int channelCount = pcmData->Channels;
+
+		switch (channelCount)
+		{
+			case 0:
+				throw InvalidOperationException("Unexpected zero channel count.");
+
+			case 1:
+				// Output the mono channel over both stereo channels
+				channels[0] = (int*)pcmData->Channel[0];
+				channels[1] = (int*)pcmData->Channel[0];
+				break;
+
+			default:
+				channels[0] = (int*)pcmData->Channel[0];
+				channels[1] = (int*)pcmData->Channel[1];
+				break;
+		}
+
+		int index = 0;
+		for (int i = 0; i < pcmData->Samples; ++i)
+		{
+			for (int j = 0; j < alsa_channels; ++j)
+			{
+				int* samples = channels[j];
+				data[index++] = (short)(samples[i] >> 16);
+			}
+		}
+	}
 	else
 	{
 		throw NotSupportedException();
