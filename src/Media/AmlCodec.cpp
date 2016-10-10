@@ -509,6 +509,37 @@ buf_status AmlCodec::GetBufferStatus()
 	//}
 }
 
+vdec_status AmlCodec::GetVdecStatus()
+{
+	codecMutex.Lock();
+
+	if (!isOpen)
+	{
+		codecMutex.Unlock();
+		throw InvalidOperationException("The codec is not open.");
+	}
+
+
+
+	am_ioctl_parm_ex parm = { 0 };
+	parm.cmd = AMSTREAM_GET_EX_VDECSTAT;
+
+	int r = ioctl(handle, AMSTREAM_IOC_GET_EX, (unsigned long)&parm);
+
+	codecMutex.Unlock();
+
+	if (r < 0)
+	{
+		throw Exception("AMSTREAM_GET_EX_VB_STATUS failed.");
+	}
+
+
+	vdec_status status;
+	memcpy(&status, &parm.status, sizeof(status));
+
+	return status;
+}
+
 //bool AmlCodec::SendData(unsigned long pts, unsigned char* data, int length)
 //{
 //	if (!isOpen)

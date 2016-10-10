@@ -259,21 +259,25 @@ void MediaPlayer::Seek(double timeStamp)
 
 	if (audioCodec)
 	{
+		//printf("Seek: audioCodec pause.\n");
 		audioCodec->SetState(MediaState::Pause);
 	}
 
 	if (audioSink)
 	{
+		//printf("Seek: audioSink pause.\n");
 		audioSink->SetState(MediaState::Pause);
 	}
 
 	if (videoSink)
 	{
+		//printf("Seek: videoSink pause.\n");
 		videoSink->SetState(MediaState::Pause);
 	}
 
 	if (subtitleCodec)
 	{
+		//printf("Seek: subtitle pause.\n");
 		subtitleCodec->SetState(MediaState::Pause);
 		subtitleRender->SetState(MediaState::Pause);
 	}
@@ -284,52 +288,64 @@ void MediaPlayer::Seek(double timeStamp)
 
 	if (audioCodec)
 	{
+		//printf("Seek: audioCodec flush.\n");
 		audioCodec->Flush();
 	}
 
 	if (audioSink)
 	{
+		//printf("Seek: audioSink flush.\n");
 		audioSink->Flush();
 	}
 
 	if (videoSink)
 	{
+		//printf("Seek: videoSink flush.\n");
 		videoSink->Flush();
 	}
 
 	if (subtitleCodec)
 	{
+		//printf("Seek: subtitle flush.\n");
 		subtitleCodec->Flush();
 		subtitleRender->Flush();
 	}
 
 
+	//printf("Seek: source flush.\n");
 	source->Flush();
+
+	//printf("Seek: source seek.\n");
 	source->Seek(timeStamp);
 
 
 	if (videoSink)
 	{
+		//printf("Seek: videoSink play.\n");
 		videoSink->SetState(MediaState::Play);
 	}
 
 	if (audioCodec)
 	{
+		//printf("Seek: audioCodec play.\n");
 		audioCodec->SetState(MediaState::Play);
 	}
 
 	if (audioSink)
 	{
+		//printf("Seek: audioSink play.\n");
 		audioSink->SetState(MediaState::Play);
 	}
 
 	if (subtitleCodec)
 	{
+		//printf("Seek: subitile play.\n");
 		subtitleCodec->SetState(MediaState::Play);
 		subtitleRender->SetState(MediaState::Play);
 	}
 
 
+	//printf("Seek: source play.\n");
 	source->SetState(MediaState::Play);
 }
 

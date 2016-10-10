@@ -38,6 +38,14 @@ void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 				printf("AmlVideoSinkElement: timer_Expired - isEndOfStream=true (Pausing).\n");
 				SetState(MediaState::Pause);
 				isEndOfStream = false;
+
+				////debuging
+				//printf("AmlVideoSinkElement: timer_Expired - size=%d, data_len=%d, free_len=%d, read_pointer=%u, write_pointer=%u\n",
+				//	bufferStatus.size, bufferStatus.data_len, bufferStatus.free_len, bufferStatus.read_pointer, bufferStatus.write_pointer);
+
+				//vdec_status vdecStatus = amlCodec.GetVdecStatus();
+				//printf("AmlVideoSinkElement: timer_Expired - width=%u, height=%u, fps=%u, error_count=%u, status=0x%x\n",
+				//	vdecStatus.width, vdecStatus.height, vdecStatus.fps, vdecStatus.error_count, vdecStatus.status);
 			}
 		}
 	}
@@ -261,7 +269,7 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					// Copy AnnexB data if NAL unit type is 5
 					nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
 
-					if (nal_unit_type == 5)
+					if (!isExtraDataSent || nal_unit_type == 5)
 					{
 						ConvertH264ExtraDataToAnnexB();
 
@@ -279,7 +287,7 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
 
 					/* prepend extradata to IRAP frames */
-					if (nal_unit_type >= 16 && nal_unit_type <= 23)
+					if (!isExtraDataSent || (nal_unit_type >= 16 && nal_unit_type <= 23))
 					{
 						HevcExtraDataToAnnexB();
 
@@ -405,7 +413,7 @@ bool AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, 
 
 double AmlVideoSinkElement::Clock()
 {
-	// NOTE: This value is not valid until pts checking
+	// NOTE: This value is not valid until pts check-in
 	// and SetPts have converged.
 
 	//int vpts = codec_get_vpts(&codecContext);

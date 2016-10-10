@@ -202,7 +202,7 @@ struct am_ioctl_parm_ex {
 #define AMSTREAM_GET_VPTS 0x805
 
 #define AMSTREAM_GET_EX_VB_STATUS 0x900
-
+#define AMSTREAM_GET_EX_VDECSTAT 0x902
 
 
 
@@ -254,6 +254,7 @@ public:
 	void Pause();
 	void Resume();
 	buf_status GetBufferStatus();
+	vdec_status GetVdecStatus();
 	//bool SendData(unsigned long pts, unsigned char* data, int length);
 	void SetVideoAxis(Int32Rectangle rectangle);
 	Int32Rectangle GetVideoAxis();
