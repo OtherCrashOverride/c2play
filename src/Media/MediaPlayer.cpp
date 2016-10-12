@@ -209,6 +209,93 @@ MediaPlayer::MediaPlayer(std::string url, CompositorSPTR compositor, int videoSt
 		audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1));
 	}
 }
+
+MediaPlayer::MediaPlayer(std::string url1, std::string url2, CompositorSPTR compositor, int videoStream, int audioStream, int subtitleStream)
+{
+	if (!compositor)
+		throw ArgumentNullException();
+
+
+	source = std::make_shared<MediaSourceElement>(url1);
+	source->SetName(std::string("Source"));
+	source->Execute();
+	source->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+	source2 = std::make_shared<MediaSourceElement>(url2);
+	source2->SetName(std::string("Source2"));
+	source2->Execute();
+	source2->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+
+
+	// Connections
+	OutPinSPTR sourceVideoPin = std::static_pointer_cast<OutPin>(
+		source->Outputs()->Find(MediaCategoryEnum::Video, videoStream));
+	if (sourceVideoPin)
+	{
+		videoSink = std::make_shared<AmlVideoSinkElement>();
+		videoSink->SetName(std::string("VideoSink"));
+		videoSink->Execute();
+		videoSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		sourceVideoPin->Connect(videoSink->Inputs()->Item(0));
+	}
+
+	OutPinSPTR sourceAudioPin = std::static_pointer_cast<OutPin>(
+		source2->Outputs()->Find(MediaCategoryEnum::Audio, audioStream));
+	if (sourceAudioPin)
+	{
+		audioCodec = std::make_shared<AudioCodecElement>();
+		audioCodec->SetName(std::string("AudioCodec"));
+		audioCodec->Execute();
+		audioCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		audioSink = std::make_shared<AlsaAudioSinkElement>();
+		audioSink->SetName(std::string("AudioSink"));
+		audioSink->Execute();
+		audioSink->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		sourceAudioPin->Connect(audioCodec->Inputs()->Item(0));
+
+		audioCodec->Outputs()->Item(0)->Connect(audioSink->Inputs()->Item(0));
+	}
+
+	//OutPinSPTR sourceSubtitlePin;
+	OutPinSPTR sourceSubtitlePin = source->Outputs()->Find(MediaCategoryEnum::Subtitle, subtitleStream);
+	if (sourceSubtitlePin)
+	{
+		subtitleCodec = std::make_shared<SubtitleDecoderElement>();
+		subtitleCodec->SetName("SubtitleDecoderElement");
+		subtitleCodec->Execute();
+		subtitleCodec->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		sourceSubtitlePin->Connect(subtitleCodec->Inputs()->Item(0));
+
+
+		subtitleRender = std::make_shared<SubtitleRenderElement>(compositor);
+		subtitleRender->SetName("SubtitleRenderElement");
+		subtitleRender->Execute();
+		subtitleRender->WaitForExecutionState(ExecutionStateEnum::Idle);
+
+		subtitleCodec->Outputs()->Item(0)->Connect(subtitleRender->Inputs()->Item(0));
+
+		if (audioSink)
+		{
+			audioSink->ClockSinks()->Add(subtitleRender);
+		}
+
+		printf("MediaPlayer: Connected subtitle decoder.\n");
+	}
+
+
+
+	if (audioSink && videoSink)
+	{
+		// Clock
+		audioSink->Outputs()->Item(0)->Connect(videoSink->Inputs()->Item(1));
+	}
+}
+
 MediaPlayer::~MediaPlayer()
 {
 	// Tear down
@@ -248,6 +335,12 @@ MediaPlayer::~MediaPlayer()
 	source->Terminate();
 	source->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
 
+	if (source2)
+	{
+		source2->Terminate();
+		source2->WaitForExecutionState(ExecutionStateEnum::WaitingForExecute);
+	}
+
 	printf("MediaPlayer: destructed.\n");
 }
 
@@ -256,6 +349,12 @@ MediaPlayer::~MediaPlayer()
 void MediaPlayer::Seek(double timeStamp)
 {
 	source->SetState(MediaState::Pause);
+
+	if (source2)
+	{
+		source2->SetState(MediaState::Pause);
+	}
+
 
 	if (audioCodec)
 	{
@@ -315,8 +414,15 @@ void MediaPlayer::Seek(double timeStamp)
 	//printf("Seek: source flush.\n");
 	source->Flush();
 
+	if (source2)
+		source2->Flush();
+
+
 	//printf("Seek: source seek.\n");
 	source->Seek(timeStamp);
+
+	if (source2)
+		source2->Seek(timeStamp);
 
 
 	if (videoSink)
@@ -347,5 +453,8 @@ void MediaPlayer::Seek(double timeStamp)
 
 	//printf("Seek: source play.\n");
 	source->SetState(MediaState::Play);
+
+	if (source2)
+		source2->SetState(MediaState::Play);
 }
 

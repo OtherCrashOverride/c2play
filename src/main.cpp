@@ -191,6 +191,7 @@ struct option longopts[] = {
 	{ "video",			required_argument,  NULL,          'v' },
 	{ "audio",			required_argument,  NULL,          'a' },
 	{ "subtitle",		required_argument,  NULL,          's' },
+	{ "dual",			required_argument,  NULL,          'd' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -216,6 +217,7 @@ int main(int argc, char** argv)
 	int optionVideoIndex = 0;
 	int optionAudioIndex = 0;
 	int optionSubtitleIndex = -1;	//disabled by default
+	const char* optionDual = nullptr;
 
 	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
@@ -265,6 +267,11 @@ int main(int argc, char** argv)
 			case 's':
 				optionSubtitleIndex = atoi(optarg);
 				printf("optionSubtitleIndex=%d\n", optionSubtitleIndex);
+				break;
+
+			case 'd':
+				optionDual = (optarg);
+				printf("optionDual=%s\n", optionDual);
 				break;
 
 			default:
@@ -343,11 +350,25 @@ int main(int argc, char** argv)
 	osd = std::make_shared<Osd>(compositor);
 
 
-	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url,
-		compositor,
-		optionVideoIndex,
-		optionAudioIndex,
-		optionSubtitleIndex);
+	MediaPlayerSPTR mediaPlayer;
+	
+	if (optionDual == nullptr)
+	{
+		mediaPlayer = std::make_shared<MediaPlayer>(url,
+			compositor,
+			optionVideoIndex,
+			optionAudioIndex,
+			optionSubtitleIndex);
+	}
+	else
+	{
+		mediaPlayer = std::make_shared<MediaPlayer>(url,
+			optionDual,
+			compositor,
+			optionVideoIndex,
+			optionAudioIndex,
+			optionSubtitleIndex);
+	}
 
 
 	if (optionChapter > -1)
