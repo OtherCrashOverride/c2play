@@ -213,6 +213,24 @@ struct am_ioctl_parm_ex {
 #define AMSTREAM_IOC_TSTAMP _IOW(AMSTREAM_IOC_MAGIC, 0x0e, unsigned long)
 #define AMSTREAM_IOC_VPTS _IOR(AMSTREAM_IOC_MAGIC, 0x41, unsigned long)
 #define AMSTREAM_IOC_SET_PCRSCR _IOW(AMSTREAM_IOC_MAGIC, 0x4a, unsigned long)
+#define AMSTREAM_IOC_VB_STATUS _IOR(AMSTREAM_IOC_MAGIC, 0x08, unsigned long)
+
+struct am_io_param {
+	union {
+		int data;
+		int id;//get bufstatus? //or others
+	};
+
+	int len; //buffer size;
+
+	union {
+		char buf[1];
+		struct buf_status status;
+		struct vdec_status vstatus;
+		struct adec_status astatus;
+	};
+};
+
 
 
 enum class ApiLevel

@@ -563,19 +563,12 @@ buf_status AmlCodec::GetBufferStatus()
 	}
 
 	
-	//if (true) 
+	buf_status status;
+	if (apiLevel >= ApiLevel::S905)	// S905
 	{
-		buf_status status;
-		//r = codec_h_ioctl(p->handle, AMSTREAM_IOC_GET_EX, AMSTREAM_GET_EX_VB_STATUS, (unsigned long)&status);
-		//memcpy(buf, &status, sizeof(*buf));
-
-
 		am_ioctl_parm_ex parm = { 0 };
-
 		parm.cmd = AMSTREAM_GET_EX_VB_STATUS;
 		
-		//codecMutex.Lock();
-
 		int r = ioctl(handle, AMSTREAM_IOC_GET_EX, (unsigned long)&parm);
 
 		codecMutex.Unlock();
@@ -586,15 +579,24 @@ buf_status AmlCodec::GetBufferStatus()
 		}
 
 		memcpy(&status, &parm.status, sizeof(status));
-
-		return status;
 	}
-	//else 
-	//{
-	//	struct am_io_param am_io;
-	//	r = codec_h_control(p->handle, AMSTREAM_IOC_VB_STATUS, (unsigned long)&am_io);
-	//	memcpy(buf, &am_io.status, sizeof(*buf));
-	//}
+	else	// S805
+	{
+		am_io_param am_io;
+
+		int r = ioctl(handle, AMSTREAM_IOC_VB_STATUS, (unsigned long)&am_io);
+
+		codecMutex.Unlock();
+
+		if (r < 0)
+		{
+			throw Exception("AMSTREAM_IOC_VB_STATUS failed.");
+		}
+
+		memcpy(&status, &am_io.status, sizeof(status));
+	}
+
+	return status;
 }
 
 vdec_status AmlCodec::GetVdecStatus()
