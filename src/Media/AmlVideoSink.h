@@ -35,7 +35,7 @@
 
 class AmlVideoSinkClockInPin : public InPin
 {
-	const unsigned long PTS_FREQ = 90000;
+	const uint64_t PTS_FREQ = 90000;
 
 	//codec_para_t* codecContextPtr;
 	AmlCodec* codecPTR;
@@ -46,10 +46,10 @@ class AmlVideoSinkClockInPin : public InPin
 	void ProcessClockBuffer(BufferSPTR buffer)
 	{
 		// truncate to 32bit
-		unsigned long pts = (unsigned long)(buffer->TimeStamp() * PTS_FREQ);
+		uint64_t pts = (uint64_t)(buffer->TimeStamp() * PTS_FREQ);
 		pts &= 0xffffffff;
 
-		unsigned long vpts = (unsigned long)(codecPTR->GetCurrentPts() * PTS_FREQ);
+		uint64_t vpts = (uint64_t)(codecPTR->GetCurrentPts() * PTS_FREQ);
 		vpts &= 0xffffffff;
 
 		//double pts = pts1 / (double)PTS_FREQ;
@@ -219,7 +219,7 @@ typedef std::shared_ptr<AmlVideoSinkClockInPin> AmlVideoSinkClockInPinSPTR;
 
 class AmlVideoSinkElement : public Element
 {
-	const unsigned long PTS_FREQ = 90000;
+	const uint64_t PTS_FREQ = 90000;
 	//
 	//const long EXTERNAL_PTS = (1);
 	//const long SYNC_OUTSIDE = (2);
@@ -236,15 +236,15 @@ class AmlVideoSinkElement : public Element
 	bool isFirstVideoPacket = true;
 	bool isAnnexB = false;
 	bool isExtraDataSent = false;
-	long estimatedNextPts = 0;
+	int64_t estimatedNextPts = 0;
 
 	VideoFormatEnum videoFormat = VideoFormatEnum::Unknown;
 	VideoInPinSPTR videoPin;
 	bool isFirstData = true;
 	std::vector<unsigned char> extraData;
 
-	unsigned long clockPts = 0;
-	unsigned long lastClockPts = 0;
+	uint64_t clockPts = 0;
+	uint64_t lastClockPts = 0;
 	double clock = 0;
 
 	AmlVideoSinkClockInPinSPTR clockInPin;

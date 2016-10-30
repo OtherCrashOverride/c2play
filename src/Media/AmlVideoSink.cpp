@@ -230,12 +230,12 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 	}
 
 
-	unsigned long pts = 0;
+	uint64_t pts = 0;
 
 	if (pkt->pts != AV_NOPTS_VALUE)
 	{
 		double timeStamp = av_q2d(buffer->TimeBase()) * pkt->pts;
-		pts = (unsigned long)(timeStamp * PTS_FREQ);
+		pts = (uint64_t)(timeStamp * PTS_FREQ);
 
 		estimatedNextPts = pkt->pts + pkt->duration;
 		lastTimeStamp = timeStamp;
@@ -527,7 +527,7 @@ void AmlVideoSinkElement::DoWork()
 
 					clockInPin->SetFrameRate(info->FrameRate);
 
-					printf("AmlVideoSink: ExtraData size=%ld\n", extraData.size());
+					printf("AmlVideoSink: ExtraData size=%ld\n", (long int)extraData.size());
 
 					SetupHardware();
 

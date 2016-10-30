@@ -82,13 +82,13 @@ class MediaSourceElement : public Element
 	
 	ThreadSafeQueue<BufferSPTR> availableBuffers;
 	std::vector<OutPinSPTR> streamList;
-	std::vector<unsigned long> streamNextPts;
+	std::vector<uint64_t> streamNextPts;
 
 	ChapterListSPTR chapters = NewSPTR<ChapterList>();
 	
 	EventListenerSPTR<EventArgs> bufferReturnedListener;
 
-	unsigned long lastPts = 0;
+	uint64_t lastPts = 0;
 	double duration = -1;
 
 
