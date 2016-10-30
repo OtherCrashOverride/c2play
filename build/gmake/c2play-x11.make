@@ -65,40 +65,40 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/main.o \
-	$(OBJDIR)/Window.o \
-	$(OBJDIR)/Compositor.o \
-	$(OBJDIR)/Texture2D.o \
-	$(OBJDIR)/Egl.o \
-	$(OBJDIR)/Osd.o \
-	$(OBJDIR)/Shader.o \
-	$(OBJDIR)/AmlWindow.o \
-	$(OBJDIR)/Vector2.o \
-	$(OBJDIR)/InputDevice.o \
-	$(OBJDIR)/QuadBatch.o \
-	$(OBJDIR)/GL.o \
-	$(OBJDIR)/QuadBatchProgram.o \
-	$(OBJDIR)/Matrix4.o \
-	$(OBJDIR)/Vector3.o \
-	$(OBJDIR)/Vector4.o \
-	$(OBJDIR)/X11Window.o \
-	$(OBJDIR)/LockedQueue.o \
-	$(OBJDIR)/AmlVideoSink.o \
-	$(OBJDIR)/MediaSourceElement.o \
-	$(OBJDIR)/AlsaAudioSink.o \
 	$(OBJDIR)/Image.o \
-	$(OBJDIR)/Codec.o \
-	$(OBJDIR)/MediaPlayer.o \
-	$(OBJDIR)/AmlCodec.o \
-	$(OBJDIR)/InPin.o \
-	$(OBJDIR)/Element.o \
-	$(OBJDIR)/Thread.o \
 	$(OBJDIR)/Buffer.o \
 	$(OBJDIR)/Mutex.o \
+	$(OBJDIR)/AmlCodec.o \
+	$(OBJDIR)/MediaPlayer.o \
+	$(OBJDIR)/MediaSourceElement.o \
 	$(OBJDIR)/AudioCodec.o \
-	$(OBJDIR)/SubtitleCodecElement.o \
-	$(OBJDIR)/Pin.o \
+	$(OBJDIR)/Thread.o \
+	$(OBJDIR)/LockedQueue.o \
+	$(OBJDIR)/Codec.o \
+	$(OBJDIR)/AmlVideoSink.o \
 	$(OBJDIR)/Exception.o \
+	$(OBJDIR)/Element.o \
+	$(OBJDIR)/SubtitleCodecElement.o \
 	$(OBJDIR)/OutPin.o \
+	$(OBJDIR)/InPin.o \
+	$(OBJDIR)/Pin.o \
+	$(OBJDIR)/AlsaAudioSink.o \
+	$(OBJDIR)/Matrix4.o \
+	$(OBJDIR)/QuadBatch.o \
+	$(OBJDIR)/Compositor.o \
+	$(OBJDIR)/GL.o \
+	$(OBJDIR)/QuadBatchProgram.o \
+	$(OBJDIR)/Window.o \
+	$(OBJDIR)/Vector3.o \
+	$(OBJDIR)/InputDevice.o \
+	$(OBJDIR)/Vector2.o \
+	$(OBJDIR)/Osd.o \
+	$(OBJDIR)/Shader.o \
+	$(OBJDIR)/Vector4.o \
+	$(OBJDIR)/AmlWindow.o \
+	$(OBJDIR)/Egl.o \
+	$(OBJDIR)/Texture2D.o \
+	$(OBJDIR)/X11Window.o \
 
 RESOURCES := \
 
@@ -162,85 +162,7 @@ endif
 $(OBJDIR)/main.o: ../../src/main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Window.o: ../../src/UI/Window.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Compositor.o: ../../src/UI/Compositor.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Texture2D.o: ../../src/UI/Texture2D.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Egl.o: ../../src/UI/Egl.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Osd.o: ../../src/UI/Osd.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Shader.o: ../../src/UI/Shader.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/AmlWindow.o: ../../src/UI/AmlWindow.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector2.o: ../../src/UI/Vector2.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/InputDevice.o: ../../src/UI/InputDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/QuadBatch.o: ../../src/UI/QuadBatch.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/GL.o: ../../src/UI/GL.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/QuadBatchProgram.o: ../../src/UI/QuadBatchProgram.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Matrix4.o: ../../src/UI/Matrix4.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector3.o: ../../src/UI/Vector3.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector4.o: ../../src/UI/Vector4.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/X11Window.o: ../../src/UI/X11/X11Window.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/LockedQueue.o: ../../src/Media/LockedQueue.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/AmlVideoSink.o: ../../src/Media/AmlVideoSink.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/MediaSourceElement.o: ../../src/Media/MediaSourceElement.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/AlsaAudioSink.o: ../../src/Media/AlsaAudioSink.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Image.o: ../../src/Media/Image.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Codec.o: ../../src/Media/Codec.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/MediaPlayer.o: ../../src/Media/MediaPlayer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/AmlCodec.o: ../../src/Media/AmlCodec.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/InPin.o: ../../src/Media/InPin.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Element.o: ../../src/Media/Element.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Thread.o: ../../src/Media/Thread.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Buffer.o: ../../src/Media/Buffer.cpp
@@ -249,19 +171,97 @@ $(OBJDIR)/Buffer.o: ../../src/Media/Buffer.cpp
 $(OBJDIR)/Mutex.o: ../../src/Media/Mutex.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AmlCodec.o: ../../src/Media/AmlCodec.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/MediaPlayer.o: ../../src/Media/MediaPlayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/MediaSourceElement.o: ../../src/Media/MediaSourceElement.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/AudioCodec.o: ../../src/Media/AudioCodec.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/SubtitleCodecElement.o: ../../src/Media/SubtitleCodecElement.cpp
+$(OBJDIR)/Thread.o: ../../src/Media/Thread.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Pin.o: ../../src/Media/Pin.cpp
+$(OBJDIR)/LockedQueue.o: ../../src/Media/LockedQueue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Codec.o: ../../src/Media/Codec.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AmlVideoSink.o: ../../src/Media/AmlVideoSink.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Exception.o: ../../src/Media/Exception.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Element.o: ../../src/Media/Element.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/SubtitleCodecElement.o: ../../src/Media/SubtitleCodecElement.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/OutPin.o: ../../src/Media/OutPin.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/InPin.o: ../../src/Media/InPin.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Pin.o: ../../src/Media/Pin.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AlsaAudioSink.o: ../../src/Media/AlsaAudioSink.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Matrix4.o: ../../src/UI/Matrix4.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/QuadBatch.o: ../../src/UI/QuadBatch.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Compositor.o: ../../src/UI/Compositor.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/GL.o: ../../src/UI/GL.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/QuadBatchProgram.o: ../../src/UI/QuadBatchProgram.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Window.o: ../../src/UI/Window.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Vector3.o: ../../src/UI/Vector3.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/InputDevice.o: ../../src/UI/InputDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Vector2.o: ../../src/UI/Vector2.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Osd.o: ../../src/UI/Osd.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Shader.o: ../../src/UI/Shader.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Vector4.o: ../../src/UI/Vector4.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/AmlWindow.o: ../../src/UI/AmlWindow.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Egl.o: ../../src/UI/Egl.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/Texture2D.o: ../../src/UI/Texture2D.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/X11Window.o: ../../src/UI/X11/X11Window.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 

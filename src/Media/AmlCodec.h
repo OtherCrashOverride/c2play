@@ -204,6 +204,23 @@ struct am_ioctl_parm_ex {
 #define AMSTREAM_GET_EX_VB_STATUS 0x900
 #define AMSTREAM_GET_EX_VDECSTAT 0x902
 
+#define AMSTREAM_IOC_GET_VERSION _IOR((AMSTREAM_IOC_MAGIC), 0xc0, int)
+
+
+// S805
+#define AMSTREAM_IOC_VFORMAT _IOW(AMSTREAM_IOC_MAGIC, 0x04, int)
+#define AMSTREAM_IOC_PORT_INIT _IO(AMSTREAM_IOC_MAGIC, 0x11)
+#define AMSTREAM_IOC_TSTAMP _IOW(AMSTREAM_IOC_MAGIC, 0x0e, unsigned long)
+#define AMSTREAM_IOC_VPTS _IOR(AMSTREAM_IOC_MAGIC, 0x41, unsigned long)
+#define AMSTREAM_IOC_SET_PCRSCR _IOW(AMSTREAM_IOC_MAGIC, 0x4a, unsigned long)
+
+
+enum class ApiLevel
+{
+	Unknown = 0,
+	S805,
+	S905
+};
 
 
 class AmlCodec
@@ -232,7 +249,7 @@ class AmlCodec
 	int width;
 	int height;
 	double frameRate;
-
+	ApiLevel apiLevel;
 
 
 	void InternalOpen(VideoFormatEnum format, int width, int height, double frameRate);
@@ -244,6 +261,12 @@ public:
 	{
 		return isOpen;
 	}
+
+
+
+	AmlCodec();
+	virtual ~AmlCodec() { }
+
 
 
 	void Open(VideoFormatEnum format, int width, int height, double frameRate);

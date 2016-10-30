@@ -24,6 +24,33 @@
 
 
 
+AmlCodec::AmlCodec()
+{
+	int fd = open(CODEC_VIDEO_ES_DEVICE, O_WRONLY);
+	if (fd < 0)
+	{
+		throw Exception("AmlCodec open failed.");
+	}
+
+
+	apiLevel = ApiLevel::S805;
+
+	int version;
+	int r = ioctl(fd, AMSTREAM_IOC_GET_VERSION, &version);
+	if (r == 0)
+	{
+		printf("AmlCodec: amstream version : %d.%d\n", (version & 0xffff0000) >> 16, version & 0xffff);
+
+		if (version >= 0x20000)
+		{
+			apiLevel = ApiLevel::S905;
+		}
+	}
+
+	close(fd);
+}
+
+
 void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, double frameRate)
 {
 	this->format = format;
@@ -140,16 +167,30 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	}
 
 
+	// S905
 	am_ioctl_parm parm = { 0 };
+	int r;
 
-	parm.cmd = AMSTREAM_SET_VFORMAT;
-	parm.data_vformat = amlFormat;
-
-	int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-	if (r < 0)
+	if (apiLevel >= ApiLevel::S905) // S905
 	{
-		codecMutex.Unlock();
-		throw Exception("AMSTREAM_IOC_SET failed.");
+		parm.cmd = AMSTREAM_SET_VFORMAT;
+		parm.data_vformat = amlFormat;
+
+		r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+		if (r < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_SET failed.");
+		}
+	}
+	else //S805
+	{
+		r = ioctl(handle, AMSTREAM_IOC_VFORMAT, amlFormat);
+		if (r < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_VFORMAT failed.");
+		}
 	}
 
 
@@ -180,14 +221,26 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	}
 	*/
 
-	parm = { 0 };
-	parm.cmd = AMSTREAM_PORT_INIT;
-
-	r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-	if (r != 0)
+	if (apiLevel >= ApiLevel::S905)	//S905
 	{
-		codecMutex.Unlock();
-		throw Exception("AMSTREAM_PORT_INIT failed.");
+		parm = { 0 };
+		parm.cmd = AMSTREAM_PORT_INIT;
+
+		r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+		if (r != 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_PORT_INIT failed.");
+		}
+	}
+	else	//S805
+	{
+		r = ioctl(handle, AMSTREAM_IOC_PORT_INIT, 0);
+		if (r != 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_PORT_INIT failed.");
+		}
 	}
 
 
@@ -353,25 +406,39 @@ double AmlCodec::GetCurrentPts()
 	}
 
 
-	//int vpts = codec_get_vpts(&codec);
-	//unsigned int vpts;
-	am_ioctl_parm parm = { 0 };
-
-	parm.cmd = AMSTREAM_GET_VPTS;
-	//parm.data_32 = &vpts;
-
-	int ret = ioctl(handle, AMSTREAM_IOC_GET, (unsigned long)&parm);
-	if (ret < 0)
+	unsigned int vpts;
+	int ret;
+	if (apiLevel >= ApiLevel::S905)	// S905
 	{
-		codecMutex.Unlock();
-		throw Exception("AMSTREAM_GET_VPTS failed.");
+		//int vpts = codec_get_vpts(&codec);
+		//unsigned int vpts;
+		am_ioctl_parm parm = { 0 };
+
+		parm.cmd = AMSTREAM_GET_VPTS;
+		//parm.data_32 = &vpts;
+
+		ret = ioctl(handle, AMSTREAM_IOC_GET, (unsigned long)&parm);
+		if (ret < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_GET_VPTS failed.");
+		}
+
+		vpts = parm.data_32;
+		//unsigned long vpts = parm.data_64;
+
+		//printf("AmlCodec::GetCurrentPts() parm.data_32=%u parm.data_64=%llu\n",
+		//	parm.data_32, parm.data_64);
 	}
-
-	unsigned int vpts = parm.data_32;
-	//unsigned long vpts = parm.data_64;
-
-	//printf("AmlCodec::GetCurrentPts() parm.data_32=%u parm.data_64=%llu\n",
-	//	parm.data_32, parm.data_64);
+	else	// S805
+	{
+		ret = ioctl(handle, AMSTREAM_IOC_VPTS, (unsigned long)&vpts);
+		if (ret < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_VPTS failed.");
+		}
+	}
 
 	codecMutex.Unlock();
 
@@ -400,21 +467,33 @@ void AmlCodec::SetCurrentPts(double value)
 	unsigned long pts = (unsigned long)(value * PTS_FREQ);
 	pts &= 0xffffffff;
 
-	am_ioctl_parm parm = { 0 };
-	
-	parm.cmd = AMSTREAM_SET_PCRSCR;
-	parm.data_32 = (unsigned int)(pts);
-	//parm.data_64 = (unsigned long)(value * PTS_FREQ);
+	if (apiLevel >= ApiLevel::S905)	// S905
+	{
+		am_ioctl_parm parm = { 0 };
 
-	int ret = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-	if (ret < 0) 
-	{
-		codecMutex.Unlock();
-		throw Exception("AMSTREAM_SET_PCRSCR failed.");
+		parm.cmd = AMSTREAM_SET_PCRSCR;
+		parm.data_32 = (unsigned int)(pts);
+		//parm.data_64 = (unsigned long)(value * PTS_FREQ);
+
+		int ret = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+		if (ret < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_SET_PCRSCR failed.");
+		}
+		else
+		{
+			//printf("AmlCodec::SetCurrentPts - parm.data_32=%u\n", parm.data_32);
+		}
 	}
-	else
+	else	// S805
 	{
-		//printf("AmlCodec::SetCurrentPts - parm.data_32=%u\n", parm.data_32);
+		int ret = ioctl(handle, AMSTREAM_IOC_SET_PCRSCR, pts);
+		if (ret < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_SET_PCRSCR failed.");
+		}
 	}
 
 	codecMutex.Unlock();
@@ -729,17 +808,28 @@ void AmlCodec::CheckinPts(unsigned long pts)
 	// truncate to 32bit
 	pts &= 0xffffffff;
 
-	am_ioctl_parm parm = { 0 };
-	parm.cmd = AMSTREAM_SET_TSTAMP;
-	parm.data_32 = (unsigned int)pts;
-
-	int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
-	if (r < 0)
+	if (apiLevel >= ApiLevel::S905)	// S905
 	{
-		codecMutex.Unlock();
-		throw Exception("codec_checkin_pts failed\n");
-	}
+		am_ioctl_parm parm = { 0 };
+		parm.cmd = AMSTREAM_SET_TSTAMP;
+		parm.data_32 = (unsigned int)pts;
 
+		int r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+		if (r < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_SET_TSTAMP failed\n");
+		}
+	}
+	else	// S805
+	{
+		int r = ioctl(handle, AMSTREAM_IOC_TSTAMP, pts);
+		if (r < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_TSTAMP failed\n");
+		}
+	}
 
 	codecMutex.Unlock();
 }

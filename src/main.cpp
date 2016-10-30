@@ -134,53 +134,57 @@ void GetDevices()
 
 			int fd = open(device.c_str(), O_RDONLY);
 			if (fd < 0)
-				throw Exception("device open failed.");
-
-			//input_id id;
-			//int io = ioctl(fd, EVIOCGID, &id);
-			//if (io < 0)
-			//{
-			//	printf("EVIOCGID failed.\n");
-			//}
-			//else
-			//{
-			//	printf("\tbustype=%d, vendor=%d, product=%d, version=%d\n",
-			//		id.bustype, id.vendor, id.product, id.version);
-			//}
-
-			//char name[255];
-			//io = ioctl(fd, EVIOCGNAME(255), name);
-			//if (io < 0)
-			//{
-			//	printf("EVIOCGNAME failed.\n");
-			//}
-			//else
-			//{
-			//	printf("\tname=%s\n", name);
-			//}
-
-			
-			int bitsRequired = EV_MAX;
-			int bytesRequired = (bitsRequired + 1) / 8;
-
-			unsigned char buffer[bytesRequired];
-			int io = ioctl(fd, EVIOCGBIT(0, bytesRequired), buffer);
-			if (io < 0)
 			{
-				printf("EVIOCGBIT failed.\n");
+				printf("device open failed. (%s)\n", device.c_str());
 			}
 			else
 			{
-				unsigned int events = *((unsigned int*)buffer);
+				//input_id id;
+				//int io = ioctl(fd, EVIOCGID, &id);
+				//if (io < 0)
+				//{
+				//	printf("EVIOCGID failed.\n");
+				//}
+				//else
+				//{
+				//	printf("\tbustype=%d, vendor=%d, product=%d, version=%d\n",
+				//		id.bustype, id.vendor, id.product, id.version);
+				//}
 
-				if (events & EV_KEY)
+				//char name[255];
+				//io = ioctl(fd, EVIOCGNAME(255), name);
+				//if (io < 0)
+				//{
+				//	printf("EVIOCGNAME failed.\n");
+				//}
+				//else
+				//{
+				//	printf("\tname=%s\n", name);
+				//}
+
+
+				int bitsRequired = EV_MAX;
+				int bytesRequired = (bitsRequired + 1) / 8;
+
+				unsigned char buffer[bytesRequired];
+				int io = ioctl(fd, EVIOCGBIT(0, bytesRequired), buffer);
+				if (io < 0)
 				{
-					InputDevicePtr inputDevice = std::make_shared<InputDevice>(device);
-					inputDevices.push_back(inputDevice);
+					printf("EVIOCGBIT failed.\n");
 				}
+				else
+				{
+					unsigned int events = *((unsigned int*)buffer);
+
+					if (events & EV_KEY)
+					{
+						InputDevicePtr inputDevice = std::make_shared<InputDevice>(device);
+						inputDevices.push_back(inputDevice);
+					}
+				}
+
+				close(fd);
 			}
-			
-			close(fd);
 		}
 	}
 }
