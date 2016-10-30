@@ -53,6 +53,15 @@ AmlCodec::AmlCodec()
 
 void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, double frameRate)
 {
+	if (apiLevel < ApiLevel::S905)
+	{
+		if (width > 1920 || height > 1080)
+		{
+			throw NotSupportedException("The video resolution is not supported on this platform.");
+		}
+	}
+
+
 	this->format = format;
 	this->width = width;
 	this->height = height;
