@@ -165,15 +165,24 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 			throw InvalidOperationException();
 		}
 
-		if (pcmData->Channels < 2)
+		if (pcmData->Channels < 1)
 			throw NotSupportedException();
 
 
 		float* channels[alsa_channels] = { 0 };
 
-		channels[0] = (float*)pcmData->Channel[0];
-		channels[1] = (float*)pcmData->Channel[1];
-		channels[2] = (float*)pcmData->Channel[2];
+		if (pcmData->Channels == 1)
+		{
+			channels[0] = (float*)pcmData->Channel[0];
+			channels[1] = (float*)pcmData->Channel[0];
+			channels[2] = (float*)pcmData->Channel[0];
+		}
+		else
+		{
+			channels[0] = (float*)pcmData->Channel[0];
+			channels[1] = (float*)pcmData->Channel[1];
+			channels[2] = (float*)pcmData->Channel[2];
+		}
 
 
 		int index = 0;
