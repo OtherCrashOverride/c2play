@@ -71,7 +71,10 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 	if (doResumeFlag)
 	{
+		//printf("snd_pcm_pause: handle=%p, enable=0\n", handle);
 		snd_pcm_pause(handle, 0);
+		//printf("snd_pcm_pause: returned.\n");
+
 		doResumeFlag = false;
 	}
 
@@ -307,10 +310,13 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 	the write call to the final DAC.
 	*/
 	snd_pcm_sframes_t delay;
+
+	//printf("snd_pcm_delay: handle=%p, &delay=%p\n", handle, &delay);
 	if (snd_pcm_delay(handle, &delay) != 0)
 	{
 		printf("snd_pcm_delay failed.\n");
 	}
+	//printf("snd_pcm_delay: returned\n");
 
 	// The sample currently playing is previous in time to this frame,
 	// so adjust negatively.
@@ -361,18 +367,31 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 		*/
 
 		void* ptr = data + (totalFramesWritten * alsa_channels * sizeof(short));
+		snd_pcm_sframes_t framesToWrite = pcmData->Samples - totalFramesWritten;
 
+		//printf("snd_pcm_writei: handle=%p, ptr=%p, frames=%ld\n", handle, ptr, framesToWrite);
 		snd_pcm_sframes_t frames = snd_pcm_writei(handle,
 			ptr,
-			pcmData->Samples - totalFramesWritten);
+			framesToWrite);
+		//printf("snd_pcm_writei: returned frames=%ld\n", frames);
 
-		if (frames < 0)
+		if (frames == 0)
+		{
+			printf("snd_pcm_writei: unexpected zero (0) result.\n");
+			break;
+			//throw InvalidOperationException();
+		}
+
+		if (frames < framesToWrite)
 		{
 			printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
 
 			if (frames == -EPIPE)
 			{
+				//printf("snd_pcm_recover: handle=%p, err=%ld, silent=1\n", handle, frames);
 				snd_pcm_recover(handle, frames, 1);
+				//printf("snd_pcm_recover: returned\n");
+
 				printf("snd_pcm_recover\n");
 			}
 		}
@@ -384,7 +403,10 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 	if (doPauseFlag)
 	{
+		//printf("snd_pcm_pause: handle=%p, enable=1\n", handle);
 		snd_pcm_pause(handle, 1);
+		//printf("snd_pcm_pause: returned\n");
+
 		doPauseFlag = false;
 	}
 
