@@ -104,16 +104,16 @@ void MediaSourceElement::SetupPins()
 	for (int i = 0; i < streamCount; ++i)
 	{
 		AVStream* streamPtr = ctx->streams[i];
-		AVCodecContext* codecCtxPtr = streamPtr->codec;
-		AVMediaType mediaType = codecCtxPtr->codec_type;
-		AVCodecID codec_id = codecCtxPtr->codec_id;
+		AVCodecParameters* codecParPtr = streamPtr->codecpar;
+		AVMediaType mediaType = codecParPtr->codec_type;
+		AVCodecID codec_id = codecParPtr->codec_id;
 
 
 		ExtraDataSPTR ext = std::make_shared<ExtraData>();
 
 		// Copy codec extra data
-		unsigned char* src = codecCtxPtr->extradata;
-		int size = codecCtxPtr->extradata_size;
+		unsigned char* src = codecParPtr->extradata;
+		int size = codecParPtr->extradata_size;
 
 		for (int j = 0; j < size; ++j)
 		{
@@ -127,8 +127,8 @@ void MediaSourceElement::SetupPins()
 			{
 				VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
 				info->FrameRate = av_q2d(streamPtr->avg_frame_rate);;
-				info->Width = codecCtxPtr->width;
-				info->Height = codecCtxPtr->height;
+				info->Width = codecParPtr->width;
+				info->Height = codecParPtr->height;
 				info->ExtraData = ext;
 
 				if (url.compare(url.size() - 4, 4, ".avi") == 0)
@@ -225,8 +225,8 @@ void MediaSourceElement::SetupPins()
 			case AVMEDIA_TYPE_AUDIO:
 			{
 				AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
-				info->Channels = codecCtxPtr->channels;
-				info->SampleRate = codecCtxPtr->sample_rate;
+				info->Channels = codecParPtr->channels;
+				info->SampleRate = codecParPtr->sample_rate;
 				info->Format = AudioFormatEnum::Unknown;
 				info->ExtraData = ext;
 
