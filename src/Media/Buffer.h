@@ -426,7 +426,7 @@ public:
 	{
 		AVPacket* avpkt = Payload();
 
-		av_free_packet(avpkt);
+		av_packet_unref(avpkt);
 		free(avpkt);
 	}
 
@@ -462,7 +462,7 @@ public:
 	{
 		AVPacket* avpkt = Payload();
 
-		av_free_packet(avpkt);
+		av_packet_unref(avpkt);
 		av_init_packet(avpkt);
 		avpkt->data = NULL;
 		avpkt->size = 0;
