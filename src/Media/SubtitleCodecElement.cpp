@@ -221,8 +221,8 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 							rect->w, rect->h);
 						unsigned int* imageData = (unsigned int*)image->Data();
 
-						unsigned char* pixData = rect->pict.data[0];
-						unsigned int* paletteData = (unsigned int*)rect->pict.data[1];
+						unsigned char* pixData = rect->data[0];
+						unsigned int* paletteData = (unsigned int*)rect->data[1];
 
 						for (int y = 0; y < rect->h; ++y)
 						{
