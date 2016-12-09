@@ -40,15 +40,15 @@ void SubtitleDecoderElement::SetupCodec()
 			break;
 
 		case SubtitleFormatEnum::Pgs:
-			avcodec = avcodec_find_decoder(CODEC_ID_HDMV_PGS_SUBTITLE);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_HDMV_PGS_SUBTITLE);
 			break;
 
 		case SubtitleFormatEnum::Dvb:
-			avcodec = avcodec_find_decoder(CODEC_ID_DVB_SUBTITLE);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_DVB_SUBTITLE);
 			break;
 
 		case SubtitleFormatEnum::DvbTeletext:
-			avcodec = avcodec_find_decoder(CODEC_ID_DVB_TELETEXT);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_DVB_TELETEXT);
 			break;
 
 		default:
