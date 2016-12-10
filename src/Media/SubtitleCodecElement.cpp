@@ -148,7 +148,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 				timeStamp,  //avSubtitle->pts / (double)AV_TIME_BASE,
 				duration);
 
-			printf("Subtitle: format=%d, start_display_time=%d, end_display_time=%d, num_rects=%d, pts=%lu\n",
+			printf("Subtitle: format=%d, start_display_time=%d, end_display_time=%d, num_rects=%d, pts=%" PRId64 "\n",
 				avSubtitle->format, avSubtitle->start_display_time, avSubtitle->end_display_time, avSubtitle->num_rects, avSubtitle->pts);
 
 			if (avSubtitle->num_rects < 1)
