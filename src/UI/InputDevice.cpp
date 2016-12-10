@@ -204,6 +204,7 @@ void InputDevice::WorkThread()
 						}
 						break;
 
+#if 0
 						case 2:
 						{
 							//RaiseKeyRepeated(keyType);
@@ -211,6 +212,7 @@ void InputDevice::WorkThread()
 							EnqueKey(keycode);
 						}
 						break;
+#endif
 
 						default:
 						{
