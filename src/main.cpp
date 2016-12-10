@@ -189,7 +189,21 @@ void GetDevices()
 	}
 }
 
+void DisplayHelp()
+{
+		printf("Usage: c2play [OPTIONS] [FILE|URL]\n");
+		printf("Play video using hardware acceleration\n\n");
+
+		printf("      --help\t\tDisplay this help information\n");
+		printf("  -t, --time hh:mm:ss\tStart playback at specified time\n");
+		printf("  -c, --chapter n\tStart playback at specified chapter\n");
+		printf("      --video n\t\tIndex of video stream to play\n");
+		printf("      --audio n\t\tIndex of audio stream to play\n");
+		printf("      --subtitle n\tIndex of subtitle stream to play\n");
+}
+
 struct option longopts[] = {
+	{ "help",			no_argument,        NULL,          'h' },
 	{ "time",			required_argument,  NULL,          't' },
 	{ "chapter",		required_argument,  NULL,          'c' },
 	{ "video",			required_argument,  NULL,          'v' },
@@ -203,9 +217,8 @@ int main(int argc, char** argv)
 {
 	if (argc < 2)
 	{
-		// TODO: Usage
-		printf("TODO: Usage\n");
-		return 0;
+		DisplayHelp();
+		exit(EXIT_SUCCESS);
 	}
 
 
@@ -225,6 +238,9 @@ int main(int argc, char** argv)
 	{
 		switch (c)
 		{
+			case 'h':
+				DisplayHelp();
+				exit(EXIT_SUCCESS);
 			case 't':
 			{
 				if (strchr(optarg, ':'))
@@ -272,7 +288,8 @@ int main(int argc, char** argv)
 				break;
 
 			default:
-				throw NotSupportedException();
+				DisplayHelp();
+				exit(EXIT_FAILURE);
 
 				//printf("?? getopt returned character code 0%o ??\n", c);
 				//break;
@@ -295,9 +312,8 @@ int main(int argc, char** argv)
 
 	if (url == nullptr)
 	{
-		// TODO: Usage
-		printf("TODO: Usage\n");
-		return 0;
+		DisplayHelp();
+		exit(EXIT_FAILURE);
 	}
 
 
