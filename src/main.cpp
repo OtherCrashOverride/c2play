@@ -200,6 +200,7 @@ void DisplayHelp()
 		printf("      --video n\t\tIndex of video stream to play\n");
 		printf("      --audio n\t\tIndex of audio stream to play\n");
 		printf("      --subtitle n\tIndex of subtitle stream to play\n");
+		printf("      --avdict 'opts'\tOptions to pass to libav\n");
 }
 
 struct option longopts[] = {
@@ -209,6 +210,7 @@ struct option longopts[] = {
 	{ "video",			required_argument,  NULL,          'v' },
 	{ "audio",			required_argument,  NULL,          'a' },
 	{ "subtitle",		required_argument,  NULL,          's' },
+	{ "avdict",			required_argument,  NULL,          'A' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -233,6 +235,7 @@ int main(int argc, char** argv)
 	int optionVideoIndex = 0;
 	int optionAudioIndex = 0;
 	int optionSubtitleIndex = -1;	//disabled by default
+	std::string avOptions;
 
 	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
@@ -241,6 +244,11 @@ int main(int argc, char** argv)
 			case 'h':
 				DisplayHelp();
 				exit(EXIT_SUCCESS);
+
+			case 'A':
+				avOptions = optarg;
+				break;
+
 			case 't':
 			{
 				if (strchr(optarg, ':'))
@@ -364,6 +372,7 @@ int main(int argc, char** argv)
 
 
 	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url,
+		avOptions,
 		compositor,
 		optionVideoIndex,
 		optionAudioIndex,

@@ -109,7 +109,7 @@ public:
 	}
 
 
-	MediaSourceElement(std::string url);
+	MediaSourceElement(std::string url, std::string avOptions);
 
 
 	virtual void Initialize() override;
