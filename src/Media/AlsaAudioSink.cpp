@@ -375,25 +375,16 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 			framesToWrite);
 		//printf("snd_pcm_writei: returned frames=%ld\n", frames);
 
-		if (frames == 0)
-		{
-			printf("snd_pcm_writei: unexpected zero (0) result.\n");
-			break;
-			//throw InvalidOperationException();
-		}
 
-		if (frames < framesToWrite)
+		if (frames != framesToWrite)
 		{
 			printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
 
-			if (frames == -EPIPE)
-			{
-				//printf("snd_pcm_recover: handle=%p, err=%ld, silent=1\n", handle, frames);
-				snd_pcm_recover(handle, frames, 1);
-				//printf("snd_pcm_recover: returned\n");
+			//printf("snd_pcm_recover: handle=%p, err=%ld, silent=1\n", handle, frames);
+			snd_pcm_recover(handle, frames, 1);
+			//printf("snd_pcm_recover: returned\n");
 
-				printf("snd_pcm_recover\n");
-			}
+			printf("snd_pcm_recover\n");			
 		}
 		else
 		{
