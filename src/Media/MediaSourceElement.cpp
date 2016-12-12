@@ -623,7 +623,7 @@ void MediaSourceElement::Seek(double timeStamp)
 		throw InvalidOperationException();
 	}
 
-	int flags = AVSEEK_FLAG_ANY; //AVFMT_SEEK_TO_PTS; //AVSEEK_FLAG_ANY;
+	int flags = AVFMT_SEEK_TO_PTS; //AVFMT_SEEK_TO_PTS; //AVSEEK_FLAG_ANY;
 	int64_t seekPts = (int64_t)(timeStamp * AV_TIME_BASE);
 
 	//if (seekPts < (long)lastPts)
