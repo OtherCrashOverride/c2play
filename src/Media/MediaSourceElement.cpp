@@ -14,7 +14,10 @@
 *
 */
 
+#include <cstdio>
+
 #include "MediaSourceElement.h"
+
 
 
 void MediaSourceElement::outPin_BufferReturned(void* sender, const EventArgs& args)

@@ -14,6 +14,9 @@
 *
 */
 
+#include <cstdio>
+#include <cstdlib>
+
 #include "AlsaAudioSink.h"
 
 

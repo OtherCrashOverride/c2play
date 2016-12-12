@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <functional>
+#include <string>
+
 #include <pthread.h>
 
 #include "InPin.h"

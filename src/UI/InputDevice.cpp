@@ -14,6 +14,8 @@
 *
 */
 
+#include <cstdio>
+
 #include <fcntl.h>
 #include <unistd.h>
 

@@ -14,6 +14,8 @@
 *
 */
 
+#include <cstdio>
+
 #include "Egl.h"
 #include "Exception.h"
 #include "GL.h"

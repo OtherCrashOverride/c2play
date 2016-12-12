@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <cstdarg>
+#include <memory>
+
 #include <ass/ass.h>
 
 extern "C"

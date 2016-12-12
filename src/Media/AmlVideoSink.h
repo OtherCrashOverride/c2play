@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdio>
 #include <vector>
 
 #include "Codec.h"

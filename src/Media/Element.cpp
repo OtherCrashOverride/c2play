@@ -14,6 +14,9 @@
 *
 */
 
+#include <cstdarg>
+#include <cstdio>
+
 #include <sys/time.h>
 
 #include "Element.h"

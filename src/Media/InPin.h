@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "Event.h"
 #include "EventArgs.h"
 #include "LockedQueue.h"

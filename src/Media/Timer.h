@@ -1,8 +1,8 @@
 #pragma once
 
-#include <math.h>
-#include <signal.h>
-#include <time.h>
+#include <cmath>
+#include <csignal>
+#include <ctime>
 
 
 

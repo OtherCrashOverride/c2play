@@ -14,7 +14,7 @@
 *
 */
 
-
+#include <cstdio>
 #include <sstream>
 
 #include "Egl.h"

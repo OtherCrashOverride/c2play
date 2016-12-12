@@ -14,6 +14,9 @@
 *
 */
 
+#include <cstdio>
+#include <cstring>
+
 #include "AudioCodec.h"
 
 

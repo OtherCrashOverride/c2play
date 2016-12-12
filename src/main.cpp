@@ -14,8 +14,15 @@
 *
 */
 
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+
 #include <dirent.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include <linux/input.h>
 #include <sys/stat.h>
