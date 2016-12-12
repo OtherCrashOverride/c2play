@@ -104,16 +104,16 @@ void MediaSourceElement::SetupPins()
 	for (int i = 0; i < streamCount; ++i)
 	{
 		AVStream* streamPtr = ctx->streams[i];
-		AVCodecContext* codecCtxPtr = streamPtr->codec;
-		AVMediaType mediaType = codecCtxPtr->codec_type;
-		AVCodecID codec_id = codecCtxPtr->codec_id;
+		AVCodecParameters* codecParPtr = streamPtr->codecpar;
+		AVMediaType mediaType = codecParPtr->codec_type;
+		AVCodecID codec_id = codecParPtr->codec_id;
 
 
 		ExtraDataSPTR ext = std::make_shared<ExtraData>();
 
 		// Copy codec extra data
-		unsigned char* src = codecCtxPtr->extradata;
-		int size = codecCtxPtr->extradata_size;
+		unsigned char* src = codecParPtr->extradata;
+		int size = codecParPtr->extradata_size;
 
 		for (int j = 0; j < size; ++j)
 		{
@@ -127,8 +127,8 @@ void MediaSourceElement::SetupPins()
 			{
 				VideoPinInfoSPTR info = std::make_shared<VideoPinInfo>();
 				info->FrameRate = av_q2d(streamPtr->avg_frame_rate);;
-				info->Width = codecCtxPtr->width;
-				info->Height = codecCtxPtr->height;
+				info->Width = codecParPtr->width;
+				info->Height = codecParPtr->height;
 				info->ExtraData = ext;
 
 				if (url.compare(url.size() - 4, 4, ".avi") == 0)
@@ -160,7 +160,7 @@ void MediaSourceElement::SetupPins()
 
 				switch (codec_id)
 				{
-					case CODEC_ID_MPEG2VIDEO:
+					case AV_CODEC_ID_MPEG2VIDEO:
 						printf("stream #%d - VIDEO/MPEG2\n", i);
 						if (info)
 							info->Format = VideoFormatEnum::Mpeg2;
@@ -172,13 +172,13 @@ void MediaSourceElement::SetupPins()
 							info->Format = VideoFormatEnum::Mpeg4V3;
 						break;
 
-					case CODEC_ID_MPEG4:
+					case AV_CODEC_ID_MPEG4:
 						printf("stream #%d - VIDEO/MPEG4\n", i);
 						if (info)
 							info->Format = VideoFormatEnum::Mpeg4;
 						break;
 
-					case CODEC_ID_H264:
+					case AV_CODEC_ID_H264:
 						printf("stream #%d - VIDEO/H264\n", i);
 						if (info)
 							info->Format = VideoFormatEnum::Avc;
@@ -191,7 +191,7 @@ void MediaSourceElement::SetupPins()
 							info->Format = VideoFormatEnum::Hevc;
 						break;
 
-					case CODEC_ID_VC1:
+					case AV_CODEC_ID_VC1:
 						printf("stream #%d - VIDEO/VC1\n", i);
 						if (info)
 							info->Format = VideoFormatEnum::VC1;
@@ -225,8 +225,8 @@ void MediaSourceElement::SetupPins()
 			case AVMEDIA_TYPE_AUDIO:
 			{
 				AudioPinInfoSPTR info = std::make_shared<AudioPinInfo>();
-				info->Channels = codecCtxPtr->channels;
-				info->SampleRate = codecCtxPtr->sample_rate;
+				info->Channels = codecParPtr->channels;
+				info->SampleRate = codecParPtr->sample_rate;
 				info->Format = AudioFormatEnum::Unknown;
 				info->ExtraData = ext;
 
@@ -242,31 +242,31 @@ void MediaSourceElement::SetupPins()
 
 				switch (codec_id)
 				{
-					case CODEC_ID_MP2:
+					case AV_CODEC_ID_MP2:
 						printf("stream #%d - AUDIO/MP2\n", i);
 						if (info)
 							info->Format = AudioFormatEnum::MpegLayer2;
 						break;
 
-					case CODEC_ID_MP3:
+					case AV_CODEC_ID_MP3:
 						printf("stream #%d - AUDIO/MP3\n", i);
 						if (info)
 							info->Format = AudioFormatEnum::Mpeg2Layer3;
 						break;
 
-					case CODEC_ID_AAC:
+					case AV_CODEC_ID_AAC:
 						printf("stream #%d - AUDIO/AAC\n", i);
 						if (info)
 							info->Format = AudioFormatEnum::Aac;
 						break;
 
-					case CODEC_ID_AC3:
+					case AV_CODEC_ID_AC3:
 						printf("stream #%d - AUDIO/AC3\n", i);
 						if (info)
 							info->Format = AudioFormatEnum::Ac3;
 						break;
 
-					case CODEC_ID_DTS:
+					case AV_CODEC_ID_DTS:
 						printf("stream #%d - AUDIO/DTS\n", i);
 						if (info)
 							info->Format = AudioFormatEnum::Dts;
@@ -343,40 +343,40 @@ void MediaSourceElement::SetupPins()
 						info->Format = SubtitleFormatEnum::SubRip;
 						break;
 
-					case  CODEC_ID_HDMV_PGS_SUBTITLE:
+					case  AV_CODEC_ID_HDMV_PGS_SUBTITLE:
 						printf("stream #%d - SUBTITLE/HDMV_PGS_SUBTITLE\n", i);
 						info->Format = SubtitleFormatEnum::Pgs;
 						break;
 
-					case  CODEC_ID_DVB_SUBTITLE:
+					case  AV_CODEC_ID_DVB_SUBTITLE:
 						printf("stream #%d - SUBTITLE/DVB_SUBTITLE\n", i);
 						info->Format = SubtitleFormatEnum::Dvb;
 						break;
 
-					case  CODEC_ID_TEXT:
+					case  AV_CODEC_ID_TEXT:
 						printf("stream #%d - SUBTITLE/TEXT\n", i);
 						info->Format = SubtitleFormatEnum::Text;
 						break;
 
-					case  CODEC_ID_XSUB:
+					case  AV_CODEC_ID_XSUB:
 						printf("stream #%d - TODO SUBTITLE/XSUB\n", i);
 						break;
 
-					case  CODEC_ID_SSA:
+					case  AV_CODEC_ID_SSA:
 						printf("stream #%d - TODO SUBTITLE/SSA\n", i);
 						break;
 
-					case  CODEC_ID_MOV_TEXT:
+					case  AV_CODEC_ID_MOV_TEXT:
 						printf("stream #%d - TODO SUBTITLE/MOV_TEXT\n", i);
 						break;
 
 
-					case  CODEC_ID_DVB_TELETEXT:
+					case  AV_CODEC_ID_DVB_TELETEXT:
 						printf("stream #%d - SUBTITLE/DVB_TELETEXT\n", i);
 						info->Format = SubtitleFormatEnum::DvbTeletext;
 						break;
 
-					case  CODEC_ID_SRT:
+					case  AV_CODEC_ID_SRT:
 						printf("stream #%d - TODO SUBTITLE/SRT\n", i);
 						break;
 

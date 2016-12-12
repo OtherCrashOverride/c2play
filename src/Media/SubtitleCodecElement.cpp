@@ -40,15 +40,15 @@ void SubtitleDecoderElement::SetupCodec()
 			break;
 
 		case SubtitleFormatEnum::Pgs:
-			avcodec = avcodec_find_decoder(CODEC_ID_HDMV_PGS_SUBTITLE);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_HDMV_PGS_SUBTITLE);
 			break;
 
 		case SubtitleFormatEnum::Dvb:
-			avcodec = avcodec_find_decoder(CODEC_ID_DVB_SUBTITLE);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_DVB_SUBTITLE);
 			break;
 
 		case SubtitleFormatEnum::DvbTeletext:
-			avcodec = avcodec_find_decoder(CODEC_ID_DVB_TELETEXT);
+			avcodec = avcodec_find_decoder(AV_CODEC_ID_DVB_TELETEXT);
 			break;
 
 		default:
@@ -221,8 +221,8 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 							rect->w, rect->h);
 						unsigned int* imageData = (unsigned int*)image->Data();
 
-						unsigned char* pixData = rect->pict.data[0];
-						unsigned int* paletteData = (unsigned int*)rect->pict.data[1];
+						unsigned char* pixData = rect->data[0];
+						unsigned int* paletteData = (unsigned int*)rect->data[1];
 
 						for (int y = 0; y < rect->h; ++y)
 						{
