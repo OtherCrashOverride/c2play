@@ -16,14 +16,12 @@
 
 #pragma once
 
-
 #include <pthread.h>
-#include <sys/time.h>
 
-#include "Codec.h"
 #include "InPin.h"
 #include "OutPin.h"
 #include "WaitCondition.h"
+
 
 
 // Push model

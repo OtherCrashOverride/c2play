@@ -14,13 +14,13 @@
 *
 */
 
-#include "AmlCodec.h"
-
-#include "Exception.h"
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+
+#include "AmlCodec.h"
+#include "Exception.h"
 
 
 

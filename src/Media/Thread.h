@@ -16,9 +16,10 @@
 
 #pragma once
 
-#include <pthread.h>
-#include <functional>
 #include <memory>
+#include <functional>
+
+#include <pthread.h>
 
 
 

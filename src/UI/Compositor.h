@@ -20,15 +20,12 @@
 
 #include <linux/fb.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
-#include "Egl.h"
-#include "QuadBatch.h"
-#include "Mutex.h"
-#include "Thread.h"
+#include "Exception.h"
 #include "Image.h"
+#include "Mutex.h"
+#include "QuadBatch.h"
+#include "Thread.h"
 
 
 

@@ -16,18 +16,11 @@
 
 #pragma once
 
-#include "Exception.h"
-
-#include <pthread.h>
+#include <memory>
 #include <queue>
 #include <string>
-#include <linux/input.h>
-#include <linux/uinput.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <memory>
+
+#include <pthread.h>
 
 
 

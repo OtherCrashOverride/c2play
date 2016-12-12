@@ -16,15 +16,14 @@
 
 #pragma once
 
-#include "MediaSourceElement.h"
+#include <string>
+
+#include "Compositor.h"
 #include "AlsaAudioSink.h"
 #include "AmlVideoSink.h"
 #include "AudioCodec.h"
+#include "MediaSourceElement.h"
 #include "SubtitleCodecElement.h"
-//#include "Egl.h"
-#include "Compositor.h"
-
-#include <string>
 
 
 

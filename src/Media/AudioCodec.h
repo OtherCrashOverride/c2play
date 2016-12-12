@@ -16,15 +16,10 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <vector>
-
 #include "Codec.h"
 #include "Element.h"
 #include "InPin.h"
+
 
 
 class AudioCodecElement : public Element

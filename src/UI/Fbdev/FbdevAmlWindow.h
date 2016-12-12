@@ -16,10 +16,17 @@
 
 #pragma once
 
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include <sys/kd.h>
 #include <sys/mman.h>	//mmap
-#include <linux/kd.h>
 
 #include "AmlWindow.h"
+#include "Exception.h"
+
 
 
 #ifndef _FBDEV_WINDOW_H_

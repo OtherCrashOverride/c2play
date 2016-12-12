@@ -15,7 +15,6 @@
 */
 
 #include "InPin.h"
-
 #include "OutPin.h"
 #include "Element.h"
 

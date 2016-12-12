@@ -16,18 +16,11 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <cstring>
-
-
 #include <vector>
 
 #include "Codec.h"
 #include "Element.h"
 #include "InPin.h"
-#include "Thread.h"
 #include "Timer.h"
 #include "AmlCodec.h"
 

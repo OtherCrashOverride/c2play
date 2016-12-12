@@ -16,12 +16,13 @@
 
 #pragma once
 
-#include "Mutex.h"
-#include "Exception.h"
+#include <queue>
 
 #include <pthread.h>
-#include <queue>
 #include <unistd.h>
+
+#include "Mutex.h"
+#include "Exception.h"
 
 
 

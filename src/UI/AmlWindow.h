@@ -16,12 +16,7 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/fb.h>
+#include "Window.h"
 
 // from include/linux/amlogic/amports/amstream.h
 //#define _A_M 'S'
@@ -30,9 +25,6 @@
 //{
 //#include <codec.h>	// aml_lib
 //}
-
-#include "Exception.h"
-#include "Window.h"
 
 
 

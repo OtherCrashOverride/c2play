@@ -16,11 +16,11 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "Codec.h"
 #include "Buffer.h"
-
-
-#include <memory>
 
 
 

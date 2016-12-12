@@ -16,25 +16,19 @@
 
 #pragma once
 
-#include "Codec.h"
-#include "Element.h"
-#include "OutPin.h"
-#include "EventListener.h"
-
-
+#include <memory>
 #include <string>
-#include <map>
-
 
 extern "C"
 {
 #include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
 #include <libavutil/error.h>
 }
 
-
-#include <memory>
+#include "Element.h"
+#include "OutPin.h"
+#include "EventListener.h"
+#include "Exception.h"
 
 
 

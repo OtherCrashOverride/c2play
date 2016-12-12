@@ -14,29 +14,16 @@
 *
 */
 
-#include <stdio.h>
-
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <vector>
-#include <alsa/asoundlib.h>
-#include <string> 
-#include <queue>
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <getopt.h>
 
-extern "C"
-{
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-}
+#include <linux/input.h>
+#include <sys/stat.h>
 
-#include "InputDevice.h"
 #include "MediaPlayer.h"
+#include "InputDevice.h"
+#include "Osd.h"
+#include "Compositor.h"
 
 #ifdef X11
 #include "X11Window.h"
@@ -44,17 +31,6 @@ extern "C"
 #include "FbdevAmlWindow.h"
 #endif
 
-#include <dirent.h>
-#include <sys/stat.h>
-#include <string>
-#include <linux/input.h>
-#include <linux/uinput.h>
-
-#include <linux/kd.h>
-#include <linux/fb.h>
-
-#include "Osd.h"
-#include "Compositor.h"
 
 
 bool isRunning = true;

@@ -16,7 +16,6 @@
 
 #include "AudioCodec.h"
 
-#include <algorithm>
 
 
 void AudioCodecElement::SetupCodec()

@@ -16,19 +16,17 @@
 
 #pragma once
 
-
-#include <vector>
-#include <memory>
 #include <map>
+#include <memory>
+#include <vector>
 
-#include "GL.h"
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Texture2D.h"
 #include "QuadBatchProgram.h"
-#include "Matrix4.h"
 #include "Rectangle.h"
+
 
 
 #pragma pack(push, 1)

@@ -14,8 +14,14 @@
 *
 */
 
-#include "AmlWindow.h"
+#include <fcntl.h>
+#include <unistd.h>
 
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+
+#include "AmlWindow.h"
+#include "Exception.h"
 
 
 

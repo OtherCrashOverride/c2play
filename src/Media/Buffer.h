@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include "Exception.h"
-//#include "Codec.h"
+#include <memory>
+#include <vector>
 
 extern "C"
 {
 #include <libavformat/avformat.h>
 }
 
-#include <memory>
-#include <vector>
+#include "Exception.h"
+
 
 
 enum class BufferTypeEnum

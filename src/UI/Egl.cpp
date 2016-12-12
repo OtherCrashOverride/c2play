@@ -14,7 +14,11 @@
 *
 */
 
+
+#include <sstream>
+
 #include "Egl.h"
+#include "Exception.h"
 
 
 

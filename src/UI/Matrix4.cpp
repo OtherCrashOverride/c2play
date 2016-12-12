@@ -14,10 +14,11 @@
 *
 */
 
-#include "Matrix4.h"
-
-#include "Exception.h"
 #include <cmath>
+
+#include "Matrix4.h"
+#include "Exception.h"
+
 
 
 const Matrix4 Matrix4::Identity = Matrix4(

@@ -14,6 +14,8 @@
 *
 */
 
+#include <sstream>
+
 #include "GL.h"
 
 
