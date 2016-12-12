@@ -14,6 +14,15 @@
 *
 */
 
+#include <cstdio>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <linux/input.h>
+#include <sys/ioctl.h>
+
+#include "Exception.h"
 #include "InputDevice.h"
 
 

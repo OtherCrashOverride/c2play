@@ -16,13 +16,13 @@
 
 #pragma once
 
-#include <sstream>
 #include <memory>
+#include <string>
 
 #include <GLES2/gl2.h>
 
-#include "Exception.h"
 #include "Egl.h"
+#include "Exception.h"
 
 
 

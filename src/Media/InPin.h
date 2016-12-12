@@ -16,11 +16,15 @@
 
 #pragma once
 
-#include "Pin.h"
-#include "Thread.h"
-#include "WaitCondition.h"
+#include <memory>
+
 #include "Event.h"
 #include "EventArgs.h"
+#include "LockedQueue.h"
+#include "Thread.h"
+#include "Pin.h"
+#include "WaitCondition.h"
+
 
 
 //class OutPin;

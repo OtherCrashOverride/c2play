@@ -14,9 +14,11 @@
 *
 */
 
+#include <cstdio>
+#include <cstring>
+
 #include "AudioCodec.h"
 
-#include <algorithm>
 
 
 void AudioCodecElement::SetupCodec()

@@ -16,8 +16,9 @@
 
 #pragma once
 
-#include <exception>
 #include <cstdio>
+#include <exception>
+
 
 
 class Exception : std::exception

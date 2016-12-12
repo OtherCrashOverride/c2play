@@ -14,10 +14,12 @@
 *
 */
 
-#include "InPin.h"
+#include <cstdio>
+#include <functional>
 
-#include "OutPin.h"
 #include "Element.h"
+#include "InPin.h"
+#include "OutPin.h"
 
 void  InPin::WorkThread()
 {

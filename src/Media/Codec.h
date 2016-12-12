@@ -16,20 +16,7 @@
 
 #pragma once
 
-//extern "C"
-//{
-//#include <libavformat/avformat.h>
-//#include <libavcodec/avcodec.h>
-//}
-
-#include <pthread.h>
-#include <queue>
 #include <memory>
-
-#include "Exception.h"
-#include "Thread.h"
-#include "LockedQueue.h"
-#include "Buffer.h"
 
 
 

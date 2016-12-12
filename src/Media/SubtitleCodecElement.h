@@ -16,23 +16,24 @@
 
 #pragma once
 
+#include <cstdarg>
+#include <memory>
+
+#include <ass/ass.h>
+
 extern "C"
 {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 }
 
-#include <ass/ass.h>
-
+#include "Compositor.h"
 #include "Element.h"
+#include "IClock.h"
+#include "Image.h"
 #include "InPin.h"
 #include "OutPin.h"
-#include "Image.h"
-//#include "Egl.h"
-//#include "QuadBatch.h"
-#include "Compositor.h"
 #include "Timer.h"
-#include "IClock.h"
 
 
 

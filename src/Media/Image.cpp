@@ -14,6 +14,7 @@
 *
 */
 
+#include "Exception.h"
 #include "Image.h"
 
 

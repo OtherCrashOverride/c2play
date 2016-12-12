@@ -16,19 +16,14 @@
 
 #pragma once
 
-#include "Codec.h"
-#include "Thread.h"
-#include "LockedQueue.h"
-
 #include <alsa/asoundlib.h>
-
-
-#include <vector>
 
 #include "Codec.h"
 #include "Element.h"
-#include "InPin.h"
 #include "IClock.h"
+#include "InPin.h"
+#include "LockedQueue.h"
+#include "Thread.h"
 
 
 

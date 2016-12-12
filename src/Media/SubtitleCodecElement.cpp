@@ -14,7 +14,12 @@
 *
 */
 
+#include <cstdio>
+#include <string>
+#include <vector>
+
 #include "SubtitleCodecElement.h"
+
 
 
 void SubtitleDecoderElement::static_msg_callback(int level, const char* fmt, va_list va, void *data)

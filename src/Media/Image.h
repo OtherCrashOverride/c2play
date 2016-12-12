@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "Exception.h"
 
 
 enum class ImageFormatEnum

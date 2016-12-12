@@ -16,12 +16,7 @@
 
 #pragma once
 
-#include <string>
-#include <sstream>
-
 #include <EGL/egl.h>
-
-#include "Exception.h"
 
 
 

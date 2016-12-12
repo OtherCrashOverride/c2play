@@ -16,11 +16,12 @@
 
 #pragma once
 
+#include <vector>
+
 #include "Mutex.h"
 #include "Exception.h"
 #include "EventListener.h"
 
-#include <vector>
 
 
 template<typename T>  // where T : EventArgs

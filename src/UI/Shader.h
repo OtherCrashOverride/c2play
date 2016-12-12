@@ -16,9 +16,10 @@
 
 #pragma once
 
+#include <memory>
+
 #include "GL.h"
 
-#include <memory>
 
 
 enum class ShaderTypeEnum
