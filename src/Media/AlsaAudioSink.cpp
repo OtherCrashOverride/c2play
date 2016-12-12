@@ -316,39 +316,42 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 	{
 		printf("snd_pcm_delay failed.\n");
 	}
-	//printf("snd_pcm_delay: returned\n");
-
-	// The sample currently playing is previous in time to this frame,
-	// so adjust negatively.
-	double adjust = -(delay / (double)sampleRate);
-
-	//printf("ALSA: adjust=%f\n", adjust);
-
-	if (pcmBuffer->TimeStamp() > 0)
+	else
 	{
-		double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
-		clock = time;
+		//printf("snd_pcm_delay: returned\n");
 
-		BufferSPTR clockPinBuffer;
-		if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
+		// The sample currently playing is previous in time to this frame,
+		// so adjust negatively.
+		double adjust = -(delay / (double)sampleRate);
+
+		//printf("ALSA: adjust=%f\n", adjust);
+
+		if (pcmBuffer->TimeStamp() > 0)
 		{
-			ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
-			clockDataBuffer->SetTimeStamp(time);
+			double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
+			clock = time;
 
-			clockOutPin->SendBuffer(clockDataBuffer);
-
-			//printf("AmlAudioSinkElement: clock=%f\n", pcmBuffer->TimeStamp());
-		}
-
-
-		// New clock interface
-		for (IClockSinkSPTR sink : clockSinks)
-		{
-			//printf("AmlAudioSinkElement: IClockSinkSPTR sink=%p\n", sink.get());
-
-			if (sink)
+			BufferSPTR clockPinBuffer;
+			if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
 			{
-				sink->SetTimeStamp(time);
+				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
+				clockDataBuffer->SetTimeStamp(time);
+
+				clockOutPin->SendBuffer(clockDataBuffer);
+
+				//printf("AmlAudioSinkElement: clock=%f\n", pcmBuffer->TimeStamp());
+			}
+
+
+			// New clock interface
+			for (IClockSinkSPTR sink : clockSinks)
+			{
+				//printf("AmlAudioSinkElement: IClockSinkSPTR sink=%p\n", sink.get());
+
+				if (sink)
+				{
+					sink->SetTimeStamp(time);
+				}
 			}
 		}
 	}
@@ -378,13 +381,22 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 		if (frames != framesToWrite)
 		{
-			printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+			if (frames == 0)
+			{
+				// ALSA will never recover when the return result is 0
+				printf("snd_pcm_writei: unexpected zero (0) result.\n");
+				break;
+			}
+			else
+			{
+				printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
 
-			//printf("snd_pcm_recover: handle=%p, err=%ld, silent=1\n", handle, frames);
-			snd_pcm_recover(handle, frames, 1);
-			//printf("snd_pcm_recover: returned\n");
+				//printf("snd_pcm_recover: handle=%p, err=%ld, silent=1\n", handle, frames);
+				snd_pcm_recover(handle, frames, 1);
+				//printf("snd_pcm_recover: returned\n");
 
-			printf("snd_pcm_recover\n");			
+				printf("snd_pcm_recover\n");
+			}
 		}
 		else
 		{
