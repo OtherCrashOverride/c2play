@@ -312,6 +312,8 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 	snd_pcm_sframes_t delay;
 
 	//printf("snd_pcm_delay: handle=%p, &delay=%p\n", handle, &delay);
+	double adjust = 0;
+
 	if (snd_pcm_delay(handle, &delay) != 0)
 	{
 		printf("snd_pcm_delay failed.\n");
@@ -322,39 +324,40 @@ void AlsaAudioSinkElement::ProcessBuffer(PcmDataBufferSPTR pcmBuffer)
 
 		// The sample currently playing is previous in time to this frame,
 		// so adjust negatively.
-		double adjust = -(delay / (double)sampleRate);
+		adjust = -(delay / (double)sampleRate);
+	}
 
-		//printf("ALSA: adjust=%f\n", adjust);
+	//printf("ALSA: adjust=%f\n", adjust);
 
-		if (pcmBuffer->TimeStamp() > 0)
+	if (pcmBuffer->TimeStamp() > 0)
+	{
+		double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
+		clock = time;
+
+		BufferSPTR clockPinBuffer;
+		if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
 		{
-			double time = pcmBuffer->TimeStamp() + adjust + audioAdjustSeconds;
-			clock = time;
+			ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
+			clockDataBuffer->SetTimeStamp(time);
 
-			BufferSPTR clockPinBuffer;
-			if (clockOutPin->TryGetAvailableBuffer(&clockPinBuffer))
+			clockOutPin->SendBuffer(clockDataBuffer);
+
+			//printf("AmlAudioSinkElement: clock=%f\n", pcmBuffer->TimeStamp());
+		}
+
+
+		// New clock interface
+		for (IClockSinkSPTR sink : clockSinks)
+		{
+			//printf("AmlAudioSinkElement: IClockSinkSPTR sink=%p\n", sink.get());
+
+			if (sink)
 			{
-				ClockDataBufferSPTR clockDataBuffer = std::static_pointer_cast<ClockDataBuffer>(clockPinBuffer);
-				clockDataBuffer->SetTimeStamp(time);
-
-				clockOutPin->SendBuffer(clockDataBuffer);
-
-				//printf("AmlAudioSinkElement: clock=%f\n", pcmBuffer->TimeStamp());
-			}
-
-
-			// New clock interface
-			for (IClockSinkSPTR sink : clockSinks)
-			{
-				//printf("AmlAudioSinkElement: IClockSinkSPTR sink=%p\n", sink.get());
-
-				if (sink)
-				{
-					sink->SetTimeStamp(time);
-				}
+				sink->SetTimeStamp(time);
 			}
 		}
 	}
+
 
 
 	// Send data to ALSA
