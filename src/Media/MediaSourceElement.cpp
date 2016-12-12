@@ -408,7 +408,7 @@ const ChapterListSPTR MediaSourceElement::Chapters() const
 }
 
 
-MediaSourceElement::MediaSourceElement(std::string url)
+MediaSourceElement::MediaSourceElement(std::string url, std::string avOptions)
 	: url(url)
 {
 	AVDictionary* options_dict = NULL;
@@ -427,6 +427,12 @@ MediaSourceElement::MediaSourceElement(std::string url)
 	latency. It defaults to 5,000,000 microseconds = 5 seconds.
 	*/
 	av_dict_set(&options_dict, "analyzeduration", "10000000", 0);
+
+	if (av_dict_parse_string(&options_dict, avOptions.c_str(), ":", ",", 0))
+	{
+		printf("Invalid AVDictionary options.\n");
+		throw Exception();
+	}
 
 	int ret = avformat_open_input(&ctx, url.c_str(), NULL, &options_dict);
 	if (ret < 0)

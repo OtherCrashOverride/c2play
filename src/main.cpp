@@ -189,12 +189,28 @@ void GetDevices()
 	}
 }
 
+void DisplayHelp()
+{
+		printf("Usage: c2play [OPTIONS] [FILE|URL]\n");
+		printf("Play video using hardware acceleration\n\n");
+
+		printf("      --help\t\tDisplay this help information\n");
+		printf("  -t, --time hh:mm:ss\tStart playback at specified time\n");
+		printf("  -c, --chapter n\tStart playback at specified chapter\n");
+		printf("      --video n\t\tIndex of video stream to play\n");
+		printf("      --audio n\t\tIndex of audio stream to play\n");
+		printf("      --subtitle n\tIndex of subtitle stream to play\n");
+		printf("      --avdict 'opts'\tOptions to pass to libav\n");
+}
+
 struct option longopts[] = {
+	{ "help",			no_argument,        NULL,          'h' },
 	{ "time",			required_argument,  NULL,          't' },
 	{ "chapter",		required_argument,  NULL,          'c' },
 	{ "video",			required_argument,  NULL,          'v' },
 	{ "audio",			required_argument,  NULL,          'a' },
 	{ "subtitle",		required_argument,  NULL,          's' },
+	{ "avdict",			required_argument,  NULL,          'A' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -203,9 +219,8 @@ int main(int argc, char** argv)
 {
 	if (argc < 2)
 	{
-		// TODO: Usage
-		printf("TODO: Usage\n");
-		return 0;
+		DisplayHelp();
+		exit(EXIT_SUCCESS);
 	}
 
 
@@ -220,11 +235,20 @@ int main(int argc, char** argv)
 	int optionVideoIndex = 0;
 	int optionAudioIndex = 0;
 	int optionSubtitleIndex = -1;	//disabled by default
+	std::string avOptions;
 
 	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
 	{
 		switch (c)
 		{
+			case 'h':
+				DisplayHelp();
+				exit(EXIT_SUCCESS);
+
+			case 'A':
+				avOptions = optarg;
+				break;
+
 			case 't':
 			{
 				if (strchr(optarg, ':'))
@@ -272,7 +296,8 @@ int main(int argc, char** argv)
 				break;
 
 			default:
-				throw NotSupportedException();
+				DisplayHelp();
+				exit(EXIT_FAILURE);
 
 				//printf("?? getopt returned character code 0%o ??\n", c);
 				//break;
@@ -295,9 +320,8 @@ int main(int argc, char** argv)
 
 	if (url == nullptr)
 	{
-		// TODO: Usage
-		printf("TODO: Usage\n");
-		return 0;
+		DisplayHelp();
+		exit(EXIT_FAILURE);
 	}
 
 
@@ -348,6 +372,7 @@ int main(int argc, char** argv)
 
 
 	MediaPlayerSPTR mediaPlayer = std::make_shared<MediaPlayer>(url,
+		avOptions,
 		compositor,
 		optionVideoIndex,
 		optionAudioIndex,
