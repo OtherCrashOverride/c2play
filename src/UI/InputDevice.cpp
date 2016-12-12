@@ -166,9 +166,21 @@ void InputDevice::WorkThread()
 
 		if (count != sizeof(ev))
 		{
-			// EINTR will happen when threaded                    
-			if (count != -(EINTR))
+			// EINTR will happen when threaded     
+			if (count == -(EINTR))
+			{
+				printf("InputDevice: '%s' EINTR\n", name.c_str());
+			}
+			else
+			{
+				printf("InputDevice: '%s' unexpected read count (%d).\n", name.c_str(), count);
 				break;
+			}
+
+			//if (count != -(EINTR))
+			//{				
+			//	break;
+			//}
 		}
 		else
 		{
