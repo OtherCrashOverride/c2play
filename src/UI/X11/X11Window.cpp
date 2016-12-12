@@ -14,10 +14,11 @@
 *
 */
 
+#include "Egl.h"
+#include "Exception.h"
+#include "GL.h"
 #include "X11Window.h"
 
-#include "Egl.h"
-#include "GL.h"
 
 
 //void X11AmlWindow::IntializeEgl()

@@ -16,22 +16,10 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-
-#include <cstring>
-#include <string>
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-
 #include <EGL/egl.h>
 
-#include "Exception.h"
 #include "AmlWindow.h"
+
 
 
 // from include/linux/amlogic/amports/amstream.h
