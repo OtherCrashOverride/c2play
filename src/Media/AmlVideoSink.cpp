@@ -252,126 +252,125 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 	isExtraDataSent = false;
 
-	if (isAnnexB)
-	{
-		if (isShortStartCode)
-		{
-			switch (videoFormat)
-			{
-				case VideoFormatEnum::Mpeg4:
-					ConvertH264ExtraDataToAnnexB();
-					break;
 
-				default:
-					throw NotSupportedException();
+	switch (videoFormat)
+	{
+		case VideoFormatEnum::Mpeg2:
+		{
+			SendCodecData(pts, pkt->data, pkt->size);
+			break;
+		}
+
+		case VideoFormatEnum::Mpeg4:
+		{
+			if (isShortStartCode)
+			{
+				ConvertH264ExtraDataToAnnexB();
+				SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
 			}
 
+			SendCodecData(pts, pkt->data, pkt->size);
+			break;
+		}
+
+		case VideoFormatEnum::Mpeg4V3:
+		{
+			//printf("Sending Divx3\n");
+			Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height, pkt->size);
 			SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+			//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+
+			SendCodecData(0, pkt->data, pkt->size);
+			//amlCodec.SendData(0, pkt->data, pkt->size);
+			break;
 		}
-	
-		SendCodecData(pts, pkt->data, pkt->size);
-	}
-	else if (!isAnnexB &&
-		(videoFormat == VideoFormatEnum::Avc ||
-		 videoFormat == VideoFormatEnum::Hevc))
-	{
-		//unsigned char* nalHeader = (unsigned char*)pkt.data;
-
-		// Five least significant bits of first NAL unit byte signify nal_unit_type.
-		int nal_unit_type;
-		const int nalHeaderLength = 4;
-
-		while (nalHeader < (pkt->data + pkt->size))
+			
+		case VideoFormatEnum::Avc:
+		case VideoFormatEnum::Hevc:
 		{
-			switch (videoFormat)
+			if (!isAnnexB)
 			{
-				case VideoFormatEnum::Avc:
-					//if (!isExtraDataSent)
+				// Five least significant bits of first NAL unit byte signify nal_unit_type.
+				int nal_unit_type;
+				const int nalHeaderLength = 4;
+
+				while (nalHeader < (pkt->data + pkt->size))
 				{
-					// Copy AnnexB data if NAL unit type is 5
-					nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
-
-					if (!isExtraDataSent || nal_unit_type == 5)
+					switch (videoFormat)
 					{
-						ConvertH264ExtraDataToAnnexB();
+						case VideoFormatEnum::Avc:
+						{
+							// Copy AnnexB data if NAL unit type is 5
+							nal_unit_type = nalHeader[nalHeaderLength] & 0x1F;
 
-						SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-						//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+							if (!isExtraDataSent || nal_unit_type == 5)
+							{
+								ConvertH264ExtraDataToAnnexB();
+
+								SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+								//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
+							}
+
+							isExtraDataSent = true;
+						}
+						break;
+
+						case VideoFormatEnum::Hevc:
+						{
+							nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
+
+							/* prepend extradata to IRAP frames */
+							if (!isExtraDataSent || (nal_unit_type >= 16 && nal_unit_type <= 23))
+							{
+								HevcExtraDataToAnnexB();
+
+								SendCodecData(0, &videoExtraData[0], videoExtraData.size());
+								//amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
+							}
+
+							isExtraDataSent = true;
+						}
+						break;
+
+						default:
+							throw NotSupportedException("Unexpected video format.");
 					}
 
-					isExtraDataSent = true;
-				}
-				break;
 
-				case VideoFormatEnum::Hevc:
-					//if (!isExtraDataSent)
-				{
-					nal_unit_type = (nalHeader[nalHeaderLength] >> 1) & 0x3f;
+					// Overwrite header NAL length with startcode '0x00000001' in *BigEndian*
+					int nalLength = nalHeader[0] << 24;
+					nalLength |= nalHeader[1] << 16;
+					nalLength |= nalHeader[2] << 8;
+					nalLength |= nalHeader[3];
 
-					/* prepend extradata to IRAP frames */
-					if (!isExtraDataSent || (nal_unit_type >= 16 && nal_unit_type <= 23))
+					if (nalLength < 0 || nalLength > pkt->size)
 					{
-						HevcExtraDataToAnnexB();
-
-						SendCodecData(0, &videoExtraData[0], videoExtraData.size());
-						//amlCodec.SendData(0, &videoExtraData[0], videoExtraData.size());
+						printf("Invalid NAL length=%d, pkt->size=%d\n", nalLength, pkt->size);
+						throw Exception();
 					}
 
-					isExtraDataSent = true;
+					nalHeader[0] = 0;
+					nalHeader[1] = 0;
+					nalHeader[2] = 0;
+					nalHeader[3] = 1;
+
+					nalHeader += nalLength + 4;
 				}
-				break;
-
-				default:
-					throw NotSupportedException("Unexpected video format.");
 			}
 
-
-			// Overwrite header NAL length with startcode '0x00000001' in *BigEndian*
-			int nalLength = nalHeader[0] << 24;
-			nalLength |= nalHeader[1] << 16;
-			nalLength |= nalHeader[2] << 8;
-			nalLength |= nalHeader[3];
-
-			if (nalLength < 0 || nalLength > pkt->size)
+			if (!SendCodecData(pts, pkt->data, pkt->size))
 			{
-				printf("Invalid NAL length=%d, pkt->size=%d\n", nalLength, pkt->size);
-				throw Exception();
+				// Resend extra data on codec reset
+				isExtraDataSent = false;
+
+				printf("AmlVideoSinkElement::ProcessBuffer - SendData Failed.\n");
 			}
 
-			nalHeader[0] = 0;
-			nalHeader[1] = 0;
-			nalHeader[2] = 0;
-			nalHeader[3] = 1;
-
-			nalHeader += nalLength + 4;
+			break;
 		}
 
-		//SendCodecData(pts, pkt->data, pkt->size);
-		//if (!amlCodec.SendData(pts, pkt->data, pkt->size))
-		if (!SendCodecData(pts, pkt->data, pkt->size))
-		{
-			// Resend extra data on codec reset
-			isExtraDataSent = false;
-
-			printf("AmlVideoSinkElement::ProcessBuffer - SendData Failed.\n");
-		}
-
-		//isExtraDataSent = false;
-	}
-	else if (videoPin->InfoAs()->Format == VideoFormatEnum::Mpeg4V3)
-	{
-		//printf("Sending Divx3\n");
-		Divx3Header(videoPin->InfoAs()->Width, videoPin->InfoAs()->Height, pkt->size);
-		SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-		//amlCodec.SendData(pts, &videoExtraData[0], videoExtraData.size());
-
-		SendCodecData(0, pkt->data, pkt->size);
-		//amlCodec.SendData(0, pkt->data, pkt->size);
-	}
-	else
-	{
-		SendCodecData(pts, pkt->data, pkt->size);
-		//amlCodec.SendData(pts, pkt->data, pkt->size);
+		default:
+			throw NotSupportedException();
 	}
 
 
