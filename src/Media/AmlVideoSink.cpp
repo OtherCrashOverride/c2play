@@ -196,8 +196,8 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 	unsigned char* nalHeader = (unsigned char*)pkt->data;
 
 #if 0
-	printf("Header (pkt.size=%x):\n", pkt.size);
-	for (int j = 0; j < 16; ++j)	//nalHeaderLength
+	printf("Header (pkt.size=%x):\n", pkt->size);
+	for (int j = 0; j < 256; ++j)	//nalHeaderLength
 	{
 		printf("%02x ", nalHeader[j]);
 	}
@@ -214,9 +214,16 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 		printf("\n");
 
 		if (nalHeader[0] == 0 && nalHeader[1] == 0 &&
+			nalHeader[2] == 1)
+		{
+			isAnnexB = true;
+			isShortStartCode = true;
+		}
+		else if (nalHeader[0] == 0 && nalHeader[1] == 0 &&
 			nalHeader[2] == 0 && nalHeader[3] == 1)
 		{
 			isAnnexB = true;
+			isShortStartCode = false;
 		}
 
 		//double timeStamp = av_q2d(buffer->TimeBase()) * pkt->pts;
@@ -227,6 +234,7 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 		isFirstVideoPacket = false;
 
 		printf("isAnnexB=%u\n", isAnnexB);
+		printf("isShortStartCode=%u\n", isShortStartCode);
 	}
 
 
@@ -246,8 +254,22 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 	if (isAnnexB)
 	{
+		if (isShortStartCode)
+		{
+			switch (videoFormat)
+			{
+				case VideoFormatEnum::Mpeg4:
+					ConvertH264ExtraDataToAnnexB();
+					break;
+
+				default:
+					throw NotSupportedException();
+			}
+
+			SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
+		}
+	
 		SendCodecData(pts, pkt->data, pkt->size);
-		//amlCodec.SendData(pts, pkt->data, pkt->size);
 	}
 	else if (!isAnnexB &&
 		(videoFormat == VideoFormatEnum::Avc ||

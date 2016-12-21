@@ -235,6 +235,7 @@ class AmlVideoSinkElement : public Element
 
 	bool isFirstVideoPacket = true;
 	bool isAnnexB = false;
+	bool isShortStartCode = false;
 	bool isExtraDataSent = false;
 	int64_t estimatedNextPts = 0;
 
