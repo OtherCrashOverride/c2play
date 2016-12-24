@@ -243,9 +243,17 @@ void AudioCodecElement::ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSP
 						decoded_frame->channel_layout,
 						AV_CH_FRONT_LEFT);
 
+					if (leftChannelIndex < 0)
+						throw InvalidOperationException("av_get_channel_layout_channel_index (AV_CH_FRONT_LEFT) failed.");
+
+
 					int rightChannelIndex = av_get_channel_layout_channel_index(
 						decoded_frame->channel_layout,
 						AV_CH_FRONT_RIGHT);
+
+					if (rightChannelIndex < 0)
+						throw InvalidOperationException("av_get_channel_layout_channel_index (AV_CH_FRONT_RIGHT) failed.");
+
 
 					int centerChannelIndex = av_get_channel_layout_channel_index(
 						decoded_frame->channel_layout,
@@ -257,6 +265,9 @@ void AudioCodecElement::ProcessBuffer(AVPacketBufferSPTR buffer, AVFrameBufferSP
 
 					if (decoded_frame->channels > 2)
 					{
+						if (centerChannelIndex < 0)
+							throw InvalidOperationException("av_get_channel_layout_channel_index (AV_CH_FRONT_CENTER) failed.");
+
 						channels[2] = (void*)decoded_frame->data[centerChannelIndex];
 					}
 					//else
