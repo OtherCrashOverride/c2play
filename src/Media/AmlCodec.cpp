@@ -262,6 +262,22 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	}
 
 
+	// Restore settings that Kodi tramples
+	r = ioctl(cntl_handle, AMSTREAM_IOC_SET_VIDEO_DISABLE, (unsigned long)VIDEO_DISABLE_NONE);
+	if (r != 0)
+	{
+		throw Exception("AMSTREAM_IOC_SET_VIDEO_DISABLE VIDEO_DISABLE_NONE failed.");
+	}
+
+	uint32_t screenMode = (uint32_t)VIDEO_WIDEOPTION_NORMAL;
+	r = ioctl(cntl_handle, AMSTREAM_IOC_SET_SCREEN_MODE, &screenMode);
+	if (r != 0)
+	{
+		std::string err = "AMSTREAM_IOC_SET_SCREEN_MODE VIDEO_WIDEOPTION_NORMAL failed (" + std::to_string(r) + ").";
+		throw Exception(err.c_str());
+	}
+
+
 	//// Rotation
 	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x10000); //90
 	////codecContext.am_sysinfo.param = (void*)((unsigned long)(codecContext.am_sysinfo.param) | 0x20000); //180
