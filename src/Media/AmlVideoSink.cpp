@@ -370,6 +370,13 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			break;
 		}
 
+		case VideoFormatEnum::VC1:
+		{
+			SendCodecData(pts, pkt->data, pkt->size);
+
+			break;
+		}
+
 		default:
 			throw NotSupportedException();
 	}
