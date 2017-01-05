@@ -263,13 +263,14 @@ void AmlVideoSinkElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 		case VideoFormatEnum::Mpeg4:
 		{
-			if (isShortStartCode)
-			{
-				ConvertH264ExtraDataToAnnexB();
-				SendCodecData(pts, &videoExtraData[0], videoExtraData.size());
-			}
+			unsigned char* video_extra_data = &extraData[0];
+			int video_extra_data_size = extraData.size();
+
+			SendCodecData(0, video_extra_data, video_extra_data_size);
+
 
 			SendCodecData(pts, pkt->data, pkt->size);
+
 			break;
 		}
 
