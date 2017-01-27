@@ -201,6 +201,7 @@ void DisplayHelp()
 		printf("      --audio n\t\tIndex of audio stream to play\n");
 		printf("      --subtitle n\tIndex of subtitle stream to play\n");
 		printf("      --avdict 'opts'\tOptions to pass to libav\n");
+		printf("  -l, --loop\t\tLoop continuously\n");
 }
 
 struct option longopts[] = {
@@ -211,6 +212,7 @@ struct option longopts[] = {
 	{ "audio",			required_argument,  NULL,          'a' },
 	{ "subtitle",		required_argument,  NULL,          's' },
 	{ "avdict",			required_argument,  NULL,          'A' },
+	{ "loop",			no_argument,        NULL,          'l' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -236,8 +238,9 @@ int main(int argc, char** argv)
 	int optionAudioIndex = 0;
 	int optionSubtitleIndex = -1;	//disabled by default
 	std::string avOptions;
+	bool optionLoop = false;
 
-	while ((c = getopt_long(argc, argv, "t:c:", longopts, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "t:c:l", longopts, NULL)) != -1)
 	{
 		switch (c)
 		{
@@ -293,6 +296,11 @@ int main(int argc, char** argv)
 			case 's':
 				optionSubtitleIndex = atoi(optarg);
 				printf("optionSubtitleIndex=%d\n", optionSubtitleIndex);
+				break;
+
+			case 'l':
+				optionLoop = true;
+				printf("optionLoop=true\n");
 				break;
 
 			default:
@@ -526,7 +534,15 @@ seek:
 
 		if (mediaPlayer->IsEndOfStream())
 		{
-			isRunning = false;
+			if (optionLoop)
+			{
+				mediaPlayer->Seek(0);
+				mediaPlayer->SetState(MediaState::Play);
+			}
+			else
+			{
+				isRunning = false;
+			}
 		}
 		else
 		{
