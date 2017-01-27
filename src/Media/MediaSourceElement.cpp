@@ -380,6 +380,11 @@ void MediaSourceElement::SetupPins()
 						printf("stream #%d - TODO SUBTITLE/SRT\n", i);
 						break;
 
+					case  AV_CODEC_ID_DVD_SUBTITLE:
+						printf("stream #%d - SUBTITLE/DVD_SUBTITLE\n", i);
+						info->Format = SubtitleFormatEnum::Dvd;
+						break;
+
 					default:
 						printf("stream #%d - SUBTITLE/UNKNOWN (0x%x)\n", i, codec_id);
 						break;

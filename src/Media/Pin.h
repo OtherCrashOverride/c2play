@@ -79,7 +79,8 @@ enum class SubtitleFormatEnum
 	SubRip,
 	Pgs, //Presentation Graphic Stream
 	Dvb,
-	DvbTeletext
+	DvbTeletext,
+	Dvd
 };
 
 enum class PictureFormatEnum
