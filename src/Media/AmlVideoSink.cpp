@@ -31,7 +31,7 @@ void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 
 	timerMutex.Lock();
 
-	if (isEndOfStream)
+	if (isEndOfStream && (State() != MediaState::Pause))
 	{
 
 #if 1
@@ -659,7 +659,7 @@ void AmlVideoSinkElement::ChangeState(MediaState oldState, MediaState newState)
 
 			//doPauseFlag = false;
 			//doResumeFlag = true;
-			isEndOfStream = false;
+			//isEndOfStream = false;
 			//timer.Start();
 
 			playPauseMutex.Unlock();
@@ -746,6 +746,7 @@ void AmlVideoSinkElement::Flush()
 		//codec_set_syncenable(&codecContext, 1);
 	}
 
+	isEndOfStream = false;
 
 	timer.Start();
 
