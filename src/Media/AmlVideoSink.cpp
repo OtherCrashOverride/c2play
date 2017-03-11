@@ -21,10 +21,37 @@
 
 void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 {
+	//vdec_status vdecStatus = amlCodec.GetVdecStatus();
+	//printf("AmlVideoSinkElement: timer_Expired - width=%u, height=%u, fps=%u, error_count=%u, status=0x%x\n",
+	//	vdecStatus.width, vdecStatus.height, vdecStatus.fps, vdecStatus.error_count, vdecStatus.status);
+
+	//double pts = amlCodec.GetCurrentPts();
+	//printf("AmlVideoSinkElement: pts=%f, eosPts=%f\n", pts, eosPts);
+
+
 	timerMutex.Lock();
 
 	if (isEndOfStream)
 	{
+
+#if 1
+		double pts = amlCodec.GetCurrentPts();
+		//printf("AmlVideoSinkElement: timer_Expired - isEndOfStream=true, pts=%f, eosPts=%f\n", pts, eosPts);
+
+		// If the pts is the same as last time (clock tick = 1/4 s),
+		// then assume that playback is done.
+		if (pts == eosPts)
+		{
+			printf("AmlVideoSinkElement: timer_Expired (pausing) - isEndOfStream=true, pts=%f, eosPts=%f\n", pts, eosPts);
+			SetState(MediaState::Pause);
+			isEndOfStream = false;
+			eosPts = -1;
+		}
+		else
+		{
+			eosPts = pts;
+		}
+#else
 		buf_status bufferStatus = amlCodec.GetBufferStatus();
 		//int api = codec_get_vbuf_state(&codecContext, &bufferStatus);
 		//if (api == 0)
@@ -35,7 +62,7 @@ void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 			// Testing has shown this value does not reach zero
 			if (bufferStatus.data_len < 512)
 			{
-				printf("AmlVideoSinkElement: timer_Expired - isEndOfStream=true (Pausing).\n");
+				printf("AmlVideoSinkElement: timer_Expired - isEndOfStream=true, bufferStatus.data_len=%d (Pausing).\n", bufferStatus.data_len);
 				SetState(MediaState::Pause);
 				isEndOfStream = false;
 
@@ -48,6 +75,7 @@ void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 				//	vdecStatus.width, vdecStatus.height, vdecStatus.fps, vdecStatus.error_count, vdecStatus.status);
 			}
 		}
+#endif
 	}
 
 	timerMutex.Unlock();
@@ -578,6 +606,7 @@ void AmlVideoSinkElement::DoWork()
 					{
 						case MarkerEnum::EndOfStream:
 							isEndOfStream = true;
+							//eosPts = buffer->TimeStamp();
 							break;
 
 						case MarkerEnum::Discontinue:
@@ -597,6 +626,7 @@ void AmlVideoSinkElement::DoWork()
 					//printf("AmlVideoSink: Got a buffer.\n");
 					AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 					ProcessBuffer(avPacketBuffer);
+					//eosPts = buffer->TimeStamp();
 					break;
 				}
 

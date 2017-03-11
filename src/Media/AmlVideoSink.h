@@ -250,6 +250,7 @@ class AmlVideoSinkElement : public Element
 
 	AmlVideoSinkClockInPinSPTR clockInPin;
 	bool isEndOfStream = false;
+	double eosPts = -1;
 
 	Timer timer;
 	EventListenerSPTR<EventArgs> timerExpiredListener;
