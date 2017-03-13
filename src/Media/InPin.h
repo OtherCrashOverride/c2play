@@ -54,6 +54,10 @@ public:
 
 	Event<EventArgs> BufferReceived;
 
+	size_t FilledBufferCount() const
+	{
+		return filledBuffers.Count();
+	}
 
 
 	OutPinSPTR Source()

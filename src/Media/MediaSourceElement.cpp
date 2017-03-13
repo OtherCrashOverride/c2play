@@ -597,7 +597,7 @@ void MediaSourceElement::DoWork()
 
 			//AddFilledBuffer(buffer);
 			OutPinSPTR pin = streamList[pkt->stream_index];
-			if (pin)
+			if (pin && pin->IsConnected())
 			{
 				pin->SendBuffer(freeBuffer);
 				//printf("MediaElement (%s) DoWork pin[%d] buffer sent.\n", Name().c_str(), pkt->stream_index);

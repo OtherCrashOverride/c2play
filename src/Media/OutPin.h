@@ -72,6 +72,11 @@ protected:
 public:
 	Event<EventArgs> BufferReturned;
 
+	bool IsConnected() const
+	{
+		return sink != nullptr;
+	}
+
 
 	OutPin(ElementWPTR owner, PinInfoSPTR info);
 

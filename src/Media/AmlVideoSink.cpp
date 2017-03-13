@@ -80,6 +80,11 @@ void AmlVideoSinkElement::timer_Expired(void* sender, const EventArgs& args)
 
 	timerMutex.Unlock();
 
+
+	// Wake up video thread to prevent stalls if there
+	// is no clock input.
+	Wake();
+
 	//printf("AmlVideoSinkElement: timer expired.\n");
 }
 
@@ -551,12 +556,13 @@ void AmlVideoSinkElement::DoWork()
 	BufferSPTR buffer;
 
 	//if (videoPin->TryPeekFilledBuffer(&buffer))
-	if (State() == MediaState::Play)
+	//if (State() == MediaState::Play)
 	{
 		//AVPacketBufferSPTR avPacketBuffer = std::static_pointer_cast<AVPacketBuffer>(buffer);
 
 		// Video
-		if (videoPin->TryGetFilledBuffer(&buffer))
+		while (State() == MediaState::Play && 
+			   videoPin->TryGetFilledBuffer(&buffer))
 		{
 			if (isFirstData)
 			{
@@ -636,6 +642,8 @@ void AmlVideoSinkElement::DoWork()
 
 			videoPin->PushProcessedBuffer(buffer);
 			videoPin->ReturnProcessedBuffers();
+
+			//printf("AmlVideoSink: filledBufferCount=%d\n", (int)videoPin->FilledBufferCount());
 		}
 	}
 }
