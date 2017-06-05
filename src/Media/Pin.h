@@ -69,7 +69,8 @@ enum class AudioFormatEnum
 	Opus,
 	Vorbis,
 	PcmDvd,
-	Flac
+	Flac,
+	PcmS24LE
 };
 
 enum class SubtitleFormatEnum

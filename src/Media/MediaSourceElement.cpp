@@ -314,6 +314,12 @@ void MediaSourceElement::SetupPins()
 							info->Format = AudioFormatEnum::Flac;
 						break;
 
+					case AV_CODEC_ID_PCM_S24LE:
+						printf("stream #%d - AUDIO/PCM_S24LE\n", i);
+						if (info)
+							info->Format = AudioFormatEnum::PcmS24LE;
+						break;
+
 					default:
 						printf("stream #%d - AUDIO/UNKNOWN (0x%x)\n", i, codec_id);
 						//throw NotSupportedException();
@@ -640,7 +646,8 @@ void MediaSourceElement::Seek(double timeStamp)
 	if (ret < 0)
 	{
 		printf("av_seek_frame (%f) failed\n", timeStamp);
-		throw AVException(ret);
+		printf("WARNING: Seeking is unavailable.\n");
+		//throw AVException(ret);
 	}
 
 	// Send all Output Pins a Discontinue marker

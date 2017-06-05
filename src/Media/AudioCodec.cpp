@@ -71,6 +71,10 @@ void AudioCodecElement::SetupCodec()
 		soundCodec = avcodec_find_decoder(AV_CODEC_ID_FLAC);
 		break;
 
+	case AudioFormatEnum::PcmS24LE:
+		soundCodec = avcodec_find_decoder(AV_CODEC_ID_PCM_S24LE);
+		break;
+
 	default:
 		printf("Audio format %d is not supported.\n", (int)audioFormat);
 		throw NotSupportedException();
