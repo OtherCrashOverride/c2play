@@ -1,6 +1,9 @@
 Install dependencies:
 	sudo apt install libasound2-dev libavformat-dev libass-dev
 
+Additional dependencies for X11:
+	sudo apt install libx11-dev
+
 Compile:
 	make c2play -j4
 or
