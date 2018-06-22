@@ -198,7 +198,7 @@ void  InPin::WorkThread()
 
 
 		sourceMutex.Lock();
-		source = nullptr;
+		this->source = nullptr;
 		sourceMutex.Unlock();
 
 		parent->Log("InPin::Disconnect completed\n");
