@@ -23,7 +23,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/c2play
   TARGETDIR  = ../..
   TARGET     = $(TARGETDIR)/c2play
-  DEFINES   += -DDEBUG
+  DEFINES   += -DDEBUG -DMESA_EGL_NO_X11_HEADERS
   INCLUDES  += -I../../src/Media -I../../src/UI -I../../src/UI/Fbdev
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11

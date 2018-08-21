@@ -16,7 +16,7 @@ project "c2play"
 
    configuration "Debug"
       flags { "Symbols" }
-      defines { "DEBUG" }
+      defines { "DEBUG", "MESA_EGL_NO_X11_HEADERS" }
 
    configuration "Release"
       flags { "Optimize" }
