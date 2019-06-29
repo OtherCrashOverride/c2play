@@ -48,8 +48,8 @@
 
 class X11AmlWindow : public AmlWindow
 {
-	const int DEFAULT_WIDTH = 1280;
-	const int DEFAULT_HEIGHT = 720;
+	const int DEFAULT_WIDTH = 1;
+	const int DEFAULT_HEIGHT = 1;
 	const char* WINDOW_TITLE = "X11AmlWindow";
 
 	Display* display = nullptr;
