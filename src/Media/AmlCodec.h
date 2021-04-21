@@ -26,7 +26,9 @@
 #include "Pin.h"
 #include "Rectangle.h"
 
+#include "amports/amstream.h"
 
+#if 0
 // codec_type.h
 typedef struct {
 	unsigned int    format;  ///< video format, such as H264, MPEG2...
@@ -259,7 +261,7 @@ struct am_io_param {
 	};
 };
 
-
+#endif
 
 enum class ApiLevel
 {

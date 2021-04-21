@@ -21,7 +21,9 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
+#include "codec_type.h"
 
 
 AmlCodec::AmlCodec()
@@ -268,7 +270,7 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 		throw Exception("AMSTREAM_IOC_SYNCENABLE failed.");
 	}
 
-
+#if 0
 	// Restore settings that Kodi tramples
 	r = ioctl(cntl_handle, AMSTREAM_IOC_SET_VIDEO_DISABLE, (unsigned long)VIDEO_DISABLE_NONE);
 	if (r != 0)
@@ -283,7 +285,7 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 		std::string err = "AMSTREAM_IOC_SET_SCREEN_MODE VIDEO_WIDEOPTION_NORMAL failed (" + std::to_string(r) + ").";
 		throw Exception(err.c_str());
 	}
-
+#endif
 
 	// Debug info
 	printf("\tw=%d h=%d ", width, height);
@@ -871,6 +873,29 @@ int AmlCodec::WriteData(unsigned char* data, int length)
 		throw ArgumentOutOfRangeException("length");
 
 
-	// This is done unlocked because it blocks	
-	return write(handle, data, length);
+	// This is done unlocked because it blocks
+	int written = 0;
+	while (written < length)
+	{
+		int ret = write(handle, data, length);
+		if (ret < length)
+		{
+			if (errno == EAGAIN)
+			{
+				//printf("EAGAIN.\n");
+				sleep(0);
+
+				ret = 0;
+			}
+			else
+			{
+				printf("write failed. (%d)(%d)\n", ret, errno);
+				abort();
+			}
+		}
+
+		written += ret;
+	}
+
+	return written;
 }
