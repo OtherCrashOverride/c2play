@@ -24,7 +24,10 @@
 #include <errno.h>
 
 #include "codec_type.h"
+#include "amports/amstream.h"
 
+#define VIDEO_WIDEOPTION_NORMAL (0)
+#define VIDEO_DISABLE_NONE    (0)
 
 AmlCodec::AmlCodec()
 {
@@ -278,6 +281,7 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	{
 		throw Exception("AMSTREAM_IOC_SET_VIDEO_DISABLE VIDEO_DISABLE_NONE failed.");
 	}
+#endif
 
 	uint32_t screenMode = (uint32_t)VIDEO_WIDEOPTION_NORMAL;
 	r = ioctl(cntl_handle, AMSTREAM_IOC_SET_SCREEN_MODE, &screenMode);
@@ -286,7 +290,7 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 		std::string err = "AMSTREAM_IOC_SET_SCREEN_MODE VIDEO_WIDEOPTION_NORMAL failed (" + std::to_string(r) + ").";
 		throw Exception(err.c_str());
 	}
-#endif
+
 
 	// Debug info
 	printf("\tw=%d h=%d ", width, height);
@@ -309,6 +313,26 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	//	codecMutex.Unlock();
 	//	throw Exception();
 	//}
+
+#if 0
+	// Set video size
+	int video_fd = open("/dev/amvideo", O_RDWR);
+	if (video_fd < 0)
+	{
+		throw Exception("open /dev/amvideo failed.");
+	}
+
+	
+	int params[4]{ 0, 0, -1, -1 };
+
+	int ret = ioctl(video_fd, AMSTREAM_IOC_SET_VIDEO_AXIS, &params);
+	if (ret < 0)
+	{
+		throw Exception("ioctl AMSTREAM_IOC_SET_VIDEO_AXIS failed.");
+	}
+
+	close(video_fd);
+#endif
 
 	isOpen = true;
 }
