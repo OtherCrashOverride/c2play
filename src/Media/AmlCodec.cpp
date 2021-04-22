@@ -103,8 +103,9 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 	// frame-rate from PTS 
 	//am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE);
 	//am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE | USE_IDR_FRAMERATE | UCODE_IP_ONLY_PARAM);
-	am_sysinfo.param = (void*)(EXTERNAL_PTS);
-
+	//am_sysinfo.param = (void*)(SYNC_OUTSIDE | USE_IDR_FRAMERATE);
+	//am_sysinfo.param = (void*)(EXTERNAL_PTS | SYNC_OUTSIDE | USE_IDR_FRAMERATE);
+	am_sysinfo.param = (void*)(SYNC_OUTSIDE);
 
 	// Rotation (clockwise)
 	//am_sysinfo.param = (void*)((unsigned long)(am_sysinfo.param) | 0x10000); //90
@@ -113,7 +114,7 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 
 
 	// Note: Testing has shown that the ALSA clock requires the +1
-	am_sysinfo.rate = 96000.0 / frameRate + 1;
+	am_sysinfo.rate = 96000.0 / frameRate + 0.5;
 
 	//am_sysinfo.width = width;
 	//am_sysinfo.height = height;
@@ -476,7 +477,7 @@ double AmlCodec::GetCurrentPts()
 void AmlCodec::SetCurrentPts(double value)
 {
 	codecMutex.Lock();
-
+#if 1
 	if (!isOpen)
 	{
 		codecMutex.Unlock();
@@ -523,7 +524,7 @@ void AmlCodec::SetCurrentPts(double value)
 			throw Exception("AMSTREAM_IOC_SET_PCRSCR failed.");
 		}
 	}
-
+#endif
 	codecMutex.Unlock();
 }
 
@@ -836,7 +837,7 @@ void AmlCodec::CheckinPts(unsigned long pts)
 
 
 	// truncate to 32bit
-	pts &= 0xffffffff;
+	//pts &= 0xffffffff;
 
 	if (apiLevel >= ApiLevel::S905)	// S905
 	{
@@ -874,28 +875,28 @@ int AmlCodec::WriteData(unsigned char* data, int length)
 
 
 	// This is done unlocked because it blocks
-	int written = 0;
-	while (written < length)
-	{
+	// int written = 0;
+	// while (written < length)
+	// {
 		int ret = write(handle, data, length);
-		if (ret < length)
-		{
-			if (errno == EAGAIN)
-			{
-				//printf("EAGAIN.\n");
-				sleep(0);
+	// 	if (ret < 0)
+	// 	{
+	// 		if (errno == EAGAIN)
+	// 		{
+	// 			//printf("EAGAIN.\n");
+	// 			sleep(0);
 
-				ret = 0;
-			}
-			else
-			{
-				printf("write failed. (%d)(%d)\n", ret, errno);
-				abort();
-			}
-		}
+	// 			ret = 0;
+	// 		}
+	// 		else
+	// 		{
+	// 			printf("write failed. (%d)(%d)\n", ret, errno);
+	// 			abort();
+	// 		}
+	// 	}
 
-		written += ret;
-	}
+	// 	written += ret;
+	// }
 
-	return written;
+	return ret; //written;
 }

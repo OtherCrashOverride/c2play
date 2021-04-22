@@ -465,6 +465,8 @@ bool AmlVideoSinkElement::SendCodecData(unsigned long pts, unsigned char* data, 
 
 				break;
 			}
+
+			sleep(0);
 		}
 	}
 

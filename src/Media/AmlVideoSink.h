@@ -70,22 +70,19 @@ class AmlVideoSinkClockInPin : public InPin
 		//double driftTime = drift / (double)PTS_FREQ;
 		double driftFrames = drift * frameRate;
 
+#if 1
+		const int maxDelta = 60;
 		// To minimize clock jitter, only adjust the clock if it
 		// deviates more than +/- 2 frames
-		if (driftFrames >= 2.0 || driftFrames <= -2.0)
+		if (driftFrames >= maxDelta || driftFrames <= -maxDelta)
 		{
-			//if (pts > 0)
 			{
-				//int codecCall = codec_set_pcrscr(codecContextPtr, (int)pts);
-				//if (codecCall != 0)
-				//{
-				//	printf("codec_set_pcrscr failed.\n");
-				//}
 				codecPTR->SetCurrentPts(buffer->TimeStamp());
 
 				printf("AmlVideoSink: Adjust PTS - pts=%f vpts=%f drift=%f (%f frames)\n", pts / (double)PTS_FREQ, vpts / (double)PTS_FREQ, drift, driftFrames);
 			}
 		}
+#endif
 	}
 
 protected:
