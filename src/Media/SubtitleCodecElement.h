@@ -33,11 +33,15 @@ extern "C"
 #include "Compositor.h"
 #include "Timer.h"
 #include "IClock.h"
-
+#include "../UI/Rectangle.h"
 
 
 class SubtitleDecoderElement : public Element
 {
+	int width;
+	int height;
+	float xScale;
+	float yScale;
 	SubtitleInPinSPTR inPin;
 	SubtitlePinInfoSPTR inInfo;
 	OutPinSPTR outPin;
@@ -63,7 +67,7 @@ class SubtitleDecoderElement : public Element
 
 public:
 
-	SubtitleDecoderElement();
+	SubtitleDecoderElement(int width, int height);
 	virtual ~SubtitleDecoderElement();
 
 

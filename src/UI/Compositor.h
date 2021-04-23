@@ -24,13 +24,38 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "Egl.h"
-#include "QuadBatch.h"
+
+//#include "Egl.h"
+//#include "QuadBatch.h"
 #include "Mutex.h"
 #include "Thread.h"
 #include "Image.h"
+#include "Rectangle.h"
+
+#include <vector>
 
 
+struct PackedColor
+{
+	unsigned char R;
+	unsigned char G;
+	unsigned char B;
+	unsigned char A;
+
+	
+	PackedColor()
+		: R(0), G(0), B(0), A(0)
+	{
+	}
+
+	PackedColor(unsigned char red,
+		unsigned char green,
+		unsigned char blue,
+		unsigned char alpha)
+		: R(red), G(green), B(blue), A(alpha)
+	{
+	}
+};
 
 class Source
 {
@@ -185,13 +210,15 @@ typedef std::vector<SpriteSPTR> SpriteList;
 
 class Compositor
 {
-	RenderContextSPTR context;
+	//RenderContextSPTR context;
 	int width;
 	int height;
 	SpriteList sprites;
-	QuadBatchSPTR quadBatch;
+	//QuadBatchSPTR quadBatch;
 
 	int fd = -1;
+	int ge2d_fd = -1;
+	int ion_fd = -1;
 	Mutex mutex;
 	Thread renderThread = Thread(std::function<void()>(std::bind(&Compositor::RenderThread, this)));
 	bool isRunning = false;
@@ -207,10 +234,10 @@ class Compositor
 
 
 public:
-	RenderContextSPTR Context() const
-	{
-		return context;
-	}
+	// RenderContextSPTR Context() const
+	// {
+	// 	return context;
+	// }
 	
 	int Width() const
 	{
@@ -224,7 +251,7 @@ public:
 
 
 
-	Compositor(RenderContextSPTR context, int width, int height);
+	Compositor(int width, int height);
 	~Compositor();
 
 			

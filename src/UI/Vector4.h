@@ -17,27 +17,27 @@
 #pragma once
 
 
-struct PackedColor
-{
-	unsigned char R;
-	unsigned char G;
-	unsigned char B;
-	unsigned char A;
+// struct PackedColor
+// {
+// 	unsigned char R;
+// 	unsigned char G;
+// 	unsigned char B;
+// 	unsigned char A;
 
 	
-	PackedColor()
-		: R(0), G(0), B(0), A(0)
-	{
-	}
+// 	PackedColor()
+// 		: R(0), G(0), B(0), A(0)
+// 	{
+// 	}
 
-	PackedColor(unsigned char red,
-		unsigned char green,
-		unsigned char blue,
-		unsigned char alpha)
-		: R(red), G(green), B(blue), A(alpha)
-	{
-	}
-};
+// 	PackedColor(unsigned char red,
+// 		unsigned char green,
+// 		unsigned char blue,
+// 		unsigned char alpha)
+// 		: R(red), G(green), B(blue), A(alpha)
+// 	{
+// 	}
+// };
 
 
 struct Vector4

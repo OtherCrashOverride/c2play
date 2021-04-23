@@ -505,8 +505,15 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 
 
-SubtitleDecoderElement::SubtitleDecoderElement() 
+SubtitleDecoderElement::SubtitleDecoderElement(int width, int height)
+: width(width), height(height)
 {
+	xScale = width / 1920.0f;
+	yScale = height / 1080.0f;
+
+	printf("SubtitleDecoderElement: width=%d, height=%d\n", width, height);
+
+
 	ass_library = ass_library_init();
 	if (!ass_library)
 	{
@@ -523,13 +530,14 @@ SubtitleDecoderElement::SubtitleDecoderElement()
 		throw Exception("ass_renderer_init failed!\n");
 	}
 
+	ass_set_frame_size(ass_renderer, 1920, 1080);
+
 	ass_set_use_margins(ass_renderer, false);
+
 	ass_set_hinting(ass_renderer, ASS_HINTING_LIGHT);
 	ass_set_font_scale(ass_renderer, 1.0);
 	ass_set_line_spacing(ass_renderer, 0.0);
 
-	ass_set_frame_size(ass_renderer, 1920, 1080);
-	
 	ass_set_fonts(ass_renderer, NULL, "sans-serif",
 		ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
 	//ass_set_fonts(ass_renderer,

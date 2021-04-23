@@ -371,11 +371,11 @@ int main(int argc, char** argv)
 	 
 	window->ProcessMessages();
 
-	RenderContextSPTR renderContext = std::make_shared<RenderContext>(window->EglDisplay(),
-		window->Surface(),
-		window->Context());
+	// RenderContextSPTR renderContext = std::make_shared<RenderContext>(window->EglDisplay(),
+	// 	window->Surface(),
+	// 	window->Context());
 
-	CompositorSPTR compositor = std::make_shared<Compositor>(renderContext, 1920, 1080);
+	CompositorSPTR compositor = std::make_shared<Compositor>(window->Width(), window->Height());
 	osd = std::make_shared<Osd>(compositor);
 
 

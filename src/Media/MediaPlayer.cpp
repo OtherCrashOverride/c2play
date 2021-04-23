@@ -178,7 +178,7 @@ MediaPlayer::MediaPlayer(std::string url, std::string avOptions, CompositorSPTR 
 	OutPinSPTR sourceSubtitlePin = source->Outputs()->Find(MediaCategoryEnum::Subtitle, subtitleStream);
 	if (sourceSubtitlePin)
 	{
-		subtitleCodec = std::make_shared<SubtitleDecoderElement>();
+		subtitleCodec = std::make_shared<SubtitleDecoderElement>(compositor->Width(), compositor->Height());
 		subtitleCodec->SetName("SubtitleDecoderElement");
 		subtitleCodec->Execute();
 		subtitleCodec->WaitForExecutionState(ExecutionStateEnum::Idle);

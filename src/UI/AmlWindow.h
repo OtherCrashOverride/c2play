@@ -46,7 +46,7 @@ class AmlWindow : public WindowBase
 
 
 protected:
-	
+
 	AmlWindow();
 	virtual ~AmlWindow();
 

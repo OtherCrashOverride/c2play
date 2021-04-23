@@ -20,9 +20,9 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
-#include "Egl.h"
-#include "QuadBatch.h"
-#include "Texture2D.h"
+// #include "Egl.h"
+// #include "QuadBatch.h"
+// #include "Texture2D.h"
 #include "Compositor.h"
 
 
