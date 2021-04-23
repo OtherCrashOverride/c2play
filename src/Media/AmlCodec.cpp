@@ -149,14 +149,14 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 
 		case VideoFormatEnum::Avc:
 		{
-			if (width > 1920 || height > 1080)
-			{
-				printf("AmlVideoSink - VIDEO/H264_4K2K\n");
+			// if (width > 1920 || height > 1080)
+			// {
+			// 	printf("AmlVideoSink - VIDEO/H264_4K2K\n");
 
-				amlFormat = VFORMAT_H264_4K2K;
-				am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
-			}
-			else
+			// 	amlFormat = VFORMAT_H264_4K2K;
+			// 	am_sysinfo.format = VIDEO_DEC_FORMAT_H264_4K2K;
+			// }
+			// else
 			{
 				printf("AmlVideoSink - VIDEO/H264\n");
 
