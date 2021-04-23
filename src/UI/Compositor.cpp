@@ -279,7 +279,7 @@ void Compositor::RenderThread()
 				blitRect.dst_rect.w = surface.rect.Width * xScale;
 				blitRect.dst_rect.h = surface.rect.Height * yScale;
 
-				io = ioctl(ge2d_fd, GE2D_STRETCHBLIT_NOALPHA, &blitRect);
+				io = ioctl(ge2d_fd, GE2D_STRETCHBLIT, &blitRect);
 				if (io < 0)
 				{
 					throw Exception("GE2D_BLIT_NOALPHA failed.");					
