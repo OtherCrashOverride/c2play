@@ -22,6 +22,7 @@ project "c2play"
       flags { "Optimize" }
       defines { "" }
 
+--[[
 project "c2play-x11"
    location (output)
    kind "ConsoleApp"
@@ -40,3 +41,4 @@ project "c2play-x11"
    configuration "Release"
       flags { "Optimize" }
       defines { "" }
+]]
