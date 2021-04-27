@@ -28,7 +28,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
+  LDFLAGS   += -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -50,7 +50,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lEGL -lGLESv2 -lass
+  LDFLAGS   += -s -lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lass
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -84,16 +84,8 @@ OBJECTS := \
 	$(OBJDIR)/AmlVideoSink.o \
 	$(OBJDIR)/SubtitleCodecElement.o \
 	$(OBJDIR)/AmlWindow.o \
-	$(OBJDIR)/Egl.o \
-	$(OBJDIR)/GL.o \
 	$(OBJDIR)/InputDevice.o \
-	$(OBJDIR)/Matrix4.o \
 	$(OBJDIR)/Osd.o \
-	$(OBJDIR)/Shader.o \
-	$(OBJDIR)/Texture2D.o \
-	$(OBJDIR)/Vector2.o \
-	$(OBJDIR)/Vector3.o \
-	$(OBJDIR)/Vector4.o \
 	$(OBJDIR)/Window.o \
 	$(OBJDIR)/Compositor.o \
 	$(OBJDIR)/FbdevAmlWindow.o \
@@ -217,34 +209,10 @@ $(OBJDIR)/SubtitleCodecElement.o: ../../src/Media/SubtitleCodecElement.cpp
 $(OBJDIR)/AmlWindow.o: ../../src/UI/AmlWindow.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Egl.o: ../../src/UI/Egl.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/GL.o: ../../src/UI/GL.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/InputDevice.o: ../../src/UI/InputDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Matrix4.o: ../../src/UI/Matrix4.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Osd.o: ../../src/UI/Osd.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Shader.o: ../../src/UI/Shader.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Texture2D.o: ../../src/UI/Texture2D.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector2.o: ../../src/UI/Vector2.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector3.o: ../../src/UI/Vector3.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/Vector4.o: ../../src/UI/Vector4.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 $(OBJDIR)/Window.o: ../../src/UI/Window.cpp

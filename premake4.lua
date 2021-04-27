@@ -12,7 +12,7 @@ project "c2play"
    files { "src/**.h", "src/**.cpp" }
    excludes { "src/UI/X11/**" }
    buildoptions { "-std=c++11" }
-   linkoptions { "-lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lEGL -lGLESv2 -lass" }
+   linkoptions { "-lavformat -lavcodec -lavutil -lpthread -lasound -lrt -lass" }
 
    configuration "Debug"
       flags { "Symbols" }

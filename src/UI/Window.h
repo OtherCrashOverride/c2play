@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "Egl.h"
+//#include "Egl.h"
 
 
 class WindowBase	// Prevent name collisions with X11
@@ -33,7 +33,7 @@ public:
 
 	virtual int Width() = 0;
 	virtual int Height() = 0;
-	
+
 	// virtual EGLDisplay EglDisplay() const = 0;
 
 	// virtual EGLSurface Surface() const = 0;
