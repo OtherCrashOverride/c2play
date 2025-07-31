@@ -282,8 +282,8 @@ class AmlCodec
 	const long MAX_REFER_BUF = 0x10;
 	const long ERROR_RECOVERY_MODE_IN = 0x20;
 
-	const char* CODEC_VIDEO_ES_DEVICE = "/dev/amstream_vbuf";
-	const char* CODEC_VIDEO_ES_HEVC_DEVICE = "/dev/amstream_hevc";
+	const char* CODEC_VIDEO_ES_DEVICE = "/dev/amstream_vbuf_sched";
+	const char* CODEC_VIDEO_ES_HEVC_DEVICE = "/dev/amstream_hevc_sched";
 	const char* CODEC_CNTL_DEVICE = "/dev/amvideo";
 	typedef int CODEC_HANDLE;
 

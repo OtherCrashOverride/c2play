@@ -90,7 +90,7 @@ void SubtitleDecoderElement::SetupCodec()
 void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 {
 	AVPacket* pkt = buffer->GetAVPacket();
-	
+
 	if (avSubtitle == nullptr)
 	{
 		avSubtitle = (AVSubtitle*)calloc(1, sizeof(AVSubtitle));
@@ -116,7 +116,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 		if (len < 0)
 		{
-			// Report the error, but otherwise ignore it.				
+			// Report the error, but otherwise ignore it.
 			char errmsg[1024] = { 0 };
 			av_strerror(len, errmsg, 1024);
 
@@ -134,7 +134,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 
 		// Convert audio to ALSA format
 		if (got_sub_ptr)
-		{			
+		{
 			//typedef struct AVSubtitle {
 			//3300     uint16_t format; /* 0 = graphics */
 			//3301     uint32_t start_display_time; /* relative to packet pts, in ms */
@@ -144,7 +144,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			//3305     int64_t pts;    ///< Same as packet pts, in AV_TIME_BASE
 			//3306
 			//} AVSubtitle;
-			
+
 			double timeStamp = pkt->pts * av_q2d(buffer->TimeBase());
 			double duration = pkt->duration * av_q2d(buffer->TimeBase());
 
@@ -220,7 +220,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 					case SUBTITLE_BITMAP:
 					{
 						printf("Subtitle:\tBITMAP\n");
-						
+
 						AllocatedImageSPTR image = std::make_shared<AllocatedImage>(ImageFormatEnum::R8G8B8A8,
 							rect->w, rect->h);
 						unsigned int* imageData = (unsigned int*)image->Data();
@@ -232,7 +232,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 						{
 							for (int x = 0; x < rect->w; ++x)
 							{
-								unsigned char index = *(pixData++);								
+								unsigned char index = *(pixData++);
 								unsigned int color = paletteData[index];
 
 								//color |= 0xff0000ff;
@@ -257,7 +257,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 						imageList->push_back(imageBuffer);
 						break;
 					}
-						
+
 
 					case SUBTITLE_TEXT:
 						printf("Subtitle:\tTEXT: %s\n", rect->text);
@@ -279,7 +279,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 							//printf("Subtitle:\tsubtitle_header=%s\n", avcodecContext->subtitle_header);	//->subtitle_header_size
 							const char* header = (const char*)avcodecContext->subtitle_header;
 							const int header_size = avcodecContext->subtitle_header_size + 1;
-							if (header && header > 0)
+							if (header && *header > 0)
 							{
 								//ass_process_data(ass_track, (char*)header, header_size);
 								ass_process_codec_private(ass_track, (char*)header, header_size);
@@ -312,7 +312,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 							double s_sec = (timeStamp - s_hrs * 3600 - s_min * 60);
 							sprintf(buffer, "%d:%02d:%02.2f", s_hrs, s_min, s_sec);
 							printf("Start Time=%s\n", buffer);
-							
+
 							std::string start(buffer);
 
 
@@ -396,7 +396,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 			{
 				// * \param now video timestamp in milliseconds
 				long long now = (long long)((timeStamp + duration / 2) * 1000);
-				
+
 				ASS_Image *img = ass_render_frame(ass_renderer, ass_track, now, NULL);
 
 				while (img)
@@ -438,7 +438,7 @@ void SubtitleDecoderElement::ProcessBuffer(AVPacketBufferSPTR buffer)
 						for (int x = 0; x < img->w; ++x)
 						{
 							unsigned char lum = *(pixData++);
-							
+
 
 							unsigned char red = (img->color >> 24) * lum / 0xff;
 							unsigned char green = (img->color >> 16) * lum / 0xff;
@@ -525,7 +525,7 @@ SubtitleDecoderElement::SubtitleDecoderElement(int width, int height)
 
 
 	ass_renderer = ass_renderer_init(ass_library);
-	if (!ass_renderer) 
+	if (!ass_renderer)
 	{
 		throw Exception("ass_renderer_init failed!\n");
 	}
@@ -541,11 +541,11 @@ SubtitleDecoderElement::SubtitleDecoderElement(int width, int height)
 	ass_set_fonts(ass_renderer, NULL, "sans-serif",
 		ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
 	//ass_set_fonts(ass_renderer,
-	//	"/usr/share/kodi/media/Fonts/arial.ttf", "Arial", 
+	//	"/usr/share/kodi/media/Fonts/arial.ttf", "Arial",
 	//	ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
 
 	ass_track = ass_new_track(ass_library);
-	if (!ass_track) 
+	if (!ass_track)
 	{
 		throw Exception("ass_new_track failed!\n");
 	}
@@ -575,7 +575,7 @@ void SubtitleDecoderElement::Initialize()
 
 
 	ElementWPTR weakPtr = shared_from_this();
-	
+
 	inPin = std::make_shared<SubtitleInPin>(weakPtr, inInfo);
 	AddInputPin(inPin);
 
@@ -622,7 +622,7 @@ void SubtitleDecoderElement::DoWork()
 					switch (markerBuffer->Marker())
 					{
 						case MarkerEnum::EndOfStream:
-							// Send all Output Pins an EOS buffer					
+							// Send all Output Pins an EOS buffer
 							for (int i = 0; i < Outputs()->Count(); ++i)
 							{
 								MarkerBufferSPTR eosBuffer = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::EndOfStream);
@@ -634,7 +634,7 @@ void SubtitleDecoderElement::DoWork()
 							break;
 
 						default:
-							// ignore unknown 
+							// ignore unknown
 							break;
 					}
 					break;
@@ -667,7 +667,7 @@ void SubtitleDecoderElement::DoWork()
 
 					// TODO: Set output info
 					//outInfo->SampleRate = info->SampleRate;
-					
+
 
 					SetupCodec();
 
@@ -710,7 +710,7 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 	if (State() == MediaState::Play)
 	{
 		entriesMutex.Lock();
-		
+
 		//printf("SubtitleRenderElement::timer_Expired currentTime=%f\n", currentTime);
 
 		// Remove stale entries
@@ -726,7 +726,7 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 
 
 			bool clearAllActiveFlag = false;
-			
+
 			for (SpriteEntry& entry : expiredEntries)
 			{
 				if (!entry.Sprite)
@@ -781,7 +781,7 @@ void SubtitleRenderElement::timer_Expired(void* sender, const EventArgs& args)
 						spriteEntries.erase(iter);
 						break;
 					}
-				}				
+				}
 			}
 
 			if (removals.size() > 0)
@@ -827,7 +827,7 @@ void SubtitleRenderElement::SetupCodec()
 void SubtitleRenderElement::ProcessBuffer(ImageListBufferSPTR buffer)
 {
 	entriesMutex.Lock();
-	
+
 
 	if (buffer->Payload()->size() < 1)
 	{
@@ -941,7 +941,7 @@ void SubtitleRenderElement::DoWork()
 				switch (markerBuffer->Marker())
 				{
 				case MarkerEnum::EndOfStream:
-					// Send all Output Pins an EOS buffer					
+					// Send all Output Pins an EOS buffer
 					for (int i = 0; i < Outputs()->Count(); ++i)
 					{
 						MarkerBufferSPTR eosBuffer = std::make_shared<MarkerBuffer>(shared_from_this(), MarkerEnum::EndOfStream);
@@ -953,7 +953,7 @@ void SubtitleRenderElement::DoWork()
 					break;
 
 				default:
-					// ignore unknown 
+					// ignore unknown
 					break;
 				}
 				break;

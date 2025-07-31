@@ -343,6 +343,8 @@ struct userdata_poc_info_t {
 #define AMSTREAM_SET_3D_TYPE 0x171
 #define AMSTREAM_SET_VSYNC_UPINT 0x172
 #define AMSTREAM_SET_VSYNC_SLOW_FACTOR 0x173
+#define AMSTREAM_SET_FRAME_BASE_PATH          0x174
+
 /*  video set ex cmd */
 #define AMSTREAM_SET_EX_VIDEO_AXIS 0x260
 #define AMSTREAM_SET_EX_VIDEO_CROP 0x261
@@ -396,27 +398,72 @@ struct userdata_poc_info_t {
 /*  amstream get ptr cmd */
 #define AMSTREAM_GET_PTR_SUB_INFO 0xA00
 
-struct am_ioctl_parm {
-    union {
-        unsigned int data_32;
-        unsigned long long data_64;
-        vformat_t data_vformat;
-        aformat_t data_aformat;
-        char data[8];
-    };
-    unsigned int cmd;
-    char reserved[4];
+// struct am_ioctl_parm {
+//     union {
+//         unsigned int data_32;
+//         unsigned long long data_64;
+//         vformat_t data_vformat;
+//         aformat_t data_aformat;
+//         char data[8];
+//     };
+//     unsigned int cmd;
+//     char reserved[4];
+// };
+
+enum FRAME_BASE_VIDEO_PATH {
+	FRAME_BASE_PATH_IONVIDEO = 0,
+	FRAME_BASE_PATH_AMLVIDEO_AMVIDEO,
+	FRAME_BASE_PATH_AMLVIDEO1_AMVIDEO2,
+	FRAME_BASE_PATH_DI_AMVIDEO,
+	FRAME_BASE_PATH_AMVIDEO,
+	FRAME_BASE_PATH_AMVIDEO2,
+	FRAME_BASE_PATH_V4L_VIDEO,
+	FRAME_BASE_PATH_TUNNEL_MODE,
+	FRAME_BASE_PATH_V4L_OSD,
+	FRAME_BASE_PATH_DI_V4LVIDEO,
+	FRAME_BASE_PATH_PIP_TUNNEL_MODE,
+	FRAME_BASE_PATH_V4LVIDEO,
+	FRAME_BASE_PATH_DTV_TUNNEL_MODE,
+	FRAME_BASE_PATH_AMLVIDEO_FENCE,
+	FRAME_BASE_PATH_TUNNEL_DI_MODE,
+	FRAME_BASE_PATH_V4LVIDEO_FENCE,
+	FRAME_BASE_PATH_V4LVIDEO_AMLVIDEO,
+	FRAME_BASE_PATH_DTV_AMLVIDEO_AMVIDEO,
+	FRAME_BASE_PATH_DTV_TUNNEL_MEDIASYNC_MODE,
+	FRAME_BASE_PATH_MAX
 };
 
+struct am_ioctl_parm {
+	union {
+		unsigned int data_32;
+		unsigned long long data_64;
+		vformat_t data_vformat;
+		aformat_t data_aformat;
+		enum FRAME_BASE_VIDEO_PATH frame_base_video_path;
+		char data[8];
+	};
+	unsigned int cmd;
+	char reserved[4];
+};
+
+// struct am_ioctl_parm_ex {
+//     union {
+//         struct buf_status status;
+//         struct vdec_status vstatus;
+//         struct adec_status astatus;
+
+//         struct userdata_poc_info_t data_userdata_info;
+//         char data[24];
+
+//     };
+//     unsigned int cmd;
+//     char reserved[4];
+// };
 struct am_ioctl_parm_ex {
     union {
         struct buf_status status;
-        struct vdec_status vstatus;
-        struct adec_status astatus;
-
-        struct userdata_poc_info_t data_userdata_info;
+	struct vdec_status vstatus;
         char data[24];
-
     };
     unsigned int cmd;
     char reserved[4];

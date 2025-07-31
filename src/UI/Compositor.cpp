@@ -43,6 +43,7 @@ struct IonSurface
 
 void Compositor::ClearDisplay()
 {
+#if 0
 	int io;
 
 
@@ -60,7 +61,7 @@ void Compositor::ClearDisplay()
     fill_config.src_para.y_rev = 0;
 
     fill_config.dst_para = fill_config.src_para;
-    
+
 
     io = ioctl(ge2d_fd, GE2D_CONFIG_EX_ION, &fill_config);
     if (io < 0)
@@ -83,6 +84,7 @@ void Compositor::ClearDisplay()
     {
         throw Exception("GE2D_FILLRECTANGLE failed.");
     }
+#endif // 0
 }
 
 void Compositor::SwapBuffers()
@@ -92,10 +94,12 @@ void Compositor::SwapBuffers()
 
 void Compositor::WaitForVSync()
 {
+#if 0
 	if (ioctl(fd, FBIO_WAITFORVSYNC, 0) < 0)
 	{
 		throw Exception("FBIO_WAITFORVSYNC failed.");
 	}
+#endif
 }
 
 void Compositor::RenderThread()
@@ -164,9 +168,9 @@ void Compositor::RenderThread()
 				int io = ioctl(ion_fd, ION_IOC_ALLOC, &allocation_data);
 				if (io != 0)
 				{
-					throw Exception("ION_IOC_ALLOC failed.");					
+					throw Exception("ION_IOC_ALLOC failed.");
 				}
-				
+
 
 
 
@@ -175,7 +179,7 @@ void Compositor::RenderThread()
 				surface.length = size;
 				surface.stride = stride;
 				surface.ion_handle = allocation_data.handle;
-							
+
 				//surface.map_ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, ionData.fd, 0);
 				surface.rect = sprite->DestinationRect();
 				surface.color = sprite->Color();
@@ -191,7 +195,7 @@ void Compositor::RenderThread()
 					throw Exception("ION_IOC_SHARE failed.");
 				}
 
-				surface.share_fd = ionData.fd;	
+				surface.share_fd = ionData.fd;
 
 
 				// Copy data
@@ -201,7 +205,7 @@ void Compositor::RenderThread()
 					throw Exception("mmap failed.");
 				}
 
-				
+
 				uint8_t* src_ptr = (uint8_t*)sprite->Source()->Image()->Data();
 				uint8_t* dst_ptr = (uint8_t*)map_ptr;
 				for(int i = 0; i < sprite->Source()->Image()->Height(); ++i)
@@ -282,7 +286,7 @@ void Compositor::RenderThread()
 				io = ioctl(ge2d_fd, GE2D_STRETCHBLIT, &blitRect);
 				if (io < 0)
 				{
-					throw Exception("GE2D_BLIT_NOALPHA failed.");					
+					throw Exception("GE2D_BLIT_NOALPHA failed.");
 				}
 
 
@@ -295,7 +299,7 @@ void Compositor::RenderThread()
 				io = ioctl(ion_fd, ION_IOC_FREE, &ionHandleData);
 				if (io != 0)
 				{
-					throw Exception("ION_IOC_FREE failed.");					
+					throw Exception("ION_IOC_FREE failed.");
 				}
 			}
 		}
@@ -324,7 +328,7 @@ Compositor::Compositor(int width, int height)
 	if (fd < 0)
 		throw Exception("open /dev/fb0 failed.");
 
-
+#if 0
 	ge2d_fd = open("/dev/ge2d", O_RDWR);
     if (ge2d_fd < 0)
     {
@@ -339,12 +343,15 @@ Compositor::Compositor(int width, int height)
 
 
 	renderThread.Start();
+#endif
 }
 
 Compositor::~Compositor()
 {
+#if 0
 	isRunning = false;
 	renderThread.Join();
+#endif
 }
 
 

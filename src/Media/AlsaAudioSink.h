@@ -38,7 +38,7 @@ class AlsaAudioSinkElement : public Element
 	OutPinSPTR clockOutPin;
 
 	const int AUDIO_FRAME_BUFFERCOUNT = 8;
-	const char* device = "default"; //default   //plughw                     /* playback device */
+	const char* device = "sysdefault"; //default   //plughw                     /* playback device */
 	const int alsa_channels = 2;
 
 	AVCodecID codec_id = AV_CODEC_ID_NONE;

@@ -16,6 +16,7 @@
 
 #include "Image.h"
 
+#include <string>
 
 
 Image::Image(ImageFormatEnum format, int width, int height, int stride, void* data)

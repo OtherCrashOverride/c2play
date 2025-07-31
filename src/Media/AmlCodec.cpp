@@ -38,19 +38,19 @@ AmlCodec::AmlCodec()
 	}
 
 
-	apiLevel = ApiLevel::S805;
+	apiLevel = ApiLevel::S905;
 
-	int version;
-	int r = ioctl(fd, AMSTREAM_IOC_GET_VERSION, &version);
-	if (r == 0)
-	{
-		printf("AmlCodec: amstream version : %d.%d\n", (version & 0xffff0000) >> 16, version & 0xffff);
+	// int version;
+	// int r = ioctl(fd, AMSTREAM_IOC_GET_VERSION, &version);
+	// if (r == 0)
+	// {
+	// 	printf("AmlCodec: amstream version : %d.%d\n", (version & 0xffff0000) >> 16, version & 0xffff);
 
-		if (version >= 0x20000)
-		{
-			apiLevel = ApiLevel::S905;
-		}
-	}
+	// 	if (version >= 0x20000)
+	// 	{
+	// 		apiLevel = ApiLevel::S905;
+	// 	}
+	// }
 
 	close(fd);
 }
@@ -195,9 +195,19 @@ void AmlCodec::InternalOpen(VideoFormatEnum format, int width, int height, doubl
 
 	if (apiLevel >= ApiLevel::S905) // S905
 	{
+		parm.cmd = AMSTREAM_SET_FRAME_BASE_PATH;
+		parm.frame_base_video_path = FRAME_BASE_PATH_TUNNEL_MODE;
+		
+		r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
+		if (r < 0)
+		{
+			codecMutex.Unlock();
+			throw Exception("AMSTREAM_IOC_SET failed.");
+		}
+
 		parm.cmd = AMSTREAM_SET_VFORMAT;
 		parm.data_vformat = amlFormat;
-
+		
 		r = ioctl(handle, AMSTREAM_IOC_SET, (unsigned long)&parm);
 		if (r < 0)
 		{
